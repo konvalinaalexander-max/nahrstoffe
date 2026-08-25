@@ -1,12 +1,14 @@
-/* Minimaler DOM-Ersatz, damit app.js in node läuft. */
+/* DOM-Ersatz, damit basilikum.html in node läuft. */
 const fs=require('fs');
 function mkEl(id){
-  const e={id,innerHTML:'',textContent:'',value:'',checked:false,hidden:false,disabled:false,
-    dataset:{},style:{},files:[],selectedOptions:[],clientWidth:900,
+  const kinder=[];
+  const e={id,tagName:'DIV',type:'',innerHTML:'',textContent:'',value:'',checked:false,hidden:false,disabled:false,
+    open:false,dataset:{},style:{},files:[],selectedOptions:[],clientWidth:900,
     classList:{add(){},remove(){},contains(){return false}},
     appendChild(){},insertAdjacentHTML(){},remove(){},click(){},
     querySelector(){return null},querySelectorAll(){return []},
-    addEventListener(){},showModal(){},close(){},setAttribute(){},getAttribute(){return null}};
+    closest(){return null},addEventListener(){},showModal(){e.open=true},close(){e.open=false},
+    setAttribute(){},getAttribute(){return null},focus(){}};
   return e;
 }
 const store=new Map();
@@ -16,36 +18,31 @@ global.document={
   createElement(t){return mkEl('neu:'+t)},
   addEventListener(){},body:mkEl('body')
 };
-global.window={addEventListener(){},scrollTo(){}, __pruef:null};
+global.window={addEventListener(){},scrollTo(){}};
 global.self=global.window;
 global.navigator={language:'de-CH'};
-global.location={href:''};
 global.fetch=async()=>{throw new Error('kein Netz im Test')};
 global.pdfjsLib={GlobalWorkerOptions:{},getDocument(){throw new Error('kein pdf.js im Test')}};
 global.URL={createObjectURL(){return 'blob:test'},revokeObjectURL(){}};
 global.Blob=function(){};
 global.confirm=()=>true;
 global.alert=()=>{};
-global.dlg=mkEl('dlg');
-global.fileJson=mkEl('fileJson');
-global.filePdf=mkEl('filePdf');
-global.setTimeout=global.setTimeout;
 
 let src=fs.readFileSync(__dirname+'/app.js','utf8');
-/* Selbstaufruf am Ende abschneiden */
 const cut=src.lastIndexOf('(async()=>{');
-if(cut<0)throw new Error('IIFE nicht gefunden');
-src=src.slice(0,cut);
-/* "use strict" verhindert implizite Globals nicht – wir brauchen die Funktionen im Scope */
-src=src.replace(/^"use strict";/,'');
-const mod={};
+if(cut<0)throw new Error('Selbstaufruf nicht gefunden');
+src=src.slice(0,cut).replace(/^"use strict";/,'');
+
+const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseIns','parseAuto',
+ 'leer','migriere','ausKW','montagKW','bezugFuer','aussaatVon','kulturdauer','alter',
+ 'optVon','optQuelle','status','istOk','istRand','lage','abstand','ausmass','schwereVon',
+ 'erhebungen','massgebliche','bewerte','indexVon','bilanz','verh','substratZu','befunde','wiederkehrend',
+ 'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
+ 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vLogbuch','vRund','vPlaner','vSaetze',
+ 'chartLinien','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
+ 'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
+
 const fn=new Function('module','exports','require','document','window','globalThis',
-  src+'\n;return {'+
-  ['toNum','isLim','lage','status','index','erhebungen','bilanz','befunde','alter','ausKW','aussaatVon',
-   'kulturdauer','optVon','optEigen','leer','saetzeListe','vorschlaege','parseNCC','parseIns','parseAuto',
-   'einheit','leitProbe','alleSaetze','nz','esc','putz','vLage','vAnalysen','vNaehr','vKultur','vWirkung',
-   'vPlaner','vLogbuch','vKreis','vRund','vSaetze','render','setTab','KERN','HAUPT','MOBIL','NAME','NCC','INS',
-   'befundHtml','streifen','balken','chartLinien','chartIndex','chartProfil','chartSaetze','abstand','fmt'
-  ].map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
-  ', setDb:(x)=>{db=x}, getDb:()=>db, setTab2:(t)=>{tab=t}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
-module.exports=fn(mod,{},require,global.document,global.window,global);
+  src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
+  ', setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+module.exports=fn(module,{},require,global.document,global.window,global);

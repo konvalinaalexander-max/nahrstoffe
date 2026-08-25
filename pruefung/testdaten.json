@@ -1,0 +1,1096 @@
+{
+ "schema": 4,
+ "version": 0,
+ "gespeichert": null,
+ "analysen": [
+  {
+   "id": "q0",
+   "typ": "blattsaft",
+   "labor": "NovaCropControl",
+   "laborId": "20260714110",
+   "datum": "2026-07-14",
+   "satz": "28-478",
+   "kultur": "Eichhof 8B",
+   "blattalter": "jung",
+   "blattalterBeleg": "Kopfzeile: «Blatt (Jung)»",
+   "zustand": null,
+   "zustandBeleg": null,
+   "werte": {
+    "Zucker": {
+     "wert": 0.935,
+     "unter": false
+    },
+    "pH": {
+     "wert": 4.93,
+     "unter": false
+    },
+    "EC": {
+     "wert": 8.245,
+     "unter": false
+    },
+    "K": {
+     "wert": 884,
+     "unter": false
+    },
+    "Ca": {
+     "wert": 691.9,
+     "unter": false
+    },
+    "K/Ca": {
+     "wert": 1.088,
+     "unter": false
+    },
+    "Mg": {
+     "wert": 555.9,
+     "unter": false
+    },
+    "Na": {
+     "wert": 3.4,
+     "unter": false
+    },
+    "NH4": {
+     "wert": 151.3,
+     "unter": false
+    },
+    "NO3": {
+     "wert": 30.6,
+     "unter": false
+    },
+    "N_aus_NO3": {
+     "wert": 6.8,
+     "unter": false
+    },
+    "N_gesamt": {
+     "wert": 1246.1,
+     "unter": false
+    },
+    "Cl": {
+     "wert": 2300.1,
+     "unter": false
+    },
+    "S": {
+     "wert": 320.45,
+     "unter": false
+    },
+    "P": {
+     "wert": 442,
+     "unter": false
+    },
+    "Si": {
+     "wert": 26.775,
+     "unter": false
+    },
+    "Fe": {
+     "wert": 0.901,
+     "unter": false
+    },
+    "Mn": {
+     "wert": 6.018,
+     "unter": false
+    },
+    "Zn": {
+     "wert": 0.544,
+     "unter": false
+    },
+    "B": {
+     "wert": 0.671,
+     "unter": false
+    },
+    "Cu": {
+     "wert": 0.246,
+     "unter": false
+    },
+    "Mo": {
+     "wert": 0.043,
+     "unter": true
+    },
+    "Al": {
+     "wert": 0.875,
+     "unter": false
+    }
+   },
+   "optima": {
+    "Zucker": [
+     0.2,
+     0.4
+    ],
+    "pH": [
+     6.1,
+     6.2
+    ],
+    "EC": [
+     12.5,
+     13.6
+    ],
+    "K": [
+     3975,
+     4800
+    ],
+    "Ca": [
+     810,
+     1275
+    ],
+    "Mg": [
+     310,
+     430
+    ],
+    "Na": [
+     22,
+     44
+    ],
+    "NH4": [
+     25,
+     55
+    ],
+    "NO3": [
+     2010,
+     3530
+    ],
+    "N_aus_NO3": [
+     454,
+     797
+    ],
+    "N_gesamt": [
+     830,
+     1270
+    ],
+    "Cl": [
+     750,
+     1775
+    ],
+    "S": [
+     170,
+     230
+    ],
+    "P": [
+     360,
+     530
+    ],
+    "Si": [
+     25.6,
+     37.3
+    ],
+    "Fe": [
+     0.8,
+     1.6
+    ],
+    "Mn": [
+     3,
+     7
+    ],
+    "Zn": [
+     1.6,
+     2.25
+    ],
+    "B": [
+     0.8,
+     2.6
+    ],
+    "Cu": [
+     0.3,
+     0.5
+    ],
+    "Mo": [
+     null,
+     0.05
+    ],
+    "Al": [
+     null,
+     0.5
+    ]
+   },
+   "optArt": {
+    "Zucker": "spanne",
+    "pH": "spanne",
+    "EC": "spanne",
+    "K": "spanne",
+    "Ca": "spanne",
+    "Mg": "spanne",
+    "Na": "spanne",
+    "NH4": "spanne",
+    "NO3": "spanne",
+    "N_aus_NO3": "spanne",
+    "N_gesamt": "spanne",
+    "Cl": "spanne",
+    "S": "spanne",
+    "P": "spanne",
+    "Si": "spanne",
+    "Fe": "spanne",
+    "Mn": "spanne",
+    "Zn": "spanne",
+    "B": "spanne",
+    "Cu": "spanne",
+    "Mo": "nachweisgrenze",
+    "Al": "nachweisgrenze"
+   }
+  },
+  {
+   "id": "q1",
+   "typ": "blattsaft",
+   "labor": "NovaCropControl",
+   "laborId": "20260714111",
+   "datum": "2026-07-14",
+   "satz": "28-478",
+   "kultur": "Eichhof 8B",
+   "blattalter": "alt",
+   "blattalterBeleg": "Kopfzeile: «Blatt (Alt)»",
+   "zustand": null,
+   "zustandBeleg": null,
+   "werte": {
+    "Zucker": {
+     "wert": 0.425,
+     "unter": false
+    },
+    "pH": {
+     "wert": 4.93,
+     "unter": false
+    },
+    "EC": {
+     "wert": 7.225,
+     "unter": false
+    },
+    "K": {
+     "wert": 1205.3,
+     "unter": false
+    },
+    "Ca": {
+     "wert": 651.1,
+     "unter": false
+    },
+    "K/Ca": {
+     "wert": 1.573,
+     "unter": false
+    },
+    "Mg": {
+     "wert": 266.9,
+     "unter": false
+    },
+    "Na": {
+     "wert": 11.05,
+     "unter": false
+    },
+    "NH4": {
+     "wert": 72.25,
+     "unter": false
+    },
+    "NO3": {
+     "wert": 223.55,
+     "unter": false
+    },
+    "N_aus_NO3": {
+     "wert": 50.15,
+     "unter": false
+    },
+    "N_gesamt": {
+     "wert": 685.95,
+     "unter": false
+    },
+    "Cl": {
+     "wert": 1539.35,
+     "unter": false
+    },
+    "S": {
+     "wert": 277.95,
+     "unter": false
+    },
+    "P": {
+     "wert": 323,
+     "unter": false
+    },
+    "Si": {
+     "wert": 40.12,
+     "unter": false
+    },
+    "Fe": {
+     "wert": 1.037,
+     "unter": false
+    },
+    "Mn": {
+     "wert": 8.959,
+     "unter": false
+    },
+    "Zn": {
+     "wert": 0.484,
+     "unter": false
+    },
+    "B": {
+     "wert": 0.892,
+     "unter": false
+    },
+    "Cu": {
+     "wert": 0.153,
+     "unter": false
+    },
+    "Mo": {
+     "wert": 0.043,
+     "unter": true
+    },
+    "Al": {
+     "wert": 1.207,
+     "unter": false
+    }
+   },
+   "optima": {
+    "Zucker": [
+     0.2,
+     0.4
+    ],
+    "pH": [
+     6.1,
+     6.2
+    ],
+    "EC": [
+     12.5,
+     13.6
+    ],
+    "K": [
+     3975,
+     4800
+    ],
+    "Ca": [
+     810,
+     1275
+    ],
+    "Mg": [
+     310,
+     430
+    ],
+    "Na": [
+     22,
+     44
+    ],
+    "NH4": [
+     25,
+     55
+    ],
+    "NO3": [
+     2010,
+     3530
+    ],
+    "N_aus_NO3": [
+     454,
+     797
+    ],
+    "N_gesamt": [
+     830,
+     1270
+    ],
+    "Cl": [
+     750,
+     1775
+    ],
+    "S": [
+     170,
+     230
+    ],
+    "P": [
+     360,
+     530
+    ],
+    "Si": [
+     25.6,
+     37.3
+    ],
+    "Fe": [
+     0.8,
+     1.6
+    ],
+    "Mn": [
+     3,
+     7
+    ],
+    "Zn": [
+     1.6,
+     2.25
+    ],
+    "B": [
+     0.8,
+     2.6
+    ],
+    "Cu": [
+     0.3,
+     0.5
+    ],
+    "Mo": [
+     null,
+     0.05
+    ],
+    "Al": [
+     null,
+     0.5
+    ]
+   },
+   "optArt": {
+    "Zucker": "spanne",
+    "pH": "spanne",
+    "EC": "spanne",
+    "K": "spanne",
+    "Ca": "spanne",
+    "Mg": "spanne",
+    "Na": "spanne",
+    "NH4": "spanne",
+    "NO3": "spanne",
+    "N_aus_NO3": "spanne",
+    "N_gesamt": "spanne",
+    "Cl": "spanne",
+    "S": "spanne",
+    "P": "spanne",
+    "Si": "spanne",
+    "Fe": "spanne",
+    "Mn": "spanne",
+    "Zn": "spanne",
+    "B": "spanne",
+    "Cu": "spanne",
+    "Mo": "nachweisgrenze",
+    "Al": "nachweisgrenze"
+   }
+  },
+  {
+   "id": "p0",
+   "typ": "blattsaft",
+   "labor": "NovaCropControl",
+   "laborId": "202608201117",
+   "datum": "2026-08-18",
+   "satz": "28-478",
+   "kultur": "Eichhof 8B",
+   "blattalter": "jung",
+   "blattalterBeleg": "Kopfzeile: «Blatt (Jung)»",
+   "zustand": null,
+   "zustandBeleg": null,
+   "werte": {
+    "Zucker": {
+     "wert": 1.1,
+     "unter": false
+    },
+    "pH": {
+     "wert": 5.8,
+     "unter": false
+    },
+    "EC": {
+     "wert": 9.7,
+     "unter": false
+    },
+    "K": {
+     "wert": 1040,
+     "unter": false
+    },
+    "Ca": {
+     "wert": 814,
+     "unter": false
+    },
+    "K/Ca": {
+     "wert": 1.28,
+     "unter": false
+    },
+    "Mg": {
+     "wert": 654,
+     "unter": false
+    },
+    "Na": {
+     "wert": 4,
+     "unter": false
+    },
+    "NH4": {
+     "wert": 178,
+     "unter": false
+    },
+    "NO3": {
+     "wert": 36,
+     "unter": false
+    },
+    "N_aus_NO3": {
+     "wert": 8,
+     "unter": false
+    },
+    "N_gesamt": {
+     "wert": 1466,
+     "unter": false
+    },
+    "Cl": {
+     "wert": 2706,
+     "unter": false
+    },
+    "S": {
+     "wert": 377,
+     "unter": false
+    },
+    "P": {
+     "wert": 520,
+     "unter": false
+    },
+    "Si": {
+     "wert": 31.5,
+     "unter": false
+    },
+    "Fe": {
+     "wert": 1.06,
+     "unter": false
+    },
+    "Mn": {
+     "wert": 7.08,
+     "unter": false
+    },
+    "Zn": {
+     "wert": 0.64,
+     "unter": false
+    },
+    "B": {
+     "wert": 0.79,
+     "unter": false
+    },
+    "Cu": {
+     "wert": 0.29,
+     "unter": false
+    },
+    "Mo": {
+     "wert": 0.05,
+     "unter": true
+    },
+    "Al": {
+     "wert": 1.03,
+     "unter": false
+    }
+   },
+   "optima": {
+    "Zucker": [
+     0.2,
+     0.4
+    ],
+    "pH": [
+     6.1,
+     6.2
+    ],
+    "EC": [
+     12.5,
+     13.6
+    ],
+    "K": [
+     3975,
+     4800
+    ],
+    "Ca": [
+     810,
+     1275
+    ],
+    "Mg": [
+     310,
+     430
+    ],
+    "Na": [
+     22,
+     44
+    ],
+    "NH4": [
+     25,
+     55
+    ],
+    "NO3": [
+     2010,
+     3530
+    ],
+    "N_aus_NO3": [
+     454,
+     797
+    ],
+    "N_gesamt": [
+     830,
+     1270
+    ],
+    "Cl": [
+     750,
+     1775
+    ],
+    "S": [
+     170,
+     230
+    ],
+    "P": [
+     360,
+     530
+    ],
+    "Si": [
+     25.6,
+     37.3
+    ],
+    "Fe": [
+     0.8,
+     1.6
+    ],
+    "Mn": [
+     3,
+     7
+    ],
+    "Zn": [
+     1.6,
+     2.25
+    ],
+    "B": [
+     0.8,
+     2.6
+    ],
+    "Cu": [
+     0.3,
+     0.5
+    ],
+    "Mo": [
+     null,
+     0.05
+    ],
+    "Al": [
+     null,
+     0.5
+    ]
+   },
+   "optArt": {
+    "Zucker": "spanne",
+    "pH": "spanne",
+    "EC": "spanne",
+    "K": "spanne",
+    "Ca": "spanne",
+    "Mg": "spanne",
+    "Na": "spanne",
+    "NH4": "spanne",
+    "NO3": "spanne",
+    "N_aus_NO3": "spanne",
+    "N_gesamt": "spanne",
+    "Cl": "spanne",
+    "S": "spanne",
+    "P": "spanne",
+    "Si": "spanne",
+    "Fe": "spanne",
+    "Mn": "spanne",
+    "Zn": "spanne",
+    "B": "spanne",
+    "Cu": "spanne",
+    "Mo": "nachweisgrenze",
+    "Al": "nachweisgrenze"
+   }
+  },
+  {
+   "id": "p1",
+   "typ": "blattsaft",
+   "labor": "NovaCropControl",
+   "laborId": "202608201118",
+   "datum": "2026-08-18",
+   "satz": "28-478",
+   "kultur": "Eichhof 8B",
+   "blattalter": "alt",
+   "blattalterBeleg": "Kopfzeile: «Blatt (Alt)»",
+   "zustand": null,
+   "zustandBeleg": null,
+   "werte": {
+    "Zucker": {
+     "wert": 0.5,
+     "unter": false
+    },
+    "pH": {
+     "wert": 5.8,
+     "unter": false
+    },
+    "EC": {
+     "wert": 8.5,
+     "unter": false
+    },
+    "K": {
+     "wert": 1418,
+     "unter": false
+    },
+    "Ca": {
+     "wert": 766,
+     "unter": false
+    },
+    "K/Ca": {
+     "wert": 1.85,
+     "unter": false
+    },
+    "Mg": {
+     "wert": 314,
+     "unter": false
+    },
+    "Na": {
+     "wert": 13,
+     "unter": false
+    },
+    "NH4": {
+     "wert": 85,
+     "unter": false
+    },
+    "NO3": {
+     "wert": 263,
+     "unter": false
+    },
+    "N_aus_NO3": {
+     "wert": 59,
+     "unter": false
+    },
+    "N_gesamt": {
+     "wert": 807,
+     "unter": false
+    },
+    "Cl": {
+     "wert": 1811,
+     "unter": false
+    },
+    "S": {
+     "wert": 327,
+     "unter": false
+    },
+    "P": {
+     "wert": 380,
+     "unter": false
+    },
+    "Si": {
+     "wert": 47.2,
+     "unter": false
+    },
+    "Fe": {
+     "wert": 1.22,
+     "unter": false
+    },
+    "Mn": {
+     "wert": 10.54,
+     "unter": false
+    },
+    "Zn": {
+     "wert": 0.57,
+     "unter": false
+    },
+    "B": {
+     "wert": 1.05,
+     "unter": false
+    },
+    "Cu": {
+     "wert": 0.18,
+     "unter": false
+    },
+    "Mo": {
+     "wert": 0.05,
+     "unter": true
+    },
+    "Al": {
+     "wert": 1.42,
+     "unter": false
+    }
+   },
+   "optima": {
+    "Zucker": [
+     0.2,
+     0.4
+    ],
+    "pH": [
+     6.1,
+     6.2
+    ],
+    "EC": [
+     12.5,
+     13.6
+    ],
+    "K": [
+     3975,
+     4800
+    ],
+    "Ca": [
+     810,
+     1275
+    ],
+    "Mg": [
+     310,
+     430
+    ],
+    "Na": [
+     22,
+     44
+    ],
+    "NH4": [
+     25,
+     55
+    ],
+    "NO3": [
+     2010,
+     3530
+    ],
+    "N_aus_NO3": [
+     454,
+     797
+    ],
+    "N_gesamt": [
+     830,
+     1270
+    ],
+    "Cl": [
+     750,
+     1775
+    ],
+    "S": [
+     170,
+     230
+    ],
+    "P": [
+     360,
+     530
+    ],
+    "Si": [
+     25.6,
+     37.3
+    ],
+    "Fe": [
+     0.8,
+     1.6
+    ],
+    "Mn": [
+     3,
+     7
+    ],
+    "Zn": [
+     1.6,
+     2.25
+    ],
+    "B": [
+     0.8,
+     2.6
+    ],
+    "Cu": [
+     0.3,
+     0.5
+    ],
+    "Mo": [
+     null,
+     0.05
+    ],
+    "Al": [
+     null,
+     0.5
+    ]
+   },
+   "optArt": {
+    "Zucker": "spanne",
+    "pH": "spanne",
+    "EC": "spanne",
+    "K": "spanne",
+    "Ca": "spanne",
+    "Mg": "spanne",
+    "Na": "spanne",
+    "NH4": "spanne",
+    "NO3": "spanne",
+    "N_aus_NO3": "spanne",
+    "N_gesamt": "spanne",
+    "Cl": "spanne",
+    "S": "spanne",
+    "P": "spanne",
+    "Si": "spanne",
+    "Fe": "spanne",
+    "Mn": "spanne",
+    "Zn": "spanne",
+    "B": "spanne",
+    "Cu": "spanne",
+    "Mo": "nachweisgrenze",
+    "Al": "nachweisgrenze"
+   }
+  },
+  {
+   "id": "s1",
+   "typ": "substrat",
+   "labor": "Labor Ins AG",
+   "datum": "2026-08-14",
+   "satz": "28-478",
+   "tiefe": 5,
+   "blattalter": null,
+   "zustand": "grün",
+   "parzelle": "28-478 grün 5cm",
+   "werte": {
+    "sub_pH": {
+     "wert": 5.2
+    },
+    "sub_Nmin": {
+     "wert": 22
+    },
+    "sub_Salz": {
+     "wert": 1.4
+    },
+    "sof_K2O": {
+     "wert": 210
+    },
+    "sof_Mg": {
+     "wert": 95
+    },
+    "sof_Ca": {
+     "wert": 260
+    },
+    "sub_Mn": {
+     "wert": 14
+    },
+    "res_K2O": {
+     "wert": 420
+    }
+   },
+   "optima": {}
+  },
+  {
+   "id": "g1",
+   "typ": "giesswasser",
+   "datum": "2026-08-01",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.4
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 290
+    }
+   },
+   "optima": {}
+  }
+ ],
+ "ereignisse": [
+  {
+   "id": "e1",
+   "datum": "2026-07-28",
+   "typ": "Neues Substrat / Grunddüngung",
+   "titel": "Peter's Ökohum",
+   "felder": {
+    "substrat": "Ökohum",
+    "grund": "Hornmehl"
+   },
+   "geltung": "saetze",
+   "saetze": [
+    "28-478"
+   ]
+  },
+  {
+   "id": "e2",
+   "datum": "2026-08-05",
+   "typ": "Dosierung geändert",
+   "titel": "Dosis auf 0,15 %",
+   "felder": {
+    "duenger": "Biorga",
+    "dosisAlt": "0,10",
+    "dosisNeu": "0,15"
+   },
+   "geltung": "alle",
+   "saetze": []
+  }
+ ],
+ "messungen": [
+  {
+   "id": "m1",
+   "datum": "2026-07-20",
+   "ph": 6.4,
+   "ec": 1.2,
+   "ecFrisch": 2,
+   "temp": 21,
+   "notiz": null
+  },
+  {
+   "id": "m2",
+   "datum": "2026-08-03",
+   "ph": 6.1,
+   "ec": 1.5,
+   "ecFrisch": 2.1,
+   "temp": 24,
+   "notiz": null
+  },
+  {
+   "id": "m3",
+   "datum": "2026-08-17",
+   "ph": 5.9,
+   "ec": 1.9,
+   "ecFrisch": 2.1,
+   "temp": 25.5,
+   "notiz": "nach Nachfüllen"
+  }
+ ],
+ "rundgaenge": [
+  {
+   "id": "r1",
+   "datum": "2026-08-12",
+   "satz": "28-478",
+   "kultur": "blass",
+   "notiz": "Randreihen schwächer",
+   "eintraege": [
+    {
+     "schaden": "mehltau",
+     "stufe": 1
+    },
+    {
+     "schaden": "trauermuecken",
+     "stufe": 2
+    },
+    {
+     "schaden": "botrytis",
+     "stufe": 0
+    }
+   ]
+  }
+ ],
+ "saetze": {
+  "28-478": {
+   "substrat": "Ökohum neu",
+   "duenger": "Biorga Quick",
+   "tisch": "Tisch 3",
+   "notiz": "Ecke beim Tor"
+  },
+  "30-500": {
+   "aussaat": "2026-07-20",
+   "substrat": "Ökohum alt"
+  }
+ },
+ "eigeneOptima": {},
+ "plan": {
+  "zielwochen": [
+   2,
+   4,
+   6
+  ],
+  "begleitet": [
+   "28-478"
+  ],
+  "geplant": []
+ },
+ "einst": {
+  "verlagerung": 1.3,
+  "kMg": 8,
+  "kCa": 3,
+  "nh4no3": 0.5,
+  "toleranz": 5,
+  "dauerSommer": 7,
+  "dauerWinter": 10,
+  "kern": [
+   "NO3",
+   "K",
+   "Ca",
+   "Mg",
+   "P",
+   "S",
+   "Fe",
+   "Mn",
+   "Zn",
+   "B",
+   "Cu"
+  ],
+  "schaeden": [
+   "mehltau",
+   "botrytis",
+   "fusarium",
+   "wurzelfaeule",
+   "blattflecken",
+   "trauermuecken",
+   "thripse",
+   "blattlaeuse",
+   "weissefliege"
+  ]
+ }
+}
