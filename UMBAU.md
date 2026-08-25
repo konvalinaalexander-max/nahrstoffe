@@ -50,7 +50,7 @@ gekennzeichnet und änderbar.
 
 ```
 vorher · 15 Nährstoffe, jung und alt gezählt      8 von 30  =  27 %
-jetzt  · 11 Nährstoffe, Blatt nach Mobilität      5 von 11  =  45 %
+jetzt  · 11 Nährstoffe, Blatt nach Mobilität      4 von 11  =  36 %
 ```
 
 Die Zahl steigt nicht, weil es besser wird, sondern weil Positionen wegfallen,
