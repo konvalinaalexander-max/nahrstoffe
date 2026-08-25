@@ -6,6 +6,11 @@ Vorgehen nach Abschnitt 7 der Übergabe: Skript extrahiert, `node --check`,
 DOM-Ersatz gebaut, Funktionen einzeln aufgerufen. Alles unten mit **BESTÄTIGT**
 ist reproduziert, nicht vermutet. Die Testdateien liegen in `pruefung/`.
 
+Seit dem 2. Durchgang zusätzlich **gegen die echte Blattsaftdatei geprüft**
+(Satz 28-478, Probendatum 18.08.2026) — nicht mit `pdftotext`, sondern mit
+derselben pdf.js-Version 3.11.174, die die App benutzt, sodass `pdfSeiten`
+Zeile für Zeile reproduziert ist. Fixture: `pruefung/seiten.json`.
+
 **Noch nichts geändert** — Abschnitt 9 sagt „erst berichten, dann ändern".
 
 ---
@@ -19,8 +24,58 @@ genau das, was in der Übergabe steht — ein Nitratwert bei 2 % der Untergrenze
 landet bei 0,02 und drückt keine Grafik platt. Die Vorbehalts-Hinweise sind
 durchgehend vorhanden und sachlich richtig formuliert.
 
+Und der Parser liest die echte NovaCropControl-Datei fehlerfrei — 23 von 23
+Parametern, beide Proben, alle Optima, null Abweichungen (Abschnitt 0.5).
+
 Die Fehler unten sitzen fast alle **in der Auswertungsschicht**, nicht im
 Gerüst. Das ist die gute Nachricht: sie sind lokal behebbar.
+
+---
+
+## 0.5 · Gegenprobe an der echten Datei
+
+Der Parser liest die echte NovaCropControl-Datei **fehlerfrei**. Alle 23
+Parameter, beide Proben, alle Optima, keine einzige Abweichung gegenüber dem
+PDF:
+
+```
+Proben: 2 · Parameter: 23 von 23 · Hinweise: keine
+LaborId 202608201117 / 202608201118 · Datum 2026-08-18 · Satz 28-478
+Blattalter jung/alt aus «Blatt (Jung)» / «Blatt (Alt)»
+Abweichungen gegenüber dem PDF: 0
+```
+
+Auch `putz()` verfälscht **diese** Datei nicht: die Spaltenmarker stehen dank
+Hochstellung auf eigenen Zeilen, betroffen sind nur die Markerzeile `1 2` und
+die Fusszeile `21-8-2026 1 / 1`. Keine Parameterzeile.
+
+Das ist die wichtigste Einordnung für alles Weitere: **die Parserbefunde sind
+latent, die Auswertungsbefunde sind akut.** Was unten in Abschnitt 2 steht,
+passiert an genau diesen Zahlen, heute.
+
+### Die echten Werte, mit denen ab hier gerechnet wird
+
+| | jung | alt | Optimum | |
+|---|---|---|---|---|
+| Nitrat | 36 | 263 | 2010–3530 | 2 % der Untergrenze |
+| Kalium | 1040 | 1418 | 3975–4800 | 26 % |
+| Zink | 0,64 | 0,57 | 1,60–2,25 | 36 % |
+| Natrium | 4 | 13 | 22–44 | Ballastion |
+| Kupfer | 0,29 | 0,18 | 0,30–0,50 | knapp darunter |
+| Bor | 0,79 | 1,05 | 0,80–2,60 | 99 % — Messrauschen |
+| Ammonium | 178 | 85 | 25–55 | 3× darüber |
+| Chlorid | 2706 | 1811 | 750–1775 | darüber |
+| Magnesium | 654 | 314 | 310–430 | jung 52 % darüber |
+| N gesamt | 1466 | 807 | 830–1270 | jung darüber, alt darunter |
+| Schwefel | 377 | 327 | 170–230 | beide darüber |
+| Zucker | 1,1 | 0,5 | 0,2–0,4 | beide darüber |
+
+Agronomisch ist das Bild eindeutig und deckt sich mit dem, was die Übergabe
+beschreibt: **Nitrat praktisch leer, Ammonium dreifach über dem Optimum,
+Kalium bei einem Viertel des Solls, Zucker gestaut.** Organische Düngung, die
+Stickstoff als Ammonium schubweise liefert, während Nitrat nicht nachkommt —
+und Ammonium verdrängt zusätzlich Kalium an der Wurzel. Nitrat und Kalium sind
+derselbe Befund, nicht zwei.
 
 ---
 
@@ -58,28 +113,47 @@ Zwei Verschärfungen, die in der Übergabe fehlen:
 Das trifft den Reiter Kulturverlauf, jede Altersangabe, das Gantt im Planer
 und alle drei Vorschlagsarten. **Höchste Priorität.**
 
-### 1.2 `putz()` frisst Messwerte, die genau 1 oder 2 sind · Zeile 210 — NEU
+### 1.2 `putz()` frisst Messwerte, die genau 1 oder 2 sind · Zeile 210 — NEU, an der echten Datei geprüft
 
 `putz` entfernt alleinstehende „1" und „2", um die Spaltenmarker ¹ ² aus der
-Kopfzeile zu bekommen. Das Muster `/(^|\s)[12](\s|$)/g` unterscheidet aber
-nicht zwischen Marker und Messwert:
+Kopfzeile zu bekommen. Das Muster `/(^|\s)[12](\s|$)/g` unterscheidet nicht
+zwischen Marker und Messwert.
+
+**Die echte Datei ist nicht betroffen** (siehe 0.5). Aber sie zeigt, dass der
+Fall erreichbar ist: NovaCropControl druckt ganzzahlige ppm ohne
+Nachkommastelle.
 
 ```
-'Cu - Kupfer 1 2,00 - 6,00'  →  'Cu - Kupfer 2,00 - 6,00'
-   Kupfer wird als 2,00 gelesen — der Untergrenze des Optimums.   BESTÄTIGT
-'Fe - Eisen 2 3,00 - 8,00'   →  'Fe - Eisen 3,00 - 8,00'
-   Eisen wird als 3,00 gelesen — ebenfalls die Untergrenze.       BESTÄTIGT
+Zeile 40:  "Na - Natrium ppm 4 22 - 44"    → Na jung = 4
+Zeile 52:  "N aus Nitrat ppm 8 454 - 797"  → N aus Nitrat jung = 8
 ```
 
-Der Wert wird nicht verworfen, sondern **durch die Optimum-Untergrenze
-ersetzt**. Ein Kupfermangel wird damit zu „genau im Optimum".
+Ein Natriumwert von 1 oder 2 ist in diesem Format also völlig normal — in
+dieser Probe steht 4. Dieselbe Zeile mit einer 2 statt der 4, gegen den echten
+Parser:
 
-**Ich fasse den Parser nicht an, bevor ich ein echtes PDF gesehen habe.** Ob
-der Fall eintritt, hängt allein daran, ob NovaCropControl ganzzahlige Werte
-ohne Nachkommastelle druckt („1" statt „1,0"). Bei Cu, Fe, Mo, Zn und B ist
-das der plausible Bereich. Bitte schick mir ein Blattsaft-PDF oder die Ausgabe
-von `pdftotext -layout`, dann prüfe ich es gegen die echte Datei und baue den
-Marker-Abgleich so eng, dass er nur die Kopfzeile trifft.
+```
+im PDF steht :  Na jung = 2 · Na alt = 1 · Optimum 22 - 44
+die App liest:  Na jung = 22 · Na alt = —  · Optimum = keines      BESTÄTIGT
+```
+
+Drei Schäden auf einmal, alle still:
+
+- Der Messwert **2** wird zu **22** — der Untergrenze des Optimums.
+- Das **Optimum 22–44 verschwindet ganz**, weil nach dem Löschen nur noch zwei
+  Zahlen in der Zeile stehen und die Erkennung `zahlen.length >= 3` verlangt.
+- Der **Wert der Altprobe verschwindet ersatzlos**, weil `ppm 1` nach `putz`
+  keine Zahl mehr enthält.
+
+Ergebnis: Ein Natrium von 2 ppm erscheint als 22 ppm ohne Optimum, also
+unauffällig. Keine Warnung, kein Hinweis, keine Lücke in der Tabelle — der
+Fehler ist von aussen nicht erkennbar.
+
+Der Fix ist jetzt sicher zu bauen, weil das echte Layout bekannt ist: Die
+Marker stehen dank Hochstellung **auf eigenen Zeilen** (`1` bzw. `2` allein).
+`putz` muss deshalb nur eine Zeile leeren, die ausschliesslich aus einem
+Marker besteht, und darf innerhalb einer Zeile nichts entfernen. Das trifft
+alle 23 Parameter dieser Datei korrekt und kann keinen Messwert mehr fressen.
 
 ### 1.3 `optima` ist ein geteiltes Objekt · Zeile 237 — BESTÄTIGT (5.3)
 
@@ -142,6 +216,27 @@ Bei Ebbe-Flut mit gemeinsamem Kreislauf ist tiefes Na und Cl im Blattsaft das
 würde. Sie gehören aus der Mangelregel heraus und aus `KERN` heraus — ihre
 sinnvolle Auswertung ist die Anreicherungsrichtung über die Zeit, nicht der
 Abstand zu einer Untergrenze.
+
+**An der echten Datei ist das kein Randfall, sondern der Hauptbefund.** Die
+App gibt für Satz 28-478 acht Befunde aus. Im Überblick werden davon nur die
+ersten zwei angezeigt:
+
+```
+1. [HOCH] Stickstoff limitiert das Wachstum          Gewicht 100
+2. [HOCH] Natrium durchgehend unter Optimum          Gewicht  82   ← Fehlbefund
+   TUN: Zufuhr von Natrium erhöhen.
+
+unter "6 weitere Befunde" eingeklappt:
+3. [HOCH] Kalium durchgehend unter Optimum           Gewicht  74   ← der echte
+4. [HOCH] Zink durchgehend unter Optimum             Gewicht  64
+…                                                                  BESTÄTIGT
+```
+
+Kalium liegt bei 1040 ppm gegen ein Optimum ab 3975 — nach Stickstoff der mit
+Abstand wichtigste steuerbare Befund, und bei gleichzeitig dreifachem Ammonium
+der agronomisch zwingende Folgeschritt. Er ist eingeklappt, weil ein Ballastion
+mit einem erfundenen Sollwert ihn verdrängt hat. Das ist genau die Zahl, die
+der Chef zuerst sieht.
 
 ### 2.2 Zwei verschiedene Definitionen von „im Optimum" nebeneinander · `index` Zeile 380 gegen `bilanz` Zeile 407 — NEU
 
@@ -270,11 +365,20 @@ status(0.5, [0.5,0.5]) = 'ok'    → zählt als "im Optimum"
 lage(0.5,   [0.5,0.5]) = 2.5     → Band "über Optimum"
 ```
 
-Derselbe Wert ist in der Tabelle grün und im Diagramm im orangen Band. Al
-steht nicht in `KERN`, der Index bleibt also verschont — aber im Reiter
-Nährstoff ist Al wählbar, und dort wird der Widerspruch sichtbar. Der saubere
-Ort für die Korrektur ist der Parser: eine Spanne, deren beide Grenzen aus
-einem `<`-Wert stammen, ist eine Nachweisgrenze, kein Optimum.
+**An der echten Datei bestätigt.** Zeile 100 lautet
+`Al - Aluminium ppm 1,03 <0,50 - <0,50`, und der Parser liest daraus
+tatsächlich `optima.Al = [0.5, 0.5]`.
+
+Zu präzisieren ist, wann der Widerspruch zuschlägt: Bei den hier gemessenen
+1,03 sind sich `status` (`'hoch'`) und `lage` (2,5) einig. Sie widersprechen
+sich genau dann, wenn der Messwert selbst **0,50** ist — also wenn Aluminium
+als `<0,50` zurückkommt, so wie Molybdän in dieser Probe. Dann ist derselbe
+Wert in der Tabelle grün und im Diagramm im orangen Band.
+
+Al steht nicht in `KERN`, der Index bleibt also verschont — aber im Reiter
+Nährstoff ist Al wählbar. Der saubere Ort für die Korrektur ist der Parser:
+eine Spanne, deren beide Grenzen aus einem `<`-Wert stammen, ist eine
+Nachweisgrenze, kein Optimum, und gehört als `[null, 0.5]` gelesen.
 
 ### 2.9 Reiter Wirkung · Zeilen 1108, 1139 — BESTÄTIGT, erweitert (5.3)
 
@@ -290,6 +394,66 @@ Zwei getrennte Punkte:
   19-434; Rundgänge davor: 19-434 Stufe 1 und 99-999 Stufe 3 → ausgewiesener
   Mittelwert 2,0. BESTÄTIGT. Das Feld `rundgaenge[].satz` existiert und wird
   ignoriert.
+
+### 2.10 Kupfer fällt an den echten Werten durch dieselbe Lücke wie Molybdän · Zeile 448 — NEU
+
+Der in 2.4 beschriebene Mechanismus trifft in dieser Probe nicht nur Mo,
+sondern **Kupfer**, und Kupfer liegt tatsächlich unter dem Optimum:
+
+```
+Cu jung 0,29 · Cu alt 0,18 · Optimum ab 0,30   → beide unter Optimum
+jung/alt = 1,61 > Schwelle 1,3   → allgemeine Regel überspringt (Z. 461)
+Verlagerungsregel deckt ab: K, Mg, P, NO3, N_gesamt, S   → Cu nicht dabei
+
+Befund zu Kupfer: KEINER                                    BESTÄTIGT
+```
+
+Der Ausschluss `vj/va > verlagerung → continue` gilt für **alle** Nährstoffe in
+`KERN`, das Auffangnetz aber nur für sechs. Für Ca, S, Fe, Mn, Zn, B, Cu, Si,
+Mo, Na und Cl gibt es keins. Sobald bei einem von ihnen das Jungblatt um mehr
+als 30 % über dem Altblatt liegt — bei zweifelsfreiem Mangel in beiden —
+schweigt die App. Das ist die stillste Lücke im Regelwerk, weil sie sich als
+„keine Auffälligkeit" tarnt.
+
+### 2.11 Fünf Überschreitungen haben überhaupt keine Regel — NEU
+
+Es gibt Regeln für „zu tief", eine für Na/Cl „zu hoch" und eine für Mn. Für
+alles Übrige über dem Optimum existiert keine. An der echten Probe:
+
+| Nährstoff | Wert | Optimum bis | |
+|---|---|---|---|
+| Stickstoff gesamt | jung 1466 | 1270 | **stumm** |
+| Magnesium | jung 654 | 430 | **stumm** — 52 % darüber |
+| Schwefel | jung 377 · alt 327 | 230 | **stumm** — beide Blattalter |
+| Silizium | alt 47,2 | 37,3 | **stumm** |
+| Zucker | jung 1,1 · alt 0,5 | 0,4 | **stumm** als eigener Befund |
+
+BESTÄTIGT. Magnesium 52 % über dem Optimum bei gleichzeitig viertelvollem
+Kalium ist kein Nebenbefund — das ist ein Kationenverhältnis, das die
+Kaliumaufnahme zusätzlich bremst, und es steht in keinem Befund. Bei einer
+Kreislaufanlage ist Anreicherung ohnehin der wahrscheinlichere Fehler als
+Mangel.
+
+### 2.12 Die Schwere richtet sich nicht nach dem Ausmass · Zeile 452, 478 — NEU
+
+Alle Mangelbefunde tragen `schwere: 'hoch'`, unabhängig davon, ob ein Wert bei
+2 % oder bei 99 % der Untergrenze liegt. Nur das `gewicht` sortiert innerhalb
+der Stufe, und es wird aus dem relativen Abstand berechnet — was für
+Ballastionen den falschen Anreiz setzt (2.1).
+
+```
+Nitrat    Gewicht 100    2 % der Untergrenze
+Natrium   Gewicht  82   18 %                  ← Fehlbefund, steht an 2. Stelle
+Kalium    Gewicht  74   26 %
+Zink      Gewicht  64   36 %
+Bor       Gewicht   1   99 %                  ← 0,79 gegen 0,80        BESTÄTIGT
+```
+
+Bor bei 0,79 gegen eine Untergrenze von 0,80 ist Messrauschen und wird
+trotzdem als Befund der Stufe **hoch** ausgegeben, mit dem vollen Text „die
+Versorgung der Spitze stockt" und der Handlungsanweisung, Klima und
+Bewässerung zu prüfen. Eine Toleranzzone am Rand des Optimums — etwa 5 % —
+würde solche Scheinbefunde aussortieren, ohne echte zu verlieren.
 
 ---
 
@@ -358,9 +522,19 @@ Zusätzlich: Ist `iL` `null` und `iV` nicht, erscheint „NaN Punkte".
 | `saetze[].notiz` | Z. 1338 | nur im eigenen Dialog — **NEU** |
 
 Zu `limit` teile ich die agronomische Einschätzung der Übergabe: `<0,05` als
-0,05 zu behandeln ist eine Erfindung. Bei Molybdän ist `<0,05` gegenüber einem
-Optimum ab 0,20 ein *Befund* — er wird derzeit als Zahl geführt, die im
-Diagramm einen Punkt setzt, als wäre sie gemessen.
+0,05 zu behandeln ist eine Erfindung. Die echte Datei zeigt den Fall direkt —
+Molybdän steht dort mit Messwert `<0,05` **und** Optimum `< 0,05`:
+
+```
+Mo - Molybdän ppm <0,05 < 0,05
+→ Wert 0.05 (limit: true) · Optimum [null, 0.05] · status = 'ok'
+```
+
+Beide Zahlen sind dieselbe Nachweisgrenze. Die App führt daraus einen
+gemessenen Wert, der im Diagramm einen Punkt setzt und in jeder Kennzahl als
+„im Optimum" zählt — obwohl schlicht nichts gemessen wurde. `limit` ist
+bereits gesetzt (BESTÄTIGT an der echten Datei: `limit-Markierungen: Mo`), es
+wird nur nirgends gelesen.
 
 ### 3.6 Substratdaten liegen noch brächer als beschrieben — Ergänzung zu 5.2
 
@@ -419,7 +593,8 @@ Ammonium-Regel ist bei einem Demeter-Betrieb zu Recht dabei.
 - **Zucker gegen Nitrat** ist derzeit nur ein Beleg innerhalb der Nitratregel.
   Er hätte als eigenständiger Wachstumsindikator mehr Gewicht verdient — das
   ist die Auswertung, die den Zustand „Pflanze assimiliert, kann aber nicht
-  wachsen" direkt benennt, und in euren Daten ist genau das der Fall.
+  wachsen" direkt benennt. Die echte Probe zeigt ihn lehrbuchmässig: Zucker
+  jung 1,1 % gegen 0,2–0,4 %, Nitrat 36 ppm gegen ein Optimum ab 2010.
 
 **Wo ich der Übergabe widerspreche.** Abschnitt 6.2 hält die Zucker-Deutung
 für prüfenswert — zu Recht. Ich würde weitergehen: Ein Optimum von 0,2–0,4 %
@@ -433,6 +608,21 @@ Nitrat** sind es. Ich würde Zucker nicht in eine Kennzahl „im Optimum"
 aufnehmen (er steht korrekterweise nicht in `KERN`) und den Vorbehalt in der
 Oberfläche benennen.
 
+**Was die echte Probe zusätzlich zeigt.** Die acht ausgegebenen Befunde
+beschreiben in Wahrheit **einen** Vorgang: Die organische Düngung liefert
+Stickstoff als Ammonium schubweise (NH4 178 gegen 25–55), die Mineralisierung
+zu Nitrat kommt nicht nach (NO3 36 gegen ab 2010), und das überschüssige
+Ammonium verdrängt Kalium an der Wurzel (K 1040 gegen ab 3975), während
+Magnesium sich anreichert (654 gegen bis 430) und das Kationenverhältnis
+weiter zulasten von Kalium verschiebt. Nitrat, Ammonium, Kalium und Magnesium
+sind hier **keine vier Befunde, sondern vier Symptome desselben**.
+
+Das Regelwerk kann das derzeit nicht ausdrücken: Es kennt nur Einzelbefunde je
+Nährstoff. Eine Regel, die den Ammonium-Überschuss mit dem Kaliummangel
+verknüpft, wäre der grösste inhaltliche Zugewinn — und sie wäre gut belegbar,
+weil beide Werte aus derselben Probe stammen und damit vom Kulturalter
+unabhängig sind. Ich schlage sie für die Runde nach den Korrekturen vor.
+
 **Zu den gesetzten Schwellen** (`verlagerung: 1.3`, `kMg: 8`, `kCa: 3`): Die
 Kennzeichnung als Annahme ist richtig und bleibt. Für Basilikum im Pflanzensaft
 gibt es tatsächlich kaum Publiziertes; alles, was ich beitragen könnte, wäre
@@ -445,49 +635,97 @@ stattdessen anzuzeigen, **wie oft** eine Schwelle in den eigenen Daten
 
 ## 5 · Vorschlag für die Reihenfolge
 
-Nach Schaden pro Aufwand, nicht nach Reihenfolge in diesem Bericht:
+Nach der Gegenprobe umsortiert: Was an den echten Zahlen **heute** falsch
+angezeigt wird, kommt vor dem, was nur latent falsch ist.
 
-1. **1.1 Jahressprung im Kulturalter** — verfälscht die meisten Anzeigen,
-   Fix ist klein: `bezugFuer` auf Blattsaft einschränken, `ausKW` mit
-   Plausibilitätsprüfung (abgeleitete Aussaat darf nicht mehr als eine
-   Kulturdauer vor der Probe liegen) und sichtbarer Warnung.
-2. **1.3 geteiltes `optima`** — eine Zeile.
-3. **1.4 Optimum-Grenzen einzeln mischen** — wenige Zeilen, verhindert eine
+1. **2.1 Na und Cl aus Mangelregel und `KERN`** — beseitigt eine fachlich
+   falsche Empfehlung, die an eurer aktuellen Probe an zweiter Stelle steht
+   und den Kaliumbefund verdrängt. Kleinster Eingriff mit der grössten
+   sofortigen Wirkung.
+2. **1.1 Jahressprung im Kulturalter** — `bezugFuer` auf Blattsaft
+   einschränken, `ausKW` mit Plausibilitätsprüfung (abgeleitete Aussaat darf
+   nicht mehr als eine Kulturdauer vor der Probe liegen) und sichtbarer
+   Warnung.
+3. **2.10 / 2.4 das fehlende Auffangnetz** — der Ausschluss
+   `vj/va > verlagerung → continue` gilt für alle Nährstoffe, die
+   Verlagerungsregel nur für sechs. An euren Werten verschluckt das den
+   Kupferbefund komplett.
+4. **1.3 geteiltes `optima`** — eine Zeile.
+5. **1.4 Optimum-Grenzen einzeln mischen** — wenige Zeilen, verhindert eine
    stille Fehlberuhigung.
-4. **2.1 Na und Cl aus der Mangelregel und aus `KERN`** — beseitigt eine
-   fachlich falsche Empfehlung.
-5. **2.2 `KERN` und die Index-Definition sauber festlegen** — Dublette `NO3`/
+6. **2.2 `KERN` und die Index-Definition festlegen** — Dublette `NO3`/
    `N_gesamt` auflösen, `index()` und `bilanz()` auf dieselbe Grundlage
-   stellen. Hier will ich vorher deine Entscheidung (siehe unten).
-6. **2.6 Dubletten im Regelwerk** — Verhältnisregeln einmal je Erhebung statt
+   stellen. Braucht deine Entscheidung, siehe Abschnitt 6.
+7. **2.12 Toleranzzone am Rand des Optimums** — beseitigt Scheinbefunde wie
+   Bor 0,79 gegen 0,80.
+8. **2.6 Dubletten im Regelwerk** — Verhältnisregeln einmal je Erhebung statt
    je Blattalter, und `belegt` konsequent prüfen.
-7. **2.3 `leitProbe` nach Mobilität** — die grösste inhaltliche Verbesserung
-   der belastbarsten Auswertung.
-8. **3.1 verschwundene Sätze**, **3.3 Apostroph**, **3.2 Zeitachse** — kleine,
-   klar begrenzte Korrekturen.
-9. Erst danach: Phantomdaten auflösen (3.5) und die Substratanbindung
-   Angebot-gegen-Aufnahme (3.6) — das ist Neubau und braucht eigenen Raum.
+9. **2.11 Regeln für die Gegenrichtung** — Mg 52 % über dem Optimum steht
+   derzeit in keinem Befund.
+10. **2.3 `leitProbe` nach Mobilität** — die grösste inhaltliche Verbesserung
+    der belastbarsten Auswertung.
+11. **1.2 `putz()`** — jetzt sicher zu bauen, weil das echte Layout bekannt
+    ist: Marker stehen auf eigenen Zeilen, also nur ganze Markerzeilen leeren.
+    Latent, aber nach dem Fix dauerhaft erledigt.
+12. **3.1 verschwundene Sätze**, **3.3 Apostroph**, **3.2 Zeitachse** — kleine,
+    klar begrenzte Korrekturen.
+13. Erst danach: Phantomdaten auflösen (3.5), die Ammonium-Kalium-Regel aus
+    Abschnitt 4, und die Substratanbindung Angebot-gegen-Aufnahme (3.6).
 
 ---
 
 ## 6 · Was ich von dir brauche
 
-Vier Punkte, bei denen ich nicht selbst entscheiden will:
+Punkt 2 der letzten Fassung ist erledigt — die Datei liegt vor und ist
+ausgewertet. Es bleiben drei Entscheidungen.
 
-1. **Welche Nährstoffe gehören in die Kennzahl „im Optimum"?** Mein Vorschlag:
-   `NO3, K, Ca, Mg, P, S, Fe, Mn, Zn, B, Cu` — also `N_gesamt` als Dublette
-   raus (Nitrat ist der aussagekräftigere Sofortvorrat), `Na` und `Cl` als
-   Ballastionen raus, `Si` raus, weil Basilikum kein Si-Akkumulator ist und
-   der Wert nichts steuert. Das wären 11 gleichgewichtete Positionen. Trägt
-   das fachlich für euch?
-2. **Ein echtes Blattsaft-PDF** (oder `pdftotext -layout` davon), damit ich
-   1.2 gegen die Datei statt gegen eine Annahme prüfen kann.
-3. **`index()`: jung und alt oder nur ein Blatt?** Ich tendiere zu: je
-   Nährstoff das nach `MOBIL` aussagekräftige Blatt, damit index und bilanz
-   dieselbe Sprache sprechen. Das ändert die angezeigten Prozentzahlen
-   gegenüber bisherigen Ständen — deshalb frage ich.
-4. **Änderungen am Datenmodell** brauche ich laut Leitplanke ohnehin
-   freigegeben. Aus diesem Bericht folgt keine zwingende Schemaänderung; 1.4
-   und 2.7 lassen sich rein rechnend lösen. Sollte 3.5 (`limit` anzeigen und
-   von Berechnungen ausnehmen) dazukommen, bliebe `db.schema` bei 3, weil das
-   Feld bereits geschrieben wird.
+**1 · Welche Nährstoffe gehören in die Kennzahl „im Optimum"?**
+
+Mein Vorschlag: `NO3, K, Ca, Mg, P, S, Fe, Mn, Zn, B, Cu` — `N_gesamt` als
+Dublette raus (Nitrat ist der aussagekräftigere Sofortvorrat), `Na` und `Cl`
+als Ballastionen raus, `Si` raus, weil Basilikum kein Si-Akkumulator ist und
+der Wert nichts steuert. Elf gleichgewichtete Positionen.
+
+Was das an eurer echten Probe ändert:
+
+```
+heute      · KERN 15, jung und alt gezählt        8 von 30  =  27 %
+Vorschlag  · KERN 11 ohne N-Dublette/Na/Cl/Si     7 von 22  =  32 %
+```
+
+Die Zahl steigt, weil drei Positionen wegfallen, die immer als „daneben"
+gezählt haben. Sie wird dadurch nicht schmeichelhafter, sondern ehrlicher:
+von elf fachlich steuerbaren Nährstoffen liegen drei im Sollbereich. Trägt das
+für euch?
+
+**2 · `index()`: jung und alt, oder das aussagekräftige Blatt?**
+
+Ich tendiere zu: je Nährstoff das nach `MOBIL` aussagekräftige Blatt — mobile
+am Altblatt, immobile am Jungblatt, teilmobile nur dann „ok", wenn beide
+stimmen. Damit sprechen `index` und `bilanz` dieselbe Sprache (2.2), und die
+Kennzahl misst dasselbe, was die Regeln prüfen.
+
+```
+Vorschlag 1 + 2 · Blatt nach Mobilität            4 von 11  =  36 %
+   NO3 alt tief · K alt tief · Ca jung ok · Mg alt ok · P alt ok
+   S beide daneben · Fe jung ok · Mn beide daneben
+   Zn beide daneben · B jung tief · Cu beide daneben
+```
+
+Das ändert die angezeigten Prozentzahlen gegenüber euren gesicherten Ständen —
+deshalb frage ich, statt es zu entscheiden.
+
+**3 · Toleranz am Rand des Optimums (2.12).**
+
+Bor 0,79 gegen eine Untergrenze von 0,80 als Befund der Stufe „hoch" ist
+Messrauschen. Ich schlage 5 % vor: Werte innerhalb von 5 % der Grenze gelten
+als im Optimum, werden aber im Balken als Randlage sichtbar. Das ist eine
+gesetzte Annahme wie die übrigen Schwellen und käme entsprechend
+gekennzeichnet und in die Einstellungen.
+
+**Zum Datenmodell.** Aus diesem Bericht folgt weiterhin keine zwingende
+Schemaänderung; 1.4 und 2.7 lassen sich rein rechnend lösen. Auch wenn 3.5
+dazukommt (`limit` anzeigen und von Berechnungen ausnehmen), bleibt
+`db.schema` bei 3, weil das Feld bereits geschrieben wird. Eine neue
+Einstellung für Punkt 3 wäre additiv und für alte Dateien mit einem Vorgabewert
+abgedeckt.

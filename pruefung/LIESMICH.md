@@ -32,8 +32,28 @@ globale Datenbank, `nachRenderRun()` löst den Diagrammaufbau aus.
 | `t4.js` | Alle zehn Reiter leer und gefüllt, KPI-Kachel, verschwundene Sätze |
 | `t5.js` | Apostroph im onclick, Zeitachse `chartIndex`, Altersdrift |
 | `t6.js` | Reiter Wirkung: Blattalter und fremde Rundgänge, `bezugFuer` |
+| `t7.js` | Parser gegen die echte Datei: alle 23 Parameter, Werte, Optima |
+| `t8.js` | Regelwerk an den echten Werten — was die App tatsächlich ausgibt |
+| `t9.js` | `putz()` am echten Layout, Kupferlücke, stumme Überschreitungen |
+| `t10.js` | Wirkung der offenen Entscheidungen auf die Kennzahl |
 
 `app.js` wird erzeugt und ist nicht eingecheckt.
 
-**Für Parseränderungen reicht das nicht.** Dafür braucht es echte PDFs; ohne
-sie sind alle Parserbefunde nur Hinweise auf ein mögliches Verhalten.
+## Echte Datei
+
+`seiten.json` ist die von `pdfSeiten()` erzeugte Zeilenstruktur der echten
+Blattsaftanalyse (Satz 28-478, Probendatum 18.08.2026). Sie ist das Fixture
+für `t7`–`t10` und macht die Parserprüfung ohne das PDF reproduzierbar.
+
+Erzeugt mit `seiten.js`, das `pdfSeiten()` aus `basilikum.html` Zeile 303
+unverändert nachbaut — mit derselben pdf.js-Version 3.11.174, die die App
+lädt. Das ist genauer als `pdftotext -layout`, weil es dieselbe Bibliothek
+und dieselbe y-Koordinaten-Rekonstruktion benutzt.
+
+```bash
+npm install pdfjs-dist@3.11.174
+node pruefung/seiten.js pfad/zur/analyse.pdf     # schreibt seiten.json
+```
+
+Für ein neues Laborlayout — Substrat, Giesswasser — denselben Weg gehen und
+ein zweites Fixture ablegen, statt gegen Annahmen zu testen.
