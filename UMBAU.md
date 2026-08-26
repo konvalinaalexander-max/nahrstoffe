@@ -248,6 +248,34 @@ Schemawechsel mit Migrationspfad ✓
 
 ---
 
+## 7.5 · Nachtrag: der Weg von der Datei zur Auswertung
+
+Nach einer Prüfung des Ablaufs «PDF hochladen und verstehen» nachgebessert:
+
+- **Nach dem Import öffnet sich die Auswertung von selbst.** Vorher blieb man
+  in der Analysenliste stehen und musste selbst zum Überblick finden.
+- **Neue Ansicht «Alle Werte ansehen»** — eine Erhebung als Ganzes: alle 23
+  Parameter nach Nährstoffgruppen, Jung- und Altblatt nebeneinander mit
+  Balken, Sollbereich, Bewertung und der Markierung, welches Blatt für diesen
+  Nährstoff zählt. Darunter alle Befunde. Erreichbar aus dem Überblick, aus
+  der Analysenliste und direkt nach dem Import.
+- **Die Befunde stehen jetzt vor den Verlaufsdiagrammen.** Bei einer einzigen
+  Analyse standen sie vorher bei 60 % der Seitenlänge unter drei fast leeren
+  Diagrammen.
+- **Verlaufsdiagramme erscheinen erst ab zwei Erhebungen**, vorher steht dort,
+  was eine zweite Erhebung sichtbar machen würde.
+- **Der Kontrolldialog ist nach Nährstoffgruppen gegliedert**, mit dem
+  Sollbereich unter jedem Feld. Werte, die um mehr als das Sechsfache
+  danebenliegen, sind farbig markiert — das fängt ein verrutschtes Komma ab,
+  ohne echte Extremwerte fälschlich anzuzeigen.
+- **PDFs lassen sich auf jedem Reiter ablegen**, nicht nur auf «Analysen».
+
+Geprüft mit `pruefung/upload.js`: echtes PDF in Chromium eingelesen, Dialog
+kontrolliert, übernommen, Erhebungsansicht geprüft, alle neun Reiter mit einer
+einzigen Analyse gerendert.
+
+---
+
 ## 8 · Was ich bewusst nicht gebaut habe
 
 Unverändert zurückgestellt, wie in der Übergabe festgelegt: die

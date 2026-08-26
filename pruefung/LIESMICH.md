@@ -19,9 +19,13 @@ for t in n1 n2 n3 n4 n5; do node pruefung/$t.js; done
 # 3 · Statistik-Nachweise (Belege für BEFUNDE-STATISTIK.md, kein Pass/Fail)
 for t in s1 s2 s3 s4; do node pruefung/$t.js; done
 
-# 4 · Browsertest (braucht Chromium und playwright)
+# 4 · Browsertests (brauchen Chromium und playwright)
 npm install playwright
 node pruefung/browser.js
+
+# 5 · Der Upload-Weg mit einem echten PDF
+npm install pdfjs-dist@3.11.174
+PDF=pfad/zur/analyse.pdf PDFJS=node_modules/pdfjs-dist/build node pruefung/upload.js
 ```
 
 Jedes Skript endet mit Exitcode 1, sobald eine Prüfung fehlschlägt.
@@ -40,6 +44,7 @@ Jedes Skript endet mit Exitcode 1, sobald eine Prüfung fehlschlägt.
 | `s2.js` | Statistik: Messunsicherheit, zensierte Werte, Datenstruktur (Typverzweigungen, Erhebungs-Rekonstruktion, Redundanz, Einheiten, Plausibilität) |
 | `s3.js` | Statistik: Inferenz im Reiter Wirkung, Rang der Designmatrix, Substrat-Richtwerte, Kleinigkeiten |
 | `s4.js` | Statistik: neun Befunde ausserhalb der Verdachtsliste (Referenzwechsel, Verhältnistoleranz, rückwirkende Bewertung, schwankender Nenner, Scheinpräzision beim Alter, fehlende Jahreszeit, Altblatt bei immobilen Nährstoffen, unbewertete Substratwerte, Tiefe) |
+| `upload.js` | Der Weg «PDF hochladen und verstehen» in Chromium: echtes PDF einlesen, Kontrolldialog, Übernehmen, die Erhebungsansicht, Reihenfolge im Überblick, Wiedereinstieg. pdf.js wird aus der lokalen Installation umgeleitet, damit der Test ohne Netz läuft |
 | `browser.js` | Echte App in Chromium: neun Reiter leer und gefüllt, Datei laden, Detaildialog, Nährstoff- und Achsenwechsel, Planer, Logbuch mit Apostroph und spitzen Klammern, Rundgang, Einstellungen, Offline-Verhalten, Escaping |
 
 ## Fixtures

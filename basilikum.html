@@ -1155,7 +1155,7 @@ function render(){
   window.scrollTo({top:0});
   if(nachRender){const g=nachRender;nachRender=null;try{g()}catch(err){}}
 }
-AKTION.reiter=d=>{tab=d.reiter;render()};
+AKTION.reiter=d=>{const dg=el('dlg');if(dg.open)dg.close();tab=d.reiter;render()};
 function setTab(t){tab=t;render()}
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),4200)}
 function aend(){dirty=true}
@@ -1248,6 +1248,7 @@ function vLage(){
   if(!ueParams.length)ueParams=verf.slice(0,4);
 
   nachRender=()=>{
+    if(erh.length<2)return;                 /* bei einer Erhebung gibt es keine Diagramme */
     chartIndex(el('cIndex'),erh);
     const serien=ueParams.map((k,i)=>({name:NAME[k],farbe:FARBEN[i%FARBEN.length],
       punkte:erh.map(e=>{const b=e.bew[k];if(!b||b.fehlt)return null;
@@ -1277,13 +1278,20 @@ function vLage(){
     <div class="kpi"><h4>Sätze laufend</h4><b>${laufend}</b><span class="tiny muted">von ${alleSaetze().length} erfasst</span></div>
   </div>`;
 
-  s+=`<div class="card"><div class="hd"><div><h2>Nähern wir uns dem Optimum?</h2>
-    <p class="sub">Anteil der Kernnährstoffe im Sollbereich, je Erhebung. Senkrechte Linien sind Einträge aus dem Logbuch. Grün und gelb desselben Tages stehen nebeneinander.</p></div></div>
-    <div id="cIndex" class="scroll"></div>
-    <p class="tiny muted" style="margin-top:10px">Gerechnet wird über ${kern().length} Nährstoffe, jeder gleich gewichtet, jeder an dem Blatt, an dem er überhaupt aussagekräftig ist –
-    phloemmobile am Altblatt, immobile am Jungblatt. Die Zahl ist ein grobes Mass für die Gesamtlage und ersetzt den Blick auf den einzelnen Nährstoff nicht.
-    ${erh.length>1&&erh.some(e=>e.alter.woche!=null)?`Beachte: die Bestände waren bei der Probenahme unterschiedlich alt (${nz(Math.min(...erh.map(e=>e.alter.woche).filter(x=>x!=null)),1)} bis ${nz(Math.max(...erh.map(e=>e.alter.woche).filter(x=>x!=null)),1)} Wochen), was den Vergleich zwischen den Balken einschränkt.`:''}</p>
-  </div>`;
+  s+=befundKarten();
+
+  s+= erh.length>1
+   ? `<div class="card"><div class="hd"><div><h2>Nähern wir uns dem Optimum?</h2>
+      <p class="sub">Anteil der Kernnährstoffe im Sollbereich, je Erhebung. Senkrechte Linien sind Einträge aus dem Logbuch. Grün und gelb desselben Tages stehen nebeneinander.</p></div></div>
+      <div id="cIndex" class="scroll"></div>
+      <p class="tiny muted" style="margin-top:10px">Gerechnet wird über ${kern().length} Nährstoffe, jeder gleich gewichtet, jeder an dem Blatt, an dem er überhaupt aussagekräftig ist –
+      phloemmobile am Altblatt, immobile am Jungblatt. Die Zahl ist ein grobes Mass für die Gesamtlage und ersetzt den Blick auf den einzelnen Nährstoff nicht.
+      ${erh.some(e=>e.alter.woche!=null)?`Beachte: die Bestände waren bei der Probenahme unterschiedlich alt (${nz(Math.min(...erh.map(e=>e.alter.woche).filter(x=>x!=null)),1)} bis ${nz(Math.max(...erh.map(e=>e.alter.woche).filter(x=>x!=null)),1)} Wochen), was den Vergleich zwischen den Balken einschränkt.`:''}</p>
+    </div>`
+   : `<div class="card"><div class="hd"><div><h2>Nähern wir uns dem Optimum?</h2></div></div>
+      <div class="leer"><h3>Dafür braucht es eine zweite Erhebung</h3>
+      <p class="muted" style="max-width:58ch;margin:0 auto">Mit einer einzigen Analyse gibt es keinen Verlauf – nur einen Zustand.
+      Sobald eine zweite Erhebung dazukommt, erscheint hier der Anteil der Nährstoffe im Sollbereich über die Zeit, mit den Einträgen aus dem Logbuch als senkrechte Linien.</p></div></div>`;
 
   if(wk.length)s+=`<div class="card"><div class="hd"><div><h2>Was immer wieder auftritt</h2>
     <p class="sub">Befunde, die in mehr als einer Erhebung entstanden sind. Bei wenigen Analysen ist das die belastbarere Frage als ein Einzelbefund – ein wiederholtes Muster ist kein Ausreisser.</p></div></div>
@@ -1306,7 +1314,7 @@ function vLage(){
     ${bil.filter(b=>b.quote===0&&b.haupt).length?`<div class="note">${bil.filter(b=>b.quote===0&&b.haupt).map(b=>NAME[b.k]).join(', ')} lag in keiner einzigen Erhebung im Optimum. Das ist kein Ausreisser, sondern ein Grundzustand der Düngung – dort liegt der grösste Hebel.</div>`:''}
   </div>`;
 
-  s+=`<div class="card"><div class="hd"><div><h2>Nährstofflage über die Zeit</h2>
+  if(erh.length>1)s+=`<div class="card"><div class="hd"><div><h2>Nährstofflage über die Zeit</h2>
     <p class="sub">Alle Nährstoffe auf eine gemeinsame Skala gebracht: das grüne Band ist der Sollbereich, unabhängig von der Einheit.</p></div></div>
     <div class="row" style="margin-bottom:12px"><div style="flex:1"><label class="lab">Nährstoffe</label><div class="row" style="gap:6px">
       ${verf.map(k=>`<span class="chip ${ueParams.includes(k)?'on':''}" data-tun="ueParam" data-k="${esc(k)}"><span class="dot" style="background:${FARBEN[Math.max(0,ueParams.indexOf(k))%FARBEN.length]};${ueParams.includes(k)?'':'opacity:.25'}"></span>${esc(NAME[k])}</span>`).join('')}
@@ -1314,25 +1322,104 @@ function vLage(){
     <div id="cBand" class="scroll"></div><div class="legend" id="legBand"></div>
   </div>`;
 
-  const neu=new Map();
-  for(const e of [...erh].reverse()){const k=e.satz+'|'+(e.zustand||'');if(!neu.has(k))neu.set(k,e)}
-  s+=`<h2 style="margin:22px 0 12px">Neueste Erhebung je Satz</h2>`;
-  for(const e of neu.values()){
-    const f=befunde(e),top=f.slice(0,3),rest=f.slice(3);
-    s+=`<div class="card"><div class="hd">
-      <div><h2>Satz ${esc(e.satz||'?')} ${zustandTag(e.zustand)}</h2>
-        <p class="sub">${fmt(e.datum)} · ${alterTag(e.alter)} · ${Object.keys(e.proben).map(x=>`<span class="tag ${x}">${x}</span>`).join(' ')}</p></div>
-      ${e.index?`<div style="text-align:right"><b style="font-family:'Bricolage Grotesque';font-size:23px" class="${e.index.anteil>=0.5?'val-ok':'val-off'}">${Math.round(e.index.anteil*100)} %</b>
-        <div class="tiny muted">${e.index.ok} von ${e.index.n} im Optimum${e.index.fehlt?` · ${e.index.fehlt} nicht bewertbar`:''}</div></div>`:''}</div>
-      ${streifen(e)}
-      <p class="tiny muted" style="margin-top:8px">${esc(e.alter.text||'')}</p>
-      <div style="margin-top:12px">${top.length?top.map(befundHtml).join(''):'<p class="muted small">Keine Auffälligkeiten nach den hinterlegten Regeln.</p>'}</div>
-      ${rest.length?`<details><summary>${rest.length} weitere${rest.length>1?'':'r'} Befund${rest.length>1?'e':''}</summary><div style="margin-top:10px">${rest.map(befundHtml).join('')}</div></details>`:''}
-    </div>`;
+  /* Die Befunde sind der Inhalt, nicht die Diagramme. Sie stehen deshalb
+     direkt nach der Kennzahlzeile – bei einer einzigen Analyse standen sie
+     vorher bei 60 % der Seitenlaenge unter drei fast leeren Diagrammen. */
+  function befundKarten(){
+    const neu=new Map();
+    for(const e of [...erh].reverse()){const k=e.satz+'|'+(e.zustand||'');if(!neu.has(k))neu.set(k,e)}
+    let t=`<div class="hd" style="margin:22px 0 12px"><div><h2>${neu.size>1?'Neueste Erhebung je Satz':'Die Auswertung'}</h2>
+      <p class="sub">${neu.size>1?'Für jeden Satz die jüngste Erhebung.':'Was in dieser Analyse steht und was daraus folgt.'}</p></div></div>`;
+    for(const e of neu.values()){
+      const f=befunde(e),top=f.slice(0,3),rest=f.slice(3);
+      t+=`<div class="card"><div class="hd">
+        <div><h2>Satz ${esc(e.satz||'?')} ${zustandTag(e.zustand)}</h2>
+          <p class="sub">${fmt(e.datum)} · ${alterTag(e.alter)} · ${Object.keys(e.proben).map(x=>`<span class="tag ${x}">${x}</span>`).join(' ')}</p></div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+        ${e.index?`<div style="text-align:right"><b style="font-family:'Bricolage Grotesque';font-size:23px" class="${e.index.anteil>=0.5?'val-ok':'val-off'}">${Math.round(e.index.anteil*100)} %</b>
+          <div class="tiny muted">${e.index.ok} von ${e.index.n} im Optimum${e.index.fehlt?` · ${e.index.fehlt} nicht bewertbar`:''}</div></div>`:''}
+        <button class="primary" data-tun="erhebung" data-id="${esc(e.id)}">Alle Werte ansehen</button></div></div>
+        ${streifen(e)}
+        <p class="tiny muted" style="margin-top:8px">${esc(e.alter.text||'')}</p>
+        <div style="margin-top:12px">${top.length?top.map(befundHtml).join(''):'<p class="muted small">Keine Auffälligkeiten nach den hinterlegten Regeln.</p>'}</div>
+        ${rest.length?`<details><summary>${rest.length} weitere${rest.length>1?'':'r'} Befund${rest.length>1?'e':''}</summary><div style="margin-top:10px">${rest.map(befundHtml).join('')}</div></details>`:''}
+      </div>`;
+    }
+    return t;
   }
   return s;
 }
 AKTION.ueParam=d=>{const i=ueParams.indexOf(d.k);i<0?ueParams.push(d.k):ueParams.splice(i,1);render()};
+
+/* ── Eine Erhebung als Ganzes ────────────────────────────
+   Der Weg «Datei hochladen und verstehen» endet hier: alle Werte des
+   Laborberichts, Jung- und Altblatt nebeneinander, mit Sollbereich,
+   Bewertung und der Angabe, welches Blatt zählt. */
+const GRUPPEN=[
+ ['Stickstoff',['NO3','N_aus_NO3','N_gesamt','NH4']],
+ ['Hauptnährstoffe',['K','Ca','Mg','P','S']],
+ ['Spurenelemente',['Fe','Mn','Zn','B','Cu','Mo']],
+ ['Ballastionen',['Na','Cl']],
+ ['Weitere',['Si','Al']],
+ ['Summenparameter',['Zucker','pH','EC','K/Ca']]];
+AKTION.erhebung=d=>erhebungDetail(d.id);
+function erhebungDetail(id){
+  const e=erhebungen().find(x=>x.id===id);
+  if(!e)return toast('Diese Erhebung gibt es nicht mehr.');
+  const j=e.proben.jung,a=e.proben.alt,mi=e.proben.misch;
+  const spalten=[['jung',j],['alt',a],['misch',mi]].filter(x=>x[1]);
+  const f=befunde(e);
+  const ref=j||mi||a;
+  const zeile=k=>{
+    const b=e.bew[k];
+    const o=optVon(ref,k);
+    const hat=spalten.some(([,p])=>p.werte[k]);
+    if(!hat)return '';
+    const inKern=kern().indexOf(k)>=0;
+    return `<tr><td><strong>${esc(NAME[k]||k)}</strong>
+        <div class="tiny muted">${esc(einheit(k))}${MOBIL[k]?' · '+esc(MOBIL[k]):''}</div></td>
+      ${spalten.map(([lbl,p])=>{
+        const w=p.werte[k];
+        const mass=b&&!b.fehlt&&(b.mass||[]).some(x=>x.blattalter===lbl);
+        return `<td style="min-width:150px${mass?';background:var(--card2)':''}">${balken(w,o)}
+          ${mass?'<div class="tiny muted">zählt</div>':''}</td>`}).join('')}
+      <td class="mono tiny">${o?`${o[0]!=null?nz(o[0]):'offen'}–${o[1]!=null?nz(o[1]):'offen'}`:'–'}</td>
+      <td>${!inKern?'<span class="tiny muted">nicht in der Kennzahl</span>'
+        :b&&!b.fehlt?stPill(b.ok?(b.rand?'randtief':'ok'):b.st)
+        :`<span class="pill na">${esc(b&&b.grund||'nicht bewertbar')}</span>`}</td></tr>`;
+  };
+  const gruppe=([titel,ks])=>{
+    const z=ks.map(zeile).filter(Boolean).join('');
+    if(!z)return '';
+    return `<tr><td colspan="${spalten.length+3}" style="background:var(--card2);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:14px">${esc(titel)}</td></tr>`+z;
+  };
+  const rest=Object.keys(ref.werte).filter(k=>!GRUPPEN.some(g=>g[1].indexOf(k)>=0));
+  dialog(`Satz ${e.satz||'?'} · ${fmt(e.datum)}`,
+    `<div class="row" style="margin-bottom:12px;align-items:center">
+      ${zustandTag(e.zustand)}${alterTag(e.alter)}
+      ${spalten.map(([l])=>`<span class="tag ${esc(l)}">${esc(l)}</span>`).join('')}
+      <span class="tag">${esc(ref.labor||'manuell')}</span>
+      <div style="flex:1"></div>
+      ${e.index?`<div style="text-align:right"><b style="font-family:'Bricolage Grotesque';font-size:22px" class="${e.index.anteil>=0.5?'val-ok':'val-off'}">${Math.round(e.index.anteil*100)} %</b>
+        <div class="tiny muted">${e.index.ok} von ${e.index.n} im Optimum</div></div>`:''}
+    </div>
+    <p class="tiny muted">${esc(e.alter.text||'')}${ref.kultur?' · Herkunft laut Bericht: '+esc(ref.kultur):''}</p>
+    ${streifen(e)}
+    <div class="scroll" style="margin-top:16px"><table><thead><tr><th>Parameter</th>
+      ${spalten.map(([l])=>`<th>${esc(l)}</th>`).join('')}
+      <th>Optimum</th><th>Bewertung</th></tr></thead><tbody>
+      ${GRUPPEN.map(gruppe).join('')}
+      ${rest.length?gruppe(['Sonstige',rest]):''}
+    </tbody></table></div>
+    <p class="tiny muted" style="margin-top:8px">Hinterlegte Spalten sind das Blatt, das für diesen Nährstoff zählt: phloemmobile am Altblatt, immobile am Jungblatt, teilmobile an beiden.
+    Werte mit vorangestelltem &lt; lagen unter der Nachweisgrenze und werden nicht bewertet.</p>
+    <h3 style="margin:20px 0 10px">${f.length} Befund${f.length===1?'':'e'}</h3>
+    ${f.length?f.map(befundHtml).join(''):'<p class="muted small">Keine Auffälligkeiten nach den hinterlegten Regeln.</p>'}
+    ${spalten.map(([l,p])=>p.quelle&&p.quelle.datei?`<p class="tiny muted">${esc(l)}: aus ${esc(p.quelle.datei)}${p.laborId?' · Probennummer '+esc(p.laborId):''}</p>`:'').join('')}`,
+    `<button data-tun="reiter" data-reiter="naehrstoff" data-zu="1">Einen Nährstoff im Detail</button>
+     <div style="flex:1"></div><button data-tun="dlgZu">Schliessen</button>`);
+}
+
 function lageBalken(l){
   if(l==null)return '–';
   const p=Math.max(0,Math.min(100,l/3*100));
@@ -1401,7 +1488,9 @@ function detail(id){
     ${keys.some(k=>a.werte[k].unter)?'<div class="note neutral">Werte unter der Nachweisgrenze werden als solche angezeigt und fliessen in keine Kennzahl ein. Sie als Zahl zu behandeln wäre eine Erfindung.</div>':''}
     ${a.quelle&&a.quelle.text?`<details style="margin-top:14px"><summary>Quelltext des Dokuments</summary>
       <pre class="tiny mono" style="white-space:pre-wrap;background:var(--card2);padding:12px;border-radius:8px;border:1px solid var(--line);max-height:300px;overflow:auto">${esc(a.quelle.text.slice(0,6000))}</pre></details>`:''}`,
-    `<button data-tun="bearbeiten" data-id="${esc(a.id)}">Werte bearbeiten</button><div style="flex:1"></div><button data-tun="dlgZu">Schliessen</button>`);
+    `<button data-tun="bearbeiten" data-id="${esc(a.id)}">Werte bearbeiten</button>
+     ${a.typ==='blattsaft'&&a.datum&&a.satz?`<button class="primary" data-tun="erhebung" data-id="${esc((a.satz||'?')+'|'+a.datum+'|'+(a.zustand||''))}">Ganze Erhebung ansehen</button>`:''}
+     <div style="flex:1"></div><button data-tun="dlgZu">Schliessen</button>`);
 }
 AKTION.bearbeiten=d=>{const a=db.analysen.find(x=>x.id===d.id);if(a)pruefdialog([JSON.parse(JSON.stringify(a))],true)};
 function manuellNeu(typ){
@@ -1467,8 +1556,8 @@ function pruefdialog(v,bearb,manuell){
           <div><label class="lab">Tisch</label><input data-aend="pruefFeld" data-i="${i}" data-s="tisch" value="${esc(st.tisch||'')}" size="12"></div>
         </div></details>`:''}
       <label class="lab" style="margin-top:8px">Messwerte ${manuell?'':'– bitte gegen das PDF kontrollieren'}</label>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:8px" data-werte="${i}">
-        ${keys.map(k=>feldHtml(i,k,p.werte[k])).join('')}</div>
+      <p class="tiny muted" style="margin:0 0 8px">Unter jedem Feld steht der Sollbereich des Labors. Werte, die um ein Vielfaches danebenliegen, sind farbig markiert – das fängt ein verrutschtes Komma ab. Ein echter Extremwert darf so markiert sein und trotzdem stimmen.</p>
+      <div data-werte="${i}">${feldGruppen(i,p,keys)}</div>
       <div class="row" style="margin-top:10px">
         <select id="neuP${i}">${wahl.filter(k=>!keys.includes(k)).map(k=>`<option value="${esc(k)}">${esc(NAME[k]||k)}</option>`).join('')}</select>
         <button data-tun="feldDazu" data-i="${i}">Parameter ergänzen</button></div>
@@ -1478,13 +1567,38 @@ function pruefdialog(v,bearb,manuell){
      <button data-tun="dlgZu">Abbrechen</button><div style="flex:1"></div><span id="pruefHint" class="tiny muted"></span>`);
   pruefPruefen();
 }
-const feldHtml=(i,k,w)=>`<div data-feld="${esc(k)}"><label class="lab">${esc(NAME[k]||k)} <span class="muted">${esc(einheit(k))}</span></label>
-  <input class="mono" style="width:100%" value="${w&&w.wert!=null?(w.unter?'<':'')+w.wert:''}" data-aend="pruefFeld" data-i="${i}" data-w="${esc(k)}"
-    title="Ein vorangestelltes &lt; kennzeichnet einen Wert unter der Nachweisgrenze."></div>`;
+/* Felder nach Nährstoffgruppen sortiert statt in einem flachen Raster –
+   in derselben Reihenfolge, in der sie im Laborbericht stehen. */
+function feldGruppen(i,p,keys){
+  const rest=keys.filter(k=>!GRUPPEN.some(g=>g[1].indexOf(k)>=0));
+  const bloecke=GRUPPEN.concat(rest.length?[['Weitere Werte',rest]]:[])
+    .map(([titel,ks])=>{
+      const vorhanden=ks.filter(k=>keys.indexOf(k)>=0);
+      if(!vorhanden.length)return '';
+      return `<div style="margin-bottom:12px"><div class="lab" style="border-bottom:1px solid var(--line2);padding-bottom:3px;margin-bottom:7px">${esc(titel)}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:8px">
+        ${vorhanden.map(k=>feldHtml(i,k,p.werte[k],p)).join('')}</div></div>`;
+    }).join('');
+  return bloecke||'<p class="muted small">Noch keine Messwerte – unten ergänzen.</p>';
+}
+function feldHtml(i,k,w,p){
+  const o=(p&&p.optima&&p.optima[k])||null;
+  const st=(w&&w.wert!=null&&o)?status(w.wert,o,w.unter):null;
+  /* Diese Markierung soll Uebertragungsfehler fangen, nicht echte Extremwerte.
+     Ammonium bei 178 gegen ein Optimum bis 55 ist real; Kalium bei 104000
+     gegen 4800 ist ein verrutschtes Komma. Die Schwelle liegt deshalb hoch. */
+  const weit=st&&!istOk(st)&&ausmass(w.wert,o)>5;
+  return `<div data-feld="${esc(k)}"><label class="lab">${esc(NAME[k]||k)} <span class="muted">${esc(einheit(k))}</span></label>
+  <input class="mono" style="width:100%${weit?';border-color:var(--alarm);background:var(--alarm-soft)':''}"
+    value="${w&&w.wert!=null?(w.unter?'<':'')+w.wert:''}" data-aend="pruefFeld" data-i="${i}" data-w="${esc(k)}"
+    title="Ein vorangestelltes &lt; kennzeichnet einen Wert unter der Nachweisgrenze.">
+  <div class="tiny muted" style="margin-top:2px">${o?`Soll ${o[0]!=null?nz(o[0]):'offen'}–${o[1]!=null?nz(o[1]):'offen'}`:'&nbsp;'}${weit?' <span class="val-off">ungewöhnlich – bitte prüfen</span>':''}</div></div>`;
+}
 AKTION.feldDazu=d=>{
   const i=+d.i,k=el('neuP'+i).value,box=document.querySelector(`[data-werte="${i}"]`);
   if(!k||!box||box.querySelector(`[data-feld="${k}"]`))return;
-  box.insertAdjacentHTML('beforeend',feldHtml(i,k,null));
+  const ziel=box.querySelector('[data-feld]')?box.querySelector('[data-feld]').parentNode:box;
+  ziel.insertAdjacentHTML('beforeend',feldHtml(i,k,null,PRUEF[i]));
   const o=el('neuP'+i).querySelector(`option[value="${k}"]`);if(o)o.remove();
 };
 AKTION.pruefFeld=()=>pruefPruefen();
@@ -1554,7 +1668,19 @@ AKTION.uebernehmen=()=>{
     n++;
   }
   db.analysen.sort((a,b)=>(a.datum||'').localeCompare(b.datum||''));
-  ueParams=null;aend();el('dlg').close();render();
+  ueParams=null;aend();el('dlg').close();
+  /* Nach dem Import nicht in der Liste stehen bleiben, sondern die Auswertung
+     zeigen. Das ist der Schritt, an dem der Weg «Datei hochladen und
+     verstehen» vorher endete. */
+  const neuIds=[...new Set(v.filter(p=>p.__ok!==false&&p.typ==='blattsaft'&&p.satz&&p.datum)
+    .map(p=>(p.satz||'?')+'|'+p.datum+'|'+(p.zustand||'')))];
+  if(!PRUEF_BEARB&&neuIds.length){
+    tab='lage';render();
+    toast(`${n} Probe${n>1?'n':''} übernommen. Nicht vergessen: sichern.`);
+    if(neuIds.length===1)setTimeout(()=>erhebungDetail(neuIds[0]),120);
+    return;
+  }
+  render();
   toast(PRUEF_BEARB?'Gespeichert.':`${n} Probe${n>1?'n':''} übernommen. Nicht vergessen: sichern.`);
 };
 
@@ -2480,7 +2606,10 @@ async function laden(file){
 /* ══════════ 18 · Verdrahtung ══════════ */
 el('fileJson').onchange=e=>{const f=e.target.files[0];if(f)laden(f);e.target.value=''};
 el('filePdf').onchange=e=>{const l=[...e.target.files].map(f=>({pfad:f.name,file:f}));if(l.length)einlesen(l);e.target.value=''};
-document.addEventListener('dragover',e=>{if(tab!=='analysen')return;e.preventDefault();const d=el('drop');if(d)d.classList.add('over')});
+/* PDFs lassen sich auf jedem Reiter ablegen, nicht nur auf «Analysen».
+   Ohne preventDefault auf dragover oeffnet der Browser die Datei stattdessen. */
+const ziehtDatei=e=>!!(e.dataTransfer&&[...(e.dataTransfer.types||[])].indexOf('Files')>=0);
+document.addEventListener('dragover',e=>{if(!ziehtDatei(e))return;e.preventDefault();const d=el('drop');if(d)d.classList.add('over')});
 document.addEventListener('dragleave',()=>{const d=el('drop');if(d)d.classList.remove('over')});
 document.addEventListener('drop',e=>{
   e.preventDefault();const d=el('drop');if(d)d.classList.remove('over');
