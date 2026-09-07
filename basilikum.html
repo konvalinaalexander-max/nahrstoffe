@@ -1392,8 +1392,10 @@ function chartPunkte(box,o){
     s+=`<rect x="${x-5}" y="${mt}" width="10" height="${H-mb-mt}" fill="transparent" data-tipp="${esc(`<b>Logbuch</b><span class="z">${esc(ev.label)}</span>`)}" style="cursor:help"/>`;
     s+=`<text x="${x+3}" y="${mt+10}" font-size="10" fill="#141D17">${esc(String(ev.label).slice(0,20))}</text>`;
   }
-  if(davor)s+=`<text x="${ml+2}" y="${mt-9}" font-size="10" fill="#697A6C">← ${davor} Logbucheintrag${davor>1?'e':''} davor</text>`;
-  if(danach)s+=`<text x="${W-mr-2}" y="${mt-9}" text-anchor="end" font-size="10" fill="#697A6C">${danach} danach →</text>`;
+  /* Eintraege ausserhalb des Zeitraums gehoeren an die Zeitachse, nicht an
+     den oberen Rand – dort stiessen sie mit der Achsenbeschriftung zusammen. */
+  const ausserhalb=[davor?`← ${davor} Logbucheintrag${davor>1?'e':''} davor`:'',
+                    danach?`${danach} danach →`:''].filter(Boolean).join(' · ');
 
   /* Linien nur innerhalb einer Gruppe – ueber eine Satzgrenze hinweg waere
      die Verbindung eine Behauptung ueber zwei verschiedene Bestaende. */
@@ -1423,7 +1425,7 @@ function chartPunkte(box,o){
     gesehen.add(p.xtext);letztX=x;
     s+=`<text x="${x}" y="${H-mb+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(p.xtext)}</text>`;
   }
-  s+=`<text x="${(ml+W-mr)/2}" y="${H-(spur?36:6)}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}</text>`;
+  s+=`<text x="${(ml+W-mr)/2}" y="${H-(spur?36:6)}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}${ausserhalb?' · '+esc(ausserhalb):''}</text>`;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
   if(spur){
     const y=H-16;

@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: September 2026 · Schema 5 · rund 250 KB, 3500 Zeilen, eine Datei.
+Stand: September 2026 · Schema 6 · rund 330 KB, 4870 Zeilen, eine Datei.
 
 ---
 
@@ -16,8 +16,9 @@ Laboranalysen eines Gartenbaubetriebs einliest, sie fachlich auswertet und die
 Ergebnisse so darstellt, dass ein Betriebsleiter ohne Erklärung damit arbeiten
 kann. Es gibt keinen Server, keinen Build, keine Datenbank: Daten werden als
 JSON-Datei heruntergeladen und wieder hochgeladen. Die einzige externe
-Abhängigkeit ist pdf.js von einem CDN, und ohne sie funktioniert alles ausser
-dem PDF-Import weiter.
+Abhängigkeiten sind pdf.js und SheetJS von einem CDN; fallen sie aus,
+funktioniert alles ausser dem PDF- beziehungsweise Excel-Import weiter (CSV
+liest die App ohne jede Bibliothek).
 
 ---
 
@@ -74,6 +75,15 @@ Drei Berichtsformate werden aus PDF gelesen, dazu Handeingabe:
 | **Blattsaft** | NovaCropControl | 23 Parameter, typisch je eine Jung- und eine Altblattprobe, mit laborseitigem Sollbereich je Parameter | ppm, ausser Zucker %, EC mS/cm, pH und K/Ca ohne |
 | **Substrat** | Labor Ins | Reserven (P₂O₅, K₂O, Mg, Ca), sofort verfügbare Anteile, Spurenelemente, pH, Salz, Nmin | mg/l, Salz g/l |
 | **Giesswasser** | NovaCropControl | 21 Parameter, teils als Einzelbericht, teils als Sammelbericht mit Historie | **Makro mmol/l, Mikro µmol/l** — nicht mg/l |
+| **Tankmessungen** | eigene Excel-Datei | pH und EC je Reservoir, Wurzel-EC je Satz, **Bemerkungsspalte** | mS/cm, pH |
+| **Fotos** | Kamera | Schadbilder, verkleinert als JPEG in derselben Sicherungsdatei | – |
+
+Die Bemerkungsspalte der Excel-Datei ist der wertvollste Teil des Imports: sie
+enthält den grössten Teil der Betriebsgeschichte und wird zu Logbuchvorschlägen
+(`bemerkungLesen`). Drei Regeln darin sind teuer erkauft und dürfen nicht
+verloren gehen: «Wasser **ohne** Dünger» ist keine Düngergabe, ein benanntes
+Produkt schlägt ein allgemeines Wort («Düngerzugabe (3kg Epsotop»), und ein
+Mittel ohne Menge ist meist Erzählung («vor Säurezugabe») und wird zur Notiz.
 
 Wichtige Eigenheiten, die im Parser abgebildet sind:
 
@@ -102,18 +112,36 @@ Wichtige Eigenheiten, die im Parser abgebildet sind:
 Ein einziges globales Objekt `db`. `leer()` definiert die Form:
 
 ```js
-{schema:5, version:0, gespeichert:null,
+{schema:6, version:0, gespeichert:null,
  analysen:[],      // jede Probe eine Zeile: typ, datum, satz, blattalter,
                    // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle
- ereignisse:[],    // Logbuch: Düngerwechsel, pH-Korrektur, Substratwechsel …
- messungen:[],     // pH/EC im Rücklauf, von Hand am Tank gemessen
+ ereignisse:[],    // Logbuch: typ, datum, mittel, menge, einheit, stelle,
+                   // jeReservoir, felder{}, geltung, saetze[], quelle
+ messungen:[],     // pH/EC am Tank: datum, stelle, ph, ec, ecFrisch, temp,
+                   // notiz, quelle ('hand' | 'excel')
+ fotos:[],         // id, datum, titel, notiz, satz, etage, analyseId,
+                   // herkunftDatum, breite, hoehe, daten (Data-URL, JPEG)
+ produkte:{},      // Stammdaten: name, form, dichte, gehalt{Element:%}, quelle
  rundgaenge:[],    // wöchentliche Bonitur, Schadbilder in Stufen 0–3
  saetze:{},        // je Satz: eingetragenes Aussaatdatum, Notizen
  eigeneOptima:{},  // eigene Sollbereiche, schlagen die des Labors — je Grenze
- plan:{zielwochen:[2,4,6], begleitet:[], geplant:[]},
+ plan:{zielwochen:[2,4,6], begleitet:[], geplant:[]},   // geplant: +typ, +analyseId
  einst:{verlagerung:1.3, kMg:8, kCa:3, nh4no3:0.5, toleranz:5,
-        dauerSommer:7, dauerWinter:10, kern:[…], schaeden:[…], gwRicht:{}}}
+        dauerSommer:7, dauerWinter:10, systemLiter:20000,
+        kern:[…], schaeden:[…], gwRicht:{}}}
 ```
+
+**Mengen im Logbuch sind Zahlen mit fester Einheit je Art**, nicht Freitext.
+Das ist der Grund, warum die Soll-Ist-Bilanz überhaupt rechnen kann. Bei
+flüssigen Produkten ist die Einheit Liter, bei festen Kilogramm — abgeleitet
+aus `produkte[x].form`. **`jeReservoir` wird in der Anzeige nie stillschweigend
+verdoppelt** («15 l je Reservoir (zusammen 30 l)»); nur die Bilanz rechnet mit
+dem Doppelten und sagt das ausdrücklich.
+
+**Fotos liegen als Data-URL in derselben JSON-Datei.** Leitplanke 2 lässt
+weder Ordnerzugriff noch Browserspeicher zu, also bleibt nur das. Deshalb wird
+beim Einlesen auf 1400 px und JPEG-Güte 0,72 verkleinert, und die Grösse der
+Sicherungsdatei steht im Reiter Fotos — ab 40 MB mit Warnung.
 
 **Zentrale abgeleitete Einheit: die Erhebung.** `erhebungen()` gruppiert
 Analysen nach `satz|datum|zustand` — eine Jung- und eine Altblattprobe desselben
@@ -269,6 +297,11 @@ wird auf `render()` zurückgefallen.
 9. Einstellungen überleben das Neuzeichnen.
 10. Leere Zustände erklären, was fehlt.
 
+Dazu die **Fotospur**: `chartPunkte` nimmt `fotos:[{datum,x,anzahl,tipp}]` und
+zeichnet je Tag ein Kamerasymbol in einer eigenen Zeile unter der
+Messwertfläche — nie in ihr, sonst verdeckt es Messpunkte. Nur auf einer
+Datumsachse.
+
 ---
 
 ## 7 · Die zehn Reiter
@@ -280,10 +313,11 @@ wird auf `render()` zurückgefallen.
 | **Nährstoffe** | Ein oder mehrere Nährstoffe über Zeit oder Kulturwoche, mit Tabellen darunter |
 | **Wirkung** | Vorher/Nachher um ein Logbuchereignis — bewusst qualitativ, siehe Abschnitt 8 |
 | **Substrat** | Angebot im Substrat gegen Aufnahme im Blatt |
-| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, Richtwerte, der Kreislauf selbst |
-| **Logbuch** | Alles, was geändert wurde — die Grundlage des Reiters Wirkung |
+| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
+| **Logbuch** | Schnellerfassung in einer Zeile, Zeitstrahl nach Monaten, nach Art filterbar, «wieder so» zum Duplizieren |
+| **Fotos** | Galerie je Tag; jedes Foto erscheint als Kamerasymbol unter den Zeitdiagrammen |
 | **Rundgang** | Wöchentliche Bonitur, Schadbilder in Stufen 0–3 |
-| **Planer** | Was als Nächstes zu beproben ist, mit Begründung je Vorschlag |
+| **Planer** | Geplante Proben von Hand; die automatischen Vorschläge stehen zugeklappt darunter |
 | **Sätze & Einstellungen** | Aussaatdaten, eigene Optima, alle Schwellen, Kernnährstoffe |
 
 Der **Kontrolldialog** vor der Übernahme ist wichtig: nichts wandert
@@ -348,8 +382,10 @@ weiter, auch wenn du eine bessere Lösung siehst — dann sag es, bevor du es tu
    Dünger-Dosierungsrechnung (auch nicht der Säurebedarf gegen
    Hydrogencarbonat), die Nützlingserfassung, altersabhängige
    Optimum-Bereiche, jede behauptete Kausalität zwischen Nährstofflage und
-   Schädlingsbefall. Der Giesswasser-Parser war ebenfalls zurückgestellt und
-   ist inzwischen **auf ausdrücklichen Wunsch gebaut**.
+   Schädlingsbefall, Bildanalyse und automatische Symptomerkennung. Der
+   Giesswasser-Parser war ebenfalls zurückgestellt und ist inzwischen **auf
+   ausdrücklichen Wunsch gebaut**. Die Soll-Ist-Bilanz beschreibt, was war —
+   sie empfiehlt nichts.
 8. **Frag nach, bevor du das Datenmodell umbaust.** Ein Schemawechsel braucht
    einen Migrationspfad und einen Hinweis an den Nutzer, was sich geändert hat.
 
@@ -368,12 +404,14 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (134 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (318 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
-  node pruefung/browser.js          # zehn Reiter, Dialoge, Diagramme, Escaping
+  BILDER=…/bilder TAB=…/tab \
+  node pruefung/browser.js          # elf Reiter, Dialoge, Diagramme, Escaping,
+                                    # Fotos, CSV-Import, Logbuch, Planer
 PDF=…/probe.pdf  node pruefung/upload.js     # echtes Blattsaft-PDF
 GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 ```
@@ -383,6 +421,10 @@ GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 | `harness.js` | DOM-Ersatz für node; schneidet den Selbstaufruf ab, gibt die App-Funktionen zurück |
 | `n1`–`n5` | Regressionsprüfungen zu den 23 Befunden des ersten Audits |
 | `g1` | Wasserparser gegen die drei echten Berichte |
+| `f1` | Fotos: Migration, Fotospur, Escaping, Grössenwarnung |
+| `l1` | Logbuch: Umstellung auf strukturierte Mengen, Umbenennungen |
+| `x1` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen |
+| `b1` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
@@ -404,6 +446,7 @@ Chromium zur Verfügung.
 | `BEFUNDE.md` | erstes Audit, 23 Befunde, alle gegen das echte PDF geprüft |
 | `BEFUNDE-STATISTIK.md` | statistische Prüfung des Datenmodells, 19 Befunde, 5 offene Entscheidungen — **das wichtigste Dokument für die Weiterarbeit** |
 | `UMBAU.md` | was der Neubau geändert hat, inklusive der Nachträge zu Giesswasser und Diagrammen |
+| `AUFTRAG-ERWEITERUNG.md` | der Auftrag für Fotos, Logbuch, Excel-Import, Bilanz und Planer — umgesetzt |
 | `PROMPT-DATENMODELL.md` | Auftrag für die statistische Prüfung |
 | `pruefung/LIESMICH.md` | wie die Prüfungen aufgebaut sind |
 
@@ -424,3 +467,10 @@ Kennzahl genommen wurden, weil sonst Unsinn empfohlen wird. Dass die
 Vorbehaltshinweise fachlich notwendig sind und nicht wegoptimiert werden
 dürfen. Dass die App bewusst nichts dosiert. Und dass der Chef mitliest — jede
 Zahl muss sich in einem Satz erklären lassen.
+
+Aus der Erweiterung dazugekommen: dass `jeReservoir` in der Anzeige nie
+verdoppelt wird, aber in der Bilanz schon — und dass beides ausgesprochen wird.
+Dass die Bilanz bei Logbuchlücken die Zahlen verdeckt, statt sie zu zeigen.
+Dass die drei Zuordnungsregeln in `bemerkungLesen` je einen echten Fehler
+behoben haben. Und dass die Fotos in der JSON-Datei liegen, weil Leitplanke 2
+keinen anderen Ort erlaubt — nicht, weil es die beste Lösung wäre.
