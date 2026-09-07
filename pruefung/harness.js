@@ -38,8 +38,9 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'optVon','optQuelle','status','istOk','istRand','lage','abstand','ausmass','schwereVon',
  'erhebungen','massgebliche','bewerte','indexVon','bilanz','verh','substratZu','befunde','wiederkehrend',
  'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
- 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze',
- 'chartLinien','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
+ 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
+ 'chartPunkte','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
+ 'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',

@@ -156,6 +156,17 @@ details[open]>summary:before{content:'▾ '}
 .tipp .z{color:#C9D6C9;white-space:nowrap}
 .tipp .z .w,.tipp .z.w{color:#fff;font-family:'JetBrains Mono',monospace}
 .tipp .k{color:#9FB39F;margin-top:4px;font-size:11px;white-space:normal}
+.tipp img{display:block;max-width:100%;border-radius:5px;margin-top:6px}
+
+/* ── Fotos ── */
+.galerie{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px}
+.foto{border:1px solid var(--line);border-radius:var(--rs);overflow:hidden;background:#fff}
+.foto img{display:block;width:100%;height:112px;object-fit:cover;cursor:pointer;background:var(--line2)}
+.foto .b{padding:7px 9px}
+.gross{max-width:100%;max-height:58vh;display:block;margin:0 auto;border-radius:8px;background:var(--line2)}
+.fotoreihe{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--rs);padding:11px;margin-bottom:10px;background:var(--card2)}
+.fotoreihe img{width:120px;height:90px;object-fit:cover;border-radius:6px;flex:none;background:var(--line2)}
+.herkunft{font-size:10.5px;color:var(--muted);font-style:italic}
 .vorschlag{border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;margin-bottom:9px;background:var(--card2)}
 .vorschlag.dringend{border-color:var(--alarm-line);background:var(--alarm-soft)}
 .vorschlag .wann{font-family:'JetBrains Mono',monospace;font-weight:500}
@@ -198,6 +209,7 @@ details[open]>summary:before{content:'▾ '}
 </dialog>
 <input type="file" id="fileJson" accept=".json" hidden>
 <input type="file" id="filePdf" accept="application/pdf" multiple hidden>
+<input type="file" id="fileFoto" accept="image/*" multiple hidden>
 
 <script>
 "use strict";
@@ -305,6 +317,9 @@ const MOBILTEXT={
 const KERN_VORGABE=['NO3','K','Ca','Mg','P','S','Fe','Mn','Zn','B','Cu'];
 const KERN_WAEHLBAR=['NO3','N_gesamt','K','Ca','Mg','P','S','Fe','Mn','Zn','B','Cu','Si','Mo','Na','Cl'];
 const HAUPT=['NO3','K','Ca','Mg','P'];
+/* Blattetage: Symptome sind etagenabhaengig zu deuten – ein Aufhellen der
+   Spitze bedeutet etwas anderes als eines der untersten Blaetter. */
+const ETAGEN=['Spitze / jüngstes Blatt','oberes Drittel','Mitte','unteres Drittel','unterste Blätter','Wurzel','ganze Pflanze','Bestand'];
 /* Ballastionen: reichern sich im Umlauf an, werden nie zugedüngt.
    Nur «zu hoch» ist ein Befund, «zu tief» ist der Normalfall. */
 const BALLAST=['Na','Cl'];
@@ -595,9 +610,21 @@ async function pdfSeiten(buf){
 }
 
 /* ══════════ 4 · Datenmodell ══════════ */
-const leer=()=>({schema:5,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+/* Produktstammdaten fuer die Soll-Ist-Bilanz. Gehalte in Prozent der Masse,
+   Dichte in kg/l. Die Zahlen stammen von den Etiketten und sind unter
+   «Saetze & Einstellungen» aenderbar – sie sind Herstellerangaben, keine
+   eigene Messung. */
+const PRODUKTE_VORGABE={
+  biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig',dichte:1.25,
+    gehalt:{N_gesamt:9,Fe:0.22,Mn:0.10,Zn:0.19,Cu:0.13},quelle:'Etikett'},
+  epsotop:{name:'Epsotop (Bittersalz)',form:'fest',dichte:null,
+    gehalt:{Mg:9.86,S:13.0},quelle:'Etikett'}};
+
+const leer=()=>({schema:6,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+  fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4,6],begleitet:[],geplant:[]},
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
+    systemLiter:20000,
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
 let db=leer(),tab='lage',dirty=false,nachRender=null;
 /* Registrierung des aktiven Diagramms: erlaubt es, nur das Diagramm samt
@@ -612,6 +639,8 @@ function migriere(roh){
   d.plan=Object.assign({zielwochen:[2,4,6],begleitet:[],geplant:[]},roh.plan||{});
   d.eigeneOptima=roh.eigeneOptima||{};
   d.saetze=roh.saetze||{};
+  d.fotos=(roh.fotos||[]).map(f=>Object.assign({},f));
+  d.produkte=Object.assign(JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),roh.produkte||{});
   d.analysen=(roh.analysen||[]).map(a=>Object.assign({},a));
   if(von<4){
     let u=0,s=0,al=0;
@@ -649,7 +678,18 @@ function migriere(roh){
     if(gwAlt)notizen.push(`${gwAlt} von Hand erfasste Giesswasseranalyse${gwAlt>1?'n sind':' ist'} markiert: damals waren die Felder als mg/l beschriftet. Das Labor liefert mmol/l und µmol/l – bitte diese Werte kontrollieren. Eingelesene Berichte sind davon nicht betroffen.`);
     if(!roh.einst||!roh.einst.gwRicht)notizen.push('Für das Giesswasser gibt es jetzt einen eigenen Reiter mit Richtwerten. Sie sind gesetzte Annahmen und im Reiter änderbar.');
   }
-  d.schema=5;
+  if(von<6){
+    notizen.push('Es gibt jetzt eine Fotoablage. Fotos werden verkleinert in derselben Sicherungsdatei abgelegt und erscheinen als eigene Spur unter den Zeitdiagrammen.');
+    notizen.push('Produktstammdaten für Biovin und Epsotop sind mit den Etikettwerten angelegt. Sie dienen der neuen Soll-Ist-Bilanz im Reiter Giesswasser und sind unter «Sätze & Einstellungen» änderbar.');
+    let mz=0;
+    for(const m of d.messungen||[]){if(m.quelle===undefined){m.quelle='hand';mz++}}
+    if(mz)notizen.push(`${mz} Tankmessung${mz>1?'en tragen':' trägt'} jetzt ein Herkunftsfeld – von Hand erfasst oder aus dem Excel-Import.`);
+    let ez=0;
+    for(const e of d.ereignisse||[]){if(e.quelle===undefined){e.quelle='hand';ez++}}
+    if(ez)notizen.push(`${ez} Logbucheintrag${ez>1?'e tragen':' trägt'} jetzt ein Herkunftsfeld.`);
+    if(!roh.einst||roh.einst.systemLiter==null)notizen.push('Das Systemvolumen ist mit 20 000 Litern vorbelegt (zwei Reservoirs à 10 000). Unter «Sätze & Einstellungen» änderbar – die Soll-Ist-Bilanz rechnet damit.');
+  }
+  d.schema=6;
   return {db:d,notizen,von};
 }
 
@@ -1212,7 +1252,10 @@ function chartPunkte(box,o){
   const serien=(o.serien||[]).filter(se=>se.punkte&&se.punkte.length&&!diagAus.has(se.id));
   const pts=serien.flatMap(se=>se.punkte);
   if(!pts.length)return leerBox(box,(o.serien||[]).length?'Alle Reihen sind ausgeblendet – in der Legende wieder einblenden.':'Keine Werte für diese Auswahl.');
-  const W=Math.max(box.clientWidth||820,540),H=hoehe,ml=lageSkala?100:66,mr=22,mt=26,mb=48;
+  /* Fotospur: eine eigene Zeile unter der Messwertflaeche. Sie bekommt Platz
+     im unteren Rand, damit sie keinen Messpunkt verdeckt. */
+  const spur=(xTyp==='datum'&&o.fotos&&o.fotos.length)?o.fotos:null;
+  const W=Math.max(box.clientWidth||820,540),H=hoehe+(spur?30:0),ml=lageSkala?100:66,mr=22,mt=26,mb=48+(spur?30:0);
   const xs=pts.map(p=>p.x);
   let x0=Math.min(...xs),x1=Math.max(...xs);
   if(x0===x1){const d=xTyp==='datum'?6048e5:1;x0-=d;x1+=d}
@@ -1304,8 +1347,27 @@ function chartPunkte(box,o){
     gesehen.add(p.xtext);letztX=x;
     s+=`<text x="${x}" y="${H-mb+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(p.xtext)}</text>`;
   }
-  s+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}</text>`;
+  s+=`<text x="${(ml+W-mr)/2}" y="${H-(spur?36:6)}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}</text>`;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
+  if(spur){
+    const y=H-16;
+    s+=`<line x1="${ml}" x2="${W-mr}" y1="${y-13}" y2="${y-13}" stroke="#EDF1E9"/>`;
+    s+=`<text x="${ml-8}" y="${y+3}" text-anchor="end" font-size="10" fill="#697A6C">Fotos</text>`;
+    let letzt=-1e9;
+    for(const g of spur){
+      const x=X(g.x);
+      if(x<ml-6||x>W-mr+6)continue;
+      if(x-letzt<13)continue;                     /* zu dicht: nicht doppelt zeichnen */
+      letzt=x;
+      s+=`<g style="cursor:pointer" data-tun="fotoTag" data-datum="${esc(g.datum)}" data-tipp="${esc(g.tipp)}">
+        <rect x="${x-9}" y="${y-9}" width="18" height="18" rx="4" fill="transparent"/>
+        <rect x="${x-7}" y="${y-5}" width="14" height="10" rx="2.5" fill="#3A6DA6"/>
+        <rect x="${x-2.5}" y="${y-7.5}" width="5" height="3" rx="1" fill="#3A6DA6"/>
+        <circle cx="${x}" cy="${y}" r="2.6" fill="#fff"/>
+        ${g.anzahl>1?`<circle cx="${x+8}" cy="${y-7}" r="6" fill="#141D17"/><text x="${x+8}" y="${y-4}" text-anchor="middle" font-size="8.5" fill="#fff" font-weight="600">${g.anzahl}</text>`:''}
+      </g>`;
+    }
+  }
   box.innerHTML=s+'</svg>';
 }
 /* Baustein fuer den Inhalt des Infokaestchens. Alles wird hier maskiert,
@@ -1444,9 +1506,9 @@ document.addEventListener('change',ev=>{
 });
 
 const TABS=[['lage','Überblick'],['analysen','Analysen'],['naehrstoff','Nährstoffe'],['wirkung','Wirkung'],
- ['substrat','Substrat'],['giess','Giesswasser'],['logbuch','Logbuch'],['rundgang','Rundgang'],['planer','Planer'],['saetze','Sätze & Einstellungen']];
+ ['substrat','Substrat'],['giess','Giesswasser'],['logbuch','Logbuch'],['fotos','Fotos'],['rundgang','Rundgang'],['planer','Planer'],['saetze','Sätze & Einstellungen']];
 const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),naehrstoff:()=>vNaehr(),wirkung:()=>vWirkung(),
- substrat:()=>vSubstrat(),giess:()=>vGiess(),logbuch:()=>vLogbuch(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
+ substrat:()=>vSubstrat(),giess:()=>vGiess(),logbuch:()=>vLogbuch(),fotos:()=>vFotos(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
 function render(){
   const yVor=window.scrollY||window.pageYOffset||0;
   tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
@@ -1596,7 +1658,7 @@ function vLage(){
     chartIndex(el('cIndex'),erh);
     const serien=ueSerien();
     chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,
-      linien:ueLinien!=='aus',aufKlick:true,
+      linien:ueLinien!=='aus',aufKlick:true,fotos:fotoSpur?fotoGruppen():null,
       ereignisse:ueLog?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
     el('legBand').innerHTML=legende(serien,diagAus,'Skala 0–3: 1 bis 2 ist der Sollbereich');
   }
@@ -1611,7 +1673,7 @@ function vLage(){
         </span></div>
         <div class="wz"><span class="lab">Linien</span>
           <span class="seg">${[['aus','keine'],['satz','je Satz'],['alle','durchgehend']].map(([v,l])=>`<button class="${ueLinien===v?'on':''}" data-tun="ueLinien" data-v="${v}">${l}</button>`).join('')}</span>
-          <span class="chip ${ueLog?'on':''}" data-tun="ueLog" style="margin-left:8px">Logbuch einblenden</span>
+          <span class="chip ${ueLog?'on':''}" data-tun="ueLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}
           <button class="ghost" data-tun="ueSatzWahl" data-v="problem" style="margin-left:auto">Was daneben liegt</button>
           <button class="ghost" data-tun="ueSatzWahl" data-v="kern">Alle der Kennzahl</button>
         </div></div>
@@ -2192,7 +2254,7 @@ function vNaehr(){
       xTyp:nsAchse==='woche'?'zahl':'datum',
       xLabel:nsAchse==='woche'?'Kulturwoche bei der Probenahme':'Probendatum',
       yLabel:Z.skala==='lage'?'Lage auf der Skala 0–3':Z.einheiten.join(' · '),
-      linien:nsLinien!=='aus',hoehe:340,aufKlick:true,
+      linien:nsLinien!=='aus',hoehe:340,aufKlick:true,fotos:(fotoSpur&&nsAchse==='datum')?fotoGruppen():null,
       ereignisse:(nsLog&&nsAchse==='datum')?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum)))
         .map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
     el('legNs').innerHTML=legende(serien,diagAus,
@@ -2226,7 +2288,7 @@ function vNaehr(){
       <div class="wz">
         <span class="lab">Blatt</span>${segment('nsBlatt',nsBlatt,[['beide','alle']].concat(blattArten.map(a=>[a,a==='misch'?'Mischprobe':a])))}
         <span class="lab" style="min-width:0;margin-left:8px">Linien</span>${segment('nsLinien',nsLinien,[['aus','keine'],['satz','je Satz'],['alle','durchgehend']])}
-        ${nsAchse==='datum'?`<span class="chip ${nsLog?'on':''}" data-tun="nsLog" style="margin-left:8px">Logbuch einblenden</span>`:''}
+        ${nsAchse==='datum'?`<span class="chip ${nsLog?'on':''}" data-tun="nsLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}`:''}
       </div></div>`;
     t+=`<div id="cNs" class="diagramm"></div><div class="legend" id="legNs"></div>`;
     if(Z.erzwungen)t+=`<div class="note">${Z.achse.grund==='einheit'
@@ -2702,6 +2764,7 @@ function vGiess(){
       const Z=gwAb(),serien=gwSerien(Z),gwSk=Z.sk,gwEinheiten=Z.einheiten,gwBand=Z.band;
       chartPunkte(el('cGw'),{serien,yTyp:'wert',band:gwBand,bandLabel:'Richtwert (Annahme)',
         xTyp:'datum',xLabel:'Probendatum',hoehe:330,linien:gwLinien!=='aus',aufKlick:true,
+        fotos:fotoSpur?fotoGruppen():null,
         yLabel:gwSk==='rel'?'Anteil am höchsten gemessenen Wert, in %':gwEinheiten.join(' · '),
         ereignisse:gwLog?rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
       el('legGw').innerHTML=legende(serien,diagAus,
@@ -2740,7 +2803,7 @@ function vGiess(){
           <span class="seg">${[['wert','Messwert',!gwGleich],['rel','relativ, in %',false]].map(([v,l,aus])=>`<button class="${gwSk===v?'on':''}"${aus?' disabled title="'+esc(gwAchse.grund==='einheit'?'Die ausgewählten Parameter haben verschiedene Einheiten.':'Die ausgewählten Parameter liegen zu weit auseinander für eine gemeinsame Messwert-Achse.')+'"':''} data-tun="gwSkala" data-v="${v}">${l}</button>`).join('')}</span>
           <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
           <span class="seg">${[['aus','keine'],['stelle','je Stelle'],['alle','durchgehend']].map(([v,l])=>`<button class="${gwLinien===v?'on':''}" data-tun="gwLinien" data-v="${v}">${l}</button>`).join('')}</span>
-          <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>
+          <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>${fotoChip()}
         </div></div>
       <div id="cGw" class="diagramm"></div><div class="legend" id="legGw"></div>`;
     if(gwErzwungen)t+=`<div class="note">${gwAchse.grund==='einheit'
@@ -2929,6 +2992,346 @@ AKTION.gwRicht=(d,ev)=>{
   db.einst.gwRicht=db.einst.gwRicht||{};
   db.einst.gwRicht[d.k]=n;aend();render();
 };
+
+/* ══════════ 12c · Fotos ══════════
+   Ein Foto ist der schnellste Weg, eine Managementaenderung mit einer
+   sichtbaren Wirkung zu verbinden. Fotos liegen als verkleinerte JPEG in
+   derselben Sicherungsdatei wie alles andere – Leitplanke 2 laesst keinen
+   Ordnerzugriff und keinen Browserspeicher zu. Darum wird beim Einlesen
+   verkleinert und die Dateigroesse offengelegt.                            */
+const FOTO_KANTE=1400, FOTO_GUETE=0.72, FOTO_WARN=40*1024*1024;
+
+/* Aufnahmedatum aus dem EXIF-Block eines JPEG. Faellt es aus, wird das
+   Dateidatum genommen; beides wird in der Oberflaeche als Herkunft benannt,
+   damit niemand ein falsches Datum fuer gemessen haelt. */
+function exifDatum(buf){
+  try{
+    const d=new DataView(buf);
+    if(d.getUint16(0)!==0xFFD8)return null;
+    let off=2;
+    while(off<d.byteLength-4){
+      if(d.getUint8(off)!==0xFF)return null;
+      const marke=d.getUint8(off+1);
+      if(marke===0xD8||marke===0xD9||(marke>=0xD0&&marke<=0xD7)){off+=2;continue}
+      if(marke===0xDA)return null;                       /* ab hier Bilddaten */
+      const len=d.getUint16(off+2);
+      if(marke===0xE1&&d.getUint32(off+4)===0x45786966){ /* «Exif» */
+        const t=off+10;
+        const klein=d.getUint16(t)===0x4949;
+        const g16=q=>d.getUint16(q,klein),g32=q=>d.getUint32(q,klein);
+        if(g16(t+2)!==0x002A)return null;
+        const feld=(start,tag)=>{
+          const n=g16(start);
+          for(let k=0;k<n;k++){const e=start+2+k*12;if(g16(e)===tag)return e}
+          return null;
+        };
+        const ifd0=t+g32(t+4);
+        let e=feld(ifd0,0x0132);                          /* DateTime */
+        const unter=feld(ifd0,0x8769);
+        if(unter){const sub=t+g32(unter+8);
+          const e2=feld(sub,0x9003)||feld(sub,0x9004);    /* DateTimeOriginal */
+          if(e2)e=e2}
+        if(!e)return null;
+        const anz=g32(e+4),pos=anz>4?t+g32(e+8):e+8;
+        let txt='';
+        for(let k=0;k<Math.min(19,anz);k++)txt+=String.fromCharCode(d.getUint8(pos+k));
+        const m=txt.match(/^(\d{4})[:\-](\d{2})[:\-](\d{2})/);
+        if(!m||+m[1]<1990||+m[1]>2100)return null;
+        return `${m[1]}-${m[2]}-${m[3]}`;
+      }
+      off+=2+len;
+    }
+  }catch(err){}
+  return null;
+}
+
+/* Verkleinern ueber ein <canvas>. Die Ausrichtung ueberlassen wir dem
+   Browser: aktuelle Fassungen von Firefox und Chromium drehen ein Bild
+   anhand des EXIF-Felds schon beim Zeichnen. Wuerden wir zusaetzlich
+   drehen, staende es doppelt gedreht. */
+function bildVerkleinern(file){
+  return new Promise((fertig,fehler)=>{
+    const fr=new FileReader();
+    fr.onerror=()=>fehler(new Error('Die Datei liess sich nicht lesen.'));
+    fr.onload=()=>{
+      const bild=new Image();
+      bild.onerror=()=>fehler(new Error('Das ist kein lesbares Bild.'));
+      bild.onload=()=>{
+        try{
+          const f=Math.min(1,FOTO_KANTE/Math.max(bild.width,bild.height));
+          const c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(bild.width*f));
+          c.height=Math.max(1,Math.round(bild.height*f));
+          const g=c.getContext('2d');
+          g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+          g.drawImage(bild,0,0,c.width,c.height);
+          fertig({daten:c.toDataURL('image/jpeg',FOTO_GUETE),breite:c.width,hoehe:c.height,
+                  vorher:file.size,name:file.name});
+        }catch(err){fehler(err)}
+      };
+      bild.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+const dataUrlBytes=u=>{const i=String(u||'').indexOf(',');return i<0?0:Math.round((u.length-i-1)*3/4)};
+const dbBytes=()=>{try{return JSON.stringify(db).length}catch(e){return 0}};
+const mb=b=>nz(b/1048576,1)+' MB';
+const fotosNach=d=>db.fotos.filter(f=>f.datum===d);
+const fotoZuAnalyse=id=>db.fotos.filter(f=>f.analyseId===id);
+
+/* ── Einlesen ── */
+let FOTOPRUEF=[];
+async function fotosEinlesen(files){
+  const liste=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name));
+  if(!liste.length)return toast('Keine Bilddateien dabei.');
+  toast(`${liste.length} Bild${liste.length>1?'er werden':' wird'} verkleinert …`);
+  const out=[];
+  for(const file of liste){
+    let datum=null,herkunft='heute';
+    try{
+      const buf=await file.arrayBuffer();
+      const ex=exifDatum(buf);
+      if(ex){datum=ex;herkunft='Aufnahmedatum aus dem Bild'}
+    }catch(err){}
+    if(!datum&&file.lastModified){
+      const d=new Date(file.lastModified);
+      if(!isNaN(d)){datum=d.toISOString().slice(0,10);herkunft='Dateidatum'}
+    }
+    if(!datum){datum=heute();herkunft='heute – im Bild stand kein Datum'}
+    try{
+      const b=await bildVerkleinern(file);
+      out.push({id:uid(),datum,herkunft,titel:file.name.replace(/\.[^.]+$/,'').slice(0,60),
+        notiz:'',satz:'',etage:'',analyseId:'',dabei:true,
+        daten:b.daten,breite:b.breite,hoehe:b.hoehe,vorher:b.vorher});
+    }catch(err){
+      toast(`«${file.name}» liess sich nicht lesen: ${err.message}`);
+    }
+  }
+  if(!out.length)return;
+  FOTOPRUEF=out;
+  fotoPruefdialog();
+}
+
+function fotoPruefdialog(){
+  const saetze=alleSaetze();
+  const an=[...db.analysen].filter(a=>a.datum).sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  const nachher=FOTOPRUEF.filter(f=>f.dabei).reduce((n,f)=>n+dataUrlBytes(f.daten),0);
+  const html=`<p class="small">Jedes Bild ist auf höchstens ${FOTO_KANTE} px längste Kante verkleinert und neu als JPEG gespeichert.
+    Zusammen belegen die ausgewählten Bilder rund <strong>${mb(nachher)}</strong> in der Sicherungsdatei.</p>
+  ${FOTOPRUEF.map((f,i)=>`<div class="fotoreihe" data-fr="${i}">
+    <img src="${f.daten}" alt="">
+    <div style="flex:1;min-width:240px">
+      <div class="row">
+        <div><label class="lab">Datum</label><input type="date" data-aend="fpFeld" data-i="${i}" data-f="datum" value="${esc(f.datum)}">
+          <div class="herkunft">${esc(f.herkunft)}</div></div>
+        <div style="flex:1;min-width:150px"><label class="lab">Titel</label>
+          <input data-aend="fpFeld" data-i="${i}" data-f="titel" value="${esc(f.titel)}" style="width:100%"></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label class="lab">Satz <span class="muted">(freiwillig)</span></label>
+          <select data-aend="fpFeld" data-i="${i}" data-f="satz"><option value="">–</option>
+          ${saetze.map(x=>`<option${f.satz===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        <div><label class="lab">Blattetage <span class="muted">(freiwillig)</span></label>
+          <select data-aend="fpFeld" data-i="${i}" data-f="etage"><option value="">–</option>
+          ${ETAGEN.map(x=>`<option${f.etage===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        <div style="flex:1;min-width:200px"><label class="lab">An eine Analyse binden <span class="muted">(freiwillig)</span></label>
+          <select data-aend="fpFeld" data-i="${i}" data-f="analyseId" style="width:100%"><option value="">nicht gebunden – nur mit Datum</option>
+          ${an.slice(0,40).map(a=>`<option value="${esc(a.id)}"${f.analyseId===a.id?' selected':''}>${esc(TYPNAME[a.typ]||a.typ)} · ${fmt(a.datum)}${a.satz?' · '+esc(a.satz):''}${a.blattalter?' · '+esc(a.blattalter):''}</option>`).join('')}</select></div>
+      </div>
+      <div style="margin-top:8px"><label class="lab">Notiz</label>
+        <textarea rows="2" style="width:100%" data-aend="fpFeld" data-i="${i}" data-f="notiz">${esc(f.notiz)}</textarea></div>
+      <div class="row" style="margin-top:8px">
+        <span class="chip ${f.dabei?'on':''}" data-tun="fpDabei" data-i="${i}">${f.dabei?'wird übernommen':'wird übersprungen'}</span>
+        <span class="tiny muted">${f.breite}×${f.hoehe} px · ${mb(dataUrlBytes(f.daten))} statt ${mb(f.vorher)}</span>
+      </div>
+    </div></div>`).join('')}`;
+  dialog(`Fotos kontrollieren · ${FOTOPRUEF.length} Bild${FOTOPRUEF.length>1?'er':''}`,html,
+    `<button class="primary" data-tun="fpUeber">Übernehmen</button><button data-tun="dlgZu">Abbrechen</button>`);
+}
+AKTION.fpFeld=(d,ev)=>{const f=FOTOPRUEF[+d.i];if(f)f[d.f]=ev.target.value};
+AKTION.fpDabei=(d,ev,t)=>{
+  const f=FOTOPRUEF[+d.i];if(!f)return;
+  f.dabei=!f.dabei;
+  t.className='chip '+(f.dabei?'on':'');
+  t.textContent=f.dabei?'wird übernommen':'wird übersprungen';
+};
+AKTION.fpUeber=()=>{
+  const nimm=FOTOPRUEF.filter(f=>f.dabei);
+  if(!nimm.length)return toast('Kein Bild ausgewählt.');
+  for(const f of nimm){
+    if(!f.datum)return toast('Bei mindestens einem Bild fehlt das Datum.');
+    db.fotos.push({id:f.id,datum:f.datum,titel:f.titel||null,notiz:f.notiz||null,
+      satz:f.satz||null,etage:f.etage||null,analyseId:f.analyseId||null,
+      herkunftDatum:f.herkunft,breite:f.breite,hoehe:f.hoehe,daten:f.daten});
+  }
+  FOTOPRUEF=[];
+  aend();el('dlg').close();
+  const gr=dbBytes();
+  setTab('fotos');
+  toast(`${nimm.length} Bild${nimm.length>1?'er':''} übernommen. Sicherungsdatei jetzt rund ${mb(gr)} – nicht vergessen zu sichern.`);
+};
+
+/* ── Reiter ── */
+function vFotos(){
+  const alle=[...db.fotos].sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  const gr=dbBytes();
+  const proTag=new Map();
+  alle.forEach(f=>{const l=proTag.get(f.datum)||[];l.push(f);proTag.set(f.datum,l)});
+  let s=`<div class="card"><div class="hd"><div><h2>Fotos</h2>
+    <p class="sub">Wöchentliche Schadbilder, Wurzelbilder, alles Sichtbare. Jedes Foto erscheint als Kamerasymbol unter den Zeitdiagrammen –
+    dort verbindet sich das Bild mit den Messwerten und dem Logbuch desselben Tages.</p></div>
+    <button class="primary" data-tun="fotoWaehlen">Bilder wählen</button></div>
+    <div class="drop" id="dropFoto">Bilder hierher ziehen – auch mehrere auf einmal
+      <div class="tiny" style="margin-top:9px">Sie werden auf ${FOTO_KANTE} px verkleinert und als JPEG gespeichert. Das Aufnahmedatum wird aus dem Bild gelesen, wenn es dort steht.</div></div>`;
+  s+=`<div class="row" style="margin-top:14px">
+      <span class="tag">${alle.length} Foto${alle.length===1?'':'s'}</span>
+      <span class="tag">${proTag.size} Tag${proTag.size===1?'':'e'}</span>
+      <span class="tag">Sicherungsdatei rund ${mb(gr)}</span></div>`;
+  if(gr>FOTO_WARN)s+=`<div class="note warn">Die Sicherungsdatei ist mit rund ${mb(gr)} gross geworden.
+    Laden und Sichern dauern spürbar länger, und manche Mailanhänge sind bei 25 MB zu Ende.
+    Entferne ältere Fotos, die ihren Zweck erfüllt haben – die Messwerte bleiben davon unberührt.</div>`;
+  s+='</div>';
+
+  if(!alle.length)return s+`<div class="card"><div class="leer"><h3>Noch keine Fotos</h3>
+    <p class="muted" style="max-width:58ch;margin:0 auto">Ein Foto vom Bestand am Tag der Probenahme ist die billigste Zusatzinformation, die es gibt.
+    Es beantwortet später die Frage, die keine Zahl beantwortet: Sah man es der Pflanze an?</p></div></div>`;
+
+  for(const [datum,liste] of proTag){
+    const ev=db.ereignisse.filter(x=>x.datum===datum);
+    const erh=erhebungen().filter(e=>e.datum===datum);
+    s+=`<div class="card"><div class="hd"><div><h2>${fmt(datum)}</h2>
+      <p class="sub">${liste.length} Foto${liste.length===1?'':'s'}${ev.length?` · ${ev.length} Logbucheintrag${ev.length>1?'e':''} an diesem Tag`:''}${erh.length?` · ${erh.length} Erhebung${erh.length>1?'en':''}`:''}</p></div></div>
+      <div class="galerie">
+      ${liste.map(f=>`<div class="foto">
+        <img src="${f.daten}" alt="${esc(f.titel||'Foto')}" data-tun="fotoZeigen" data-id="${esc(f.id)}"
+          data-tipp="${esc(tippBau(f.titel||'Foto',FARBSTOFF[2],[['Datum',fmt(f.datum)],f.satz?['Satz',f.satz]:null,f.etage?['Etage',f.etage]:null],'Anklicken zeigt das Bild gross.'))}">
+        <div class="b"><div class="small" style="font-weight:500">${esc(f.titel||'ohne Titel')}</div>
+          <div class="tiny muted">${f.satz?esc(f.satz)+' · ':''}${f.etage?esc(f.etage):''}${f.analyseId?' · an eine Analyse gebunden':''}</div>
+          <div class="row" style="margin-top:6px;gap:4px">
+            <button class="ghost" data-tun="fotoBearbeiten" data-id="${esc(f.id)}">bearbeiten</button>
+            <button class="ghost" data-tun="fotoWeg" data-id="${esc(f.id)}">entfernen</button></div></div>
+      </div>`).join('')}
+      </div></div>`;
+  }
+  return s;
+}
+AKTION.fotoWaehlen=()=>el('fileFoto').click();
+AKTION.fotoWeg=d=>{
+  const f=db.fotos.find(x=>x.id===d.id);if(!f)return;
+  if(!confirm(`Foto «${f.titel||fmt(f.datum)}» entfernen? Das lässt sich nicht rückgängig machen.`))return;
+  db.fotos=db.fotos.filter(x=>x.id!==d.id);aend();render();toast('Foto entfernt.');
+};
+
+/* Bildansicht: blaettert durch alle Fotos desselben Tages und zeigt, was am
+   selben Tag sonst noch erfasst wurde. */
+let FOTOSCHAU={liste:[],pos:0};
+AKTION.fotoZeigen=d=>{
+  const f=db.fotos.find(x=>x.id===d.id);if(!f)return;
+  FOTOSCHAU={liste:fotosNach(f.datum),pos:0};
+  FOTOSCHAU.pos=Math.max(0,FOTOSCHAU.liste.findIndex(x=>x.id===f.id));
+  fotoSchau();
+};
+AKTION.fotoTag=d=>{
+  const l=fotosNach(d.datum);
+  if(!l.length)return;
+  FOTOSCHAU={liste:l,pos:0};fotoSchau();
+};
+AKTION.fotoBlaettern=d=>{
+  const n=FOTOSCHAU.liste.length;if(!n)return;
+  FOTOSCHAU.pos=(FOTOSCHAU.pos+ +d.v+n)%n;
+  fotoSchau();
+};
+function fotoSchau(){
+  const f=FOTOSCHAU.liste[FOTOSCHAU.pos];if(!f)return;
+  const ev=db.ereignisse.filter(x=>x.datum===f.datum);
+  const erh=erhebungen().filter(e=>e.datum===f.datum);
+  const an=f.analyseId?db.analysen.find(a=>a.id===f.analyseId):null;
+  const h=`<img class="gross" src="${f.daten}" alt="${esc(f.titel||'Foto')}">
+    <div class="row" style="margin-top:12px;align-items:flex-start">
+      <div style="flex:1;min-width:220px">
+        <div class="small"><strong>${esc(f.titel||'ohne Titel')}</strong></div>
+        <div class="tiny muted">${fmt(f.datum)}${f.satz?' · Satz '+esc(f.satz):''}${f.etage?' · '+esc(f.etage):''}
+          ${f.herkunftDatum?' · Datum: '+esc(f.herkunftDatum):''}</div>
+        ${f.notiz?`<p class="small" style="margin-top:8px;white-space:pre-wrap">${esc(f.notiz)}</p>`:''}
+      </div>
+      <div style="min-width:200px">
+        ${an?`<div class="tiny muted">gebunden an</div><button data-tun="detail" data-id="${esc(an.id)}">${esc(TYPNAME[an.typ]||an.typ)} vom ${fmt(an.datum)}</button>`:''}
+        ${erh.length?`<div class="tiny muted" style="margin-top:8px">Erhebung am selben Tag</div>
+          ${erh.map(e=>`<button data-tun="erhebung" data-id="${esc(e.id)}">Satz ${esc(e.satz||'?')}</button>`).join(' ')}`:''}
+        ${ev.length?`<div class="tiny muted" style="margin-top:8px">Logbuch am selben Tag</div>
+          ${ev.map(x=>`<div class="small">${esc(x.typ)}${x.titel?' · '+esc(x.titel):''}</div>`).join('')}`:''}
+        ${(!an&&!erh.length&&!ev.length)?'<p class="tiny muted">An diesem Tag ist sonst nichts erfasst.</p>':''}
+      </div></div>`;
+  dialog(`Foto ${FOTOSCHAU.pos+1} von ${FOTOSCHAU.liste.length} · ${fmt(f.datum)}`,h,
+    `${FOTOSCHAU.liste.length>1?'<button data-tun="fotoBlaettern" data-v="-1">◀ vorheriges</button><button data-tun="fotoBlaettern" data-v="1">nächstes ▶</button>':''}
+     <button data-tun="fotoBearbeiten" data-id="${esc(f.id)}">bearbeiten</button>
+     <div style="flex:1"></div><button data-tun="dlgZu">Schliessen</button>`);
+}
+
+let FOTOBEARB=null;
+AKTION.fotoBearbeiten=d=>{
+  const f=db.fotos.find(x=>x.id===d.id);if(!f)return;
+  FOTOBEARB=f.id;
+  const saetze=alleSaetze();
+  const an=[...db.analysen].filter(a=>a.datum).sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  dialog('Foto bearbeiten',
+   `<div class="fotoreihe"><img src="${f.daten}" alt="">
+     <div style="flex:1;min-width:240px">
+      <div class="row">
+        <div><label class="lab">Datum</label><input type="date" id="fbDatum" value="${esc(f.datum)}">
+          ${f.herkunftDatum?`<div class="herkunft">ursprünglich: ${esc(f.herkunftDatum)}</div>`:''}</div>
+        <div style="flex:1;min-width:160px"><label class="lab">Titel</label><input id="fbTitel" value="${esc(f.titel||'')}" style="width:100%"></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label class="lab">Satz</label><select id="fbSatz"><option value="">–</option>
+          ${saetze.map(x=>`<option${f.satz===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        <div><label class="lab">Blattetage</label><select id="fbEtage"><option value="">–</option>
+          ${ETAGEN.map(x=>`<option${f.etage===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+        <div style="flex:1;min-width:200px"><label class="lab">An eine Analyse binden</label>
+          <select id="fbAnalyse" style="width:100%"><option value="">nicht gebunden</option>
+          ${an.slice(0,40).map(a=>`<option value="${esc(a.id)}"${f.analyseId===a.id?' selected':''}>${esc(TYPNAME[a.typ]||a.typ)} · ${fmt(a.datum)}${a.satz?' · '+esc(a.satz):''}</option>`).join('')}</select></div>
+      </div>
+      <div style="margin-top:8px"><label class="lab">Notiz</label><textarea id="fbNotiz" rows="3" style="width:100%">${esc(f.notiz||'')}</textarea></div>
+     </div></div>`,
+   `<button class="primary" data-tun="fbSpeichern">Speichern</button><button data-tun="dlgZu">Abbrechen</button>`);
+};
+AKTION.fbSpeichern=()=>{
+  const f=db.fotos.find(x=>x.id===FOTOBEARB);if(!f)return;
+  const d=el('fbDatum').value;
+  if(!d)return toast('Datum fehlt.');
+  f.datum=d;f.titel=el('fbTitel').value||null;f.notiz=el('fbNotiz').value||null;
+  f.satz=el('fbSatz').value||null;f.etage=el('fbEtage').value||null;f.analyseId=el('fbAnalyse').value||null;
+  aend();el('dlg').close();render();toast('Gespeichert.');
+};
+
+/* ── Fotospur im Diagramm ──────────────────────────────────
+   Je Tag ein Kamerasymbol unter der Messwertflaeche. Mehrere Fotos desselben
+   Tages werden zu einem Symbol mit Anzahl gebuendelt. Miniaturbilder in der
+   Messwertflaeche selbst waeren huebsch und wuerden die Punkte verdecken –
+   darum eine eigene Spur. */
+let fotoSpur=true;
+AKTION.fotoSpur=()=>{fotoSpur=!fotoSpur;diagFrisch()};
+function fotoGruppen(){
+  const m=new Map();
+  for(const f of db.fotos){
+    if(!f.datum)continue;
+    const l=m.get(f.datum)||[];l.push(f);m.set(f.datum,l);
+  }
+  return [...m.entries()].map(([datum,liste])=>({
+    datum,x:+new Date(datum),anzahl:liste.length,
+    tipp:tippBau(liste.length>1?`${liste.length} Fotos`:(liste[0].titel||'Foto'),FARBSTOFF[2],
+      [['Datum',fmt(datum)],
+       liste[0].satz?['Satz',liste[0].satz]:null,
+       liste[0].etage?['Etage',liste[0].etage]:null],
+      'Anklicken öffnet die Bilder.')
+      +`<img src="${liste[0].daten}" alt="">`
+  })).sort((a,b)=>a.x-b.x);
+}
+/* Schaltflaeche fuer die Werkzeugleiste der Diagramme */
+const fotoChip=()=>db.fotos.length
+  ? `<span class="chip ${fotoSpur?'on':''}" data-tun="fotoSpur" style="margin-left:8px">Fotos (${db.fotos.length})</span>`
+  : '';
 
 /* ══════════ 13 · Logbuch ══════════ */
 function felderText(e){
@@ -3442,15 +3845,23 @@ async function laden(file){
 /* ══════════ 18 · Verdrahtung ══════════ */
 el('fileJson').onchange=e=>{const f=e.target.files[0];if(f)laden(f);e.target.value=''};
 el('filePdf').onchange=e=>{const l=[...e.target.files].map(f=>({pfad:f.name,file:f}));if(l.length)einlesen(l);e.target.value=''};
+el('fileFoto').onchange=e=>{const l=[...e.target.files];if(l.length)fotosEinlesen(l);e.target.value=''};
 /* PDFs lassen sich auf jedem Reiter ablegen, nicht nur auf «Analysen».
    Ohne preventDefault auf dragover oeffnet der Browser die Datei stattdessen. */
 const ziehtDatei=e=>!!(e.dataTransfer&&[...(e.dataTransfer.types||[])].indexOf('Files')>=0);
-document.addEventListener('dragover',e=>{if(!ziehtDatei(e))return;e.preventDefault();const d=el('drop');if(d)d.classList.add('over')});
-document.addEventListener('dragleave',()=>{const d=el('drop');if(d)d.classList.remove('over')});
+document.addEventListener('dragover',e=>{if(!ziehtDatei(e))return;e.preventDefault();
+  for(const id of ['drop','dropFoto']){const d=el(id);if(d)d.classList.add('over')}});
+document.addEventListener('dragleave',()=>{for(const id of ['drop','dropFoto']){const d=el(id);if(d)d.classList.remove('over')}});
 document.addEventListener('drop',e=>{
-  e.preventDefault();const d=el('drop');if(d)d.classList.remove('over');
-  const fs=[...((e.dataTransfer&&e.dataTransfer.files)||[])].filter(f=>/\.pdf$/i.test(f.name));
-  if(fs.length){if(tab!=='analysen'){tab='analysen';render()}einlesen(fs.map(f=>({pfad:f.name,file:f})))}
+  e.preventDefault();
+  for(const id of ['drop','dropFoto']){const d=el(id);if(d)d.classList.remove('over')}
+  const alle=[...((e.dataTransfer&&e.dataTransfer.files)||[])];
+  const pdfs=alle.filter(f=>/\.pdf$/i.test(f.name));
+  const tab1=alle.filter(f=>/\.(xlsx|xlsm|csv)$/i.test(f.name));
+  const bilder=alle.filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name));
+  if(pdfs.length){if(tab!=='analysen'){tab='analysen';render()}einlesen(pdfs.map(f=>({pfad:f.name,file:f})))}
+  if(tab1.length&&typeof tabelleEinlesen==='function')tabelleEinlesen(tab1[0]);
+  if(bilder.length)fotosEinlesen(bilder);
 });
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 /* Die Diagramme rechnen mit der Breite ihres Kastens; nach einer Aenderung
