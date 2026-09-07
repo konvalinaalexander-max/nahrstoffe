@@ -113,9 +113,15 @@ console.log('\n════ Der Reiter Giesswasser ════');
   A.setDb(d);
   const hh=A.vGiess();A.nachRenderRun();
   const svg=global.document.getElementById('cGw').innerHTML;
-  const titel=[...svg.matchAll(/<title>([^<]*)<\/title>/g)].map(m=>m[1]);
+  /* Seit dem Umbau der Diagramme steht der Text in data-tipp statt in <title>:
+     das Infokaestchen erscheint sofort statt nach rund einer Sekunde. */
+  const entziffern=t=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+  const titel=[...svg.matchAll(/data-tipp="([^"]*)"/g)]
+    .map(m=>entziffern(entziffern(m[1])).replace(/<[^>]+>/g,' · ').replace(/\s*·\s*/g,' · ').replace(/\s+/g,' ').replace(/^ · /,'').trim());
   titel.slice(0,4).forEach(t=>console.log('   ',t));
   ok(titel.some(t=>/Reservoir Vorne/.test(t)),'Tooltip im Diagramm nennt die Entnahmestelle');
+  ok(titel.some(t=>/Entnahmestelle/.test(t)),'Und sagt dazu, dass es eine Entnahmestelle ist');
+  ok(svg.indexOf('<title>')<0,'Der langsame <title>-Tooltip ist verschwunden');
 
   console.log('\n  Alle Reiter mit Wasserdaten:');
   const bad=[];

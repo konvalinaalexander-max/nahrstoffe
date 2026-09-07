@@ -52,13 +52,106 @@ require('fs').mkdirSync(shots,{recursive:true});
   await p.screenshot({path:shots+'/dialog.png'});
   await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(200);
 
-  await p.click('#nav button:text-is("Nährstoffe")');await p.waitForTimeout(250);
-  await p.selectOption('#view select >> nth=0','NO3');await p.waitForTimeout(300);
-  console.log('  Nährstoffwechsel:',await p.$eval('#view h2',e=>e.textContent));
-  await p.selectOption('#view select >> nth=1','woche');await p.waitForTimeout(300);
-  console.log('  Achsenwechsel auf Kulturwoche: ok');
-  await p.click('#view .chip');await p.waitForTimeout(300);
-  console.log('  Lage-Umschalter: ok');
+  console.log('\n── Diagramm: Bedienung ohne Seitensprung ──');
+  await p.click('#nav button:text-is("Nährstoffe")');await p.waitForTimeout(300);
+
+  /* Das Diagramm muss die erste Karte des Reiters sein. */
+  const ersteId=await p.$eval('#view > div:first-child',e=>e.id||'');
+  console.log((ersteId==='nsKarte'?'  ✓ ':'  ✗ ')+'Das Diagramm ist die erste Karte des Reiters ('+(ersteId||'ohne Kennung')+')');
+  if(ersteId!=='nsKarte')fehler.push('Diagramm steht nicht zuoberst');
+
+  /* Weit nach unten scrollen: ein Sprung an den Seitenanfang faellt hier auf.
+     Geklickt wird ueber el.click(), weil Playwright sonst selbst zum Element
+     scrollt und der Test seinen eigenen Sprung messen wuerde. */
+  await p.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await p.waitForTimeout(200);
+  const yVor=await p.evaluate(()=>window.scrollY);
+  await p.$eval('#view .chip.stoff:text-is("Nitrat")',e=>e.click());await p.waitForTimeout(350);
+  const yNach=await p.evaluate(()=>window.scrollY);
+  const sprung=Math.abs(yVor-yNach)>40;
+  console.log((sprung?'  ✗ ':'  ✓ ')+'Nährstoff dazugewählt · Scrollposition '+yVor+' → '+yNach+(sprung?' — SPRUNG':' (bleibt stehen)'));
+  if(sprung)fehler.push('Seitensprung beim Wechsel des Nährstoffs');
+  const h2=await p.$eval('#nsKarte h2',e=>e.textContent);
+  console.log((/2 Nährstoffe/.test(h2)?'  ✓ ':'  ✗ ')+'Mehrfachauswahl: «'+h2+'»');
+  if(!/2 Nährstoffe/.test(h2))fehler.push('Mehrfachauswahl greift nicht');
+
+  /* Verschiedene Einheiten muessen sichtbar auf die Lage-Skala wechseln. */
+  await p.$eval('#view .chip.stoff:text-is("Eisen")',e=>e.click());await p.waitForTimeout(350);
+  const nsTxt=await p.$eval('#nsKarte',e=>e.innerText);
+  const gewechselt=/Gezeigt wird deshalb die Lage 0–3/.test(nsTxt);
+  console.log((gewechselt?'  ✓ ':'  ✗ ')+'Bei unvergleichbaren Grössen wird auf die Lage 0–3 gewechselt und begründet');
+  if(gewechselt)console.log('     ',(nsTxt.match(/[^\n]*wäre[^\n]*/)||[''])[0].slice(0,150));
+  if(!gewechselt)fehler.push('Skalenwechsel wird nicht offengelegt');
+
+  /* Sofort-Tooltip: nach dem Zeigen sofort da, ohne Wartezeit. */
+  /* Trefferflaechen ueberlappen sich; die zuletzt gezeichnete liegt oben.
+     Darum die letzte anfahren, und mit der Maus statt ueber hover(), damit
+     Playwright nicht wegen der oberen Leiste abbricht. */
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(150);
+  const hits=await p.$$('#cNs .hit');
+  const hit=hits[hits.length-1];
+  if(hit){
+    const bb=await hit.boundingBox();
+    await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.waitForTimeout(120);
+    const tp=await p.$eval('.tipp',e=>({an:e.classList.contains('an'),t:e.innerText}));
+    console.log((tp.an&&tp.t.length>10?'  ✓ ':'  ✗ ')+'Infokästchen erscheint sofort: '+JSON.stringify(tp.t.replace(/\n/g,' · ').slice(0,80)));
+    if(!tp.an)fehler.push('Kein Sofort-Tooltip am Punkt');
+  }else{console.log('  ✗ keine anfassbaren Punkte im Diagramm');fehler.push('Punkte ohne Trefferflaeche')}
+
+  /* Legende als Bedienelement */
+  const legVor=await p.$$eval('#cNs .hit',e=>e.length);
+  await p.click('#legNs .pos >> nth=0');await p.waitForTimeout(300);
+  const legNach=await p.$$eval('#cNs .hit',e=>e.length);
+  console.log((legNach<legVor?'  ✓ ':'  ✗ ')+'Klick in der Legende blendet eine Reihe aus ('+legVor+' → '+legNach+' Punkte)');
+  if(legNach>=legVor)fehler.push('Legende blendet nicht aus');
+  await p.click('#legNs .pos >> nth=0');await p.waitForTimeout(300);
+
+  /* Achse, Blatt und Linien */
+  await p.click('#nsKarte .seg button:text-is("Kulturwoche")');await p.waitForTimeout(300);
+  console.log('  ✓ Achsenwechsel auf Kulturwoche');
+  await p.click('#nsKarte .seg button:text-is("Probendatum")');await p.waitForTimeout(300);
+  const vorher=await p.$$eval('#cNs polyline',e=>e.length);
+  console.log((vorher===0?'  ✓ ':'  ✗ ')+'Ohne Zutun sind es Punkte, keine Linien');
+  if(vorher!==0)fehler.push('Linien sind die Vorgabe statt Punkte');
+  await p.click('#nsKarte .seg button:text-is("durchgehend")');await p.waitForTimeout(300);
+  const linien=await p.$$eval('#cNs polyline',e=>e.length);
+  console.log((linien>0?'  ✓ ':'  ✗ ')+'Linien zuschaltbar ('+linien+' Linienzüge)');
+  if(!linien)fehler.push('Linien lassen sich nicht zuschalten');
+  await p.click('#nsKarte .seg button:text-is("keine")');await p.waitForTimeout(300);
+  console.log((await p.$$eval('#cNs polyline',e=>e.length))===0?'  ✓ Punkte ohne Linien sind die Vorgabe':'  ✗ Linien lassen sich nicht abschalten');
+
+  /* Ein Klick auf einen Punkt oeffnet die ganze Erhebung. */
+  const hits2=await p.$$('#cNs .hit');
+  const bb2=await hits2[hits2.length-1].boundingBox();
+  await p.mouse.click(bb2.x+bb2.width/2,bb2.y+bb2.height/2);await p.waitForTimeout(400);
+  const dlg2=await p.$eval('#dlgTitel',e=>e.textContent);
+  console.log((/\d{2}\.\d{2}\./.test(dlg2)?'  ✓ ':'  ✗ ')+'Klick auf einen Punkt öffnet die Erhebung: '+dlg2);
+  if(!/\d{2}\.\d{2}\./.test(dlg2))fehler.push('Punktklick öffnet keine Erhebung');
+  await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(200);
+  await p.screenshot({path:shots+'/diagramm_naehrstoffe.png',fullPage:false});
+
+  /* Voreinstellung «Was daneben liegt» */
+  await p.click('#nsKarte button:text-is("Was daneben liegt")');await p.waitForTimeout(350);
+  console.log('  ✓ Voreinstellung gewählt:',(await p.$eval('#nsKarte h2',e=>e.textContent)));
+
+  console.log('\n── Diagramm: Giesswasser ──');
+  await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(350);
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(150);
+  const gwHits=await p.$$('#cGw .hit');
+  const gwHit=gwHits[gwHits.length-1];
+  if(gwHit){
+    const gb=await gwHit.boundingBox();
+    await p.mouse.move(gb.x+gb.width/2,gb.y+gb.height/2);await p.waitForTimeout(120);
+    const t=await p.$eval('.tipp',e=>e.innerText);
+    console.log((/Entnahmestelle/.test(t)?'  ✓ ':'  ✗ ')+'Der Name der Entnahmestelle steht sofort im Kästchen: '+JSON.stringify(t.replace(/\n/g,' · ').slice(0,90)));
+    if(!/Entnahmestelle/.test(t))fehler.push('Entnahmestelle fehlt im Tooltip');
+    await p.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await p.waitForTimeout(200);
+    const gy=await p.evaluate(()=>window.scrollY);
+    await p.$eval('#view .chip.stoff >> nth=1',e=>e.click());await p.waitForTimeout(350);
+    const gy2=await p.evaluate(()=>window.scrollY);
+    console.log((Math.abs(gy-gy2)<40?'  ✓ ':'  ✗ ')+'Parameterwechsel ohne Seitensprung ('+gy+' → '+gy2+')');
+    if(Math.abs(gy-gy2)>=40)fehler.push('Seitensprung im Giesswasser-Reiter');
+    await p.screenshot({path:shots+'/diagramm_giesswasser.png',fullPage:false});
+  }else console.log('  (keine Wasserproben in den Testdaten)');
 
   await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(300);
   const vor=await p.$$('#view .vorschlag');

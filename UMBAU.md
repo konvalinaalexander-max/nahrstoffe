@@ -326,6 +326,122 @@ Der Reiter «Substrat & Wasser» heisst jetzt «Substrat». Zehn Reiter statt ne
 
 ---
 
+## 7.7 · Nachtrag: die Diagramme sind jetzt das Herzstück
+
+**Der Anlass.** Wer im Reiter Nährstoffe unten im Diagramm den Nährstoff
+wechselte, landete wieder ganz oben auf der Seite. Ursache war, dass *jede*
+Zustandsänderung die ganze Seite neu aufbaute und dabei nach oben scrollte.
+Dazu kam der eingebaute `<title>`-Tooltip der Browser: er erscheint erst nach
+rund einer Sekunde und lässt sich nicht gestalten.
+
+### Die zehn Regeln, nach denen ich gebaut habe
+
+1. **Kein Sprung.** Bedienelemente des Diagramms bauen nur das Diagramm neu.
+   Ein Sprung an den Seitenanfang passiert ausschliesslich beim Reiterwechsel.
+2. **Farbe und Form tragen je eine Information.** Bei mehreren Nährstoffen:
+   Farbe = Nährstoff, Form = Blattalter. Bei einem einzigen Nährstoff wäre die
+   Farbe leer — dann übernimmt sie das Blattalter. Im Giesswasser entsprechend:
+   Farbe = Parameter, Form = Entnahmestelle, und bei einem einzigen Parameter
+   Farbe = Entnahmestelle, dieselbe wie in den Karten darunter.
+3. **Eine gemeinsame Achse braucht eine gemeinsame Grundlage.** Mehrere
+   Nährstoffe kommen nur dann auf eine Messwert-Achse, wenn sie dieselbe
+   Einheit *und* dieselbe Grössenordnung haben. Sonst wechselt die App sichtbar
+   auf die Lage 0–3 und sagt warum — etwa «Kalium liegt bei rund 1205 ppm,
+   Eisen bei rund 1,06 — auf einer gemeinsamen Messwert-Achse wäre Eisen eine
+   Linie auf null.»
+4. **Punkte sind die Messung, Linien eine Behauptung.** Vorgabe: nur Punkte.
+   Linien sind zuschaltbar, und dann standardmässig nur innerhalb eines Satzes
+   beziehungsweise einer Entnahmestelle. Wer sie durchgehend will, bekommt sie
+   — mit einem Hinweis, dass zwischen zwei Sätzen kein Verlauf liegt, sondern
+   ein Wechsel des Bestands.
+5. **Sofortiges Infokästchen statt des `<title>`-Tooltips.** Es erscheint ohne
+   Verzögerung am Zeiger und nennt Nährstoff, Satz, Datum, Kulturwoche, Blatt,
+   Messwert, Sollbereich und Beurteilung — im Giesswasser Entnahmestelle,
+   Probennummer, Anbau, Messwert, mg/l-Entsprechung und Richtwert.
+6. **Ein Klick auf einen Punkt öffnet die ganze Erhebung** beziehungsweise die
+   ganze Wasserprobe. Das Diagramm ist damit der Einstieg in die Zahlen.
+7. **Die Legende ist ein Bedienelement.** Ein Klick blendet eine Reihe aus und
+   wieder ein.
+8. **Zusammenstellungen statt Klickerei:** Hauptnährstoffe, Spurenelemente,
+   Ballast, «Was daneben liegt», «Alle der Kennzahl». Im Giesswasser: Ballast
+   und Puffer, Nährstoffe im Wasser, Technik, Leitwerte.
+9. **Einstellungen überleben das Neuzeichnen.** Auswahl, Achse, Skala, Linien
+   und ausgeblendete Reihen bleiben, solange man im Reiter bleibt.
+10. **Leere Zustände erklären, was fehlt** — statt ein leeres Diagramm zu
+    zeigen.
+
+### Was das im Einzelnen heisst
+
+**Reiter Nährstoffe.** Das Diagramm ist die erste Karte. Darüber: die
+Zusammenstellungen, die Nährstoff-Chips zur Mehrfachauswahl (höchstens acht),
+und die Regler für waagrechte Achse (Probendatum oder Kulturwoche), senkrechte
+Skala (Messwert oder Lage 0–3), Blattalter und Linien. Darunter, je nach
+Auswahl: bei einem Nährstoff die gewohnte Tabelle je Erhebung, bei mehreren
+zusätzlich eine Tabelle «Die ausgewählten Nährstoffe nebeneinander» — je
+Erhebung eine Zeile, je Nährstoff eine Spalte, jeweils am massgeblichen Blatt.
+
+**Reiter Überblick.** Sobald es mehr als eine Erhebung gibt, steht die
+Nährstofflage über die Zeit direkt unter den Kennzahlen, vor den Befunden. Bei
+einer einzigen Analyse bleibt es umgekehrt: dann gäbe es im Diagramm nichts zu
+sehen, und die Befunde stehen oben.
+
+**Reiter Giesswasser.** Der Verlauf ist die erste Karte, sobald mehr als eine
+Probe da ist. Mehrfachauswahl der Parameter; bei gemischten Einheiten oder
+Grössenordnungen zeigt die App jeden Parameter als Anteil seines eigenen
+höchsten Messwerts — sichtbar gekennzeichnet, mit dem ausdrücklichen Hinweis,
+dass das nur Gleichlauf zeigt und nichts über hoch oder tief sagt.
+
+**Überall.** Proben auf derselben Senkrechten werden aufgefächert, damit zwei
+Proben vom selben Tag nebeneinander stehen statt sich zu verdecken. Auch die
+übrigen Diagramme — Kennzahl über die Zeit, Wirkungsprofil, Satz-Laufzeiten —
+haben den langsamen `<title>`-Tooltip gegen das sofortige Infokästchen
+getauscht; die Balken der Kennzahl öffnen jetzt ebenfalls die Erhebung.
+
+### Was das an der Technik geändert hat
+
+`render()` merkt sich die Scrollposition und stellt sie wieder her; nach oben
+gesprungen wird nur beim Reiterwechsel. Das behebt den Sprung nicht nur im
+Diagramm, sondern in der ganzen App — auch beim Ändern einer Einstellung oder
+beim Eintragen einer Messung.
+
+Neu ist eine Registrierung `DIAG`: eine Ansicht meldet an, welche Teile der
+Seite zum Diagramm gehören und wie es gezeichnet wird. `diagFrisch()` baut nur
+diese Teile neu. Schlägt etwas fehl, fällt die App auf den vollständigen
+Seitenaufbau zurück — die Bedienung bricht nie ab.
+
+Wichtig dabei: alles, was von der Auswahl abhängt — Farben, Einheiten, Skala,
+Hinweise —, wird bei *jedem* Neuzeichnen frisch bestimmt. Läge es im äusseren
+Gültigkeitsbereich der Ansicht, zeigte das Diagramm nach einer Änderung noch
+die Farben und Begründungen der vorigen Auswahl. Genau das ist mir beim Bauen
+einmal passiert und von der Browserprüfung gefunden worden.
+
+### Geprüft
+
+```
+node --check                      Syntax
+pruefung/n1 … n5                  93 Einzelprüfungen, alle bestanden
+pruefung/g1                       41 Einzelprüfungen gegen die drei echten
+                                  Wasserberichte, alle bestanden
+browser.js (Chromium)             zehn Reiter leer und gefüllt · Diagramm
+                                  zuoberst · Scrollposition bleibt beim
+                                  Nährstoffwechsel stehen (434 → 434) ·
+                                  Mehrfachauswahl · Skalenwechsel mit
+                                  Begründung · Infokästchen sofort da ·
+                                  Legende blendet aus · Punkte statt Linien
+                                  als Vorgabe · Klick auf einen Punkt öffnet
+                                  die Erhebung · Offline-Verhalten · Escaping
+upload.js / gwupload.js           echte PDFs hochgeladen, Weg bis zur
+                                  Auswertung, Infokästchen am Wasserpunkt
+```
+
+Nicht geprüft: Firefox selbst — in dieser Umgebung steht nur Chromium zur
+Verfügung. Verwendet werden ausschliesslich Funktionen, die Firefox seit
+Jahren unterstützt (`Element.closest`, `dataset` auf SVG-Elementen,
+`getBoundingClientRect`, `classList`); Neues wie `getScreenCTM` oder
+Pointer-Events-Feinheiten kommt bewusst nicht vor.
+
+---
+
 ## 8 · Was ich bewusst nicht gebaut habe
 
 Unverändert zurückgestellt, wie in der Übergabe festgelegt: die

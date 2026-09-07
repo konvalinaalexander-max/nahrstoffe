@@ -61,10 +61,24 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
   console.log('  Tooltips mit Stellennamen:',tips.length);
   tips.slice(0,3).forEach(t=>console.log('   ',t));
   ok(tips.length>=4,'Der Name der Entnahmestelle steht in den Tooltips');
-  const svgTitel=await p.$$eval('#view svg title',es=>es.map(e=>e.textContent));
+  /* Im Diagramm steht der Text seit dem Umbau in data-tipp: das Kaestchen
+     erscheint sofort statt nach rund einer Sekunde. Geprueft wird darum der
+     Inhalt des Attributs und zusaetzlich, dass das Kaestchen wirklich kommt. */
+  const svgTitel=await p.$$eval('#view svg [data-tipp]',es=>es.map(e=>e.getAttribute('data-tipp').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()));
   console.log('  Diagramm-Tooltips:',svgTitel.length);
-  svgTitel.slice(0,4).forEach(t=>console.log('   ',t));
+  svgTitel.slice(0,3).forEach(t=>console.log('   ',t.slice(0,110)));
   ok(svgTitel.some(t=>/H2O2/.test(t)),'Auch im Diagramm');
+  ok(svgTitel.some(t=>/Entnahmestelle/.test(t)),'und ist dort als Entnahmestelle bezeichnet');
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(150);
+  const gh=await p.$$('#cGw .hit');
+  if(gh.length){
+    const bb=await gh[gh.length-1].boundingBox();
+    await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.waitForTimeout(120);
+    const kasten=await p.$eval('.tipp',e=>({an:e.classList.contains('an'),t:e.innerText}));
+    console.log('  Infokästchen:',JSON.stringify(kasten.t.replace(/\n/g,' · ').slice(0,110)));
+    ok(kasten.an,'Das Infokästchen erscheint sofort beim Zeigen auf einen Punkt');
+    ok(/Entnahmestelle/.test(kasten.t),'und nennt die Entnahmestelle');
+  }else{ok(false,'Keine anfassbaren Punkte im Verlaufsdiagramm')}
 
   console.log('\n── Eine Wasserprobe im Detail ──');
   await p.click('#view button:text-is("Alle Werte ansehen")');

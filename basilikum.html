@@ -37,7 +37,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:var(--rs);background:#fff;color:var(--ink);max-width:100%}
 input[type=date]{min-width:142px}
-label.lab{font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px;font-weight:500}
+label.lab,span.lab{font-size:11.5px;color:var(--muted);display:block;margin-bottom:3px;font-weight:500}
 header.top{position:sticky;top:0;z-index:40;background:rgba(243,246,239,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .topbar{display:flex;gap:12px;align-items:center;padding:11px 20px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:9px}
@@ -120,6 +120,42 @@ details[open]>summary:before{content:'▾ '}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:10px;align-items:center}
 .legend i{display:inline-block;width:13px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 .scroll{overflow-x:auto}
+
+/* ── Diagramm-Werkzeugleiste ──────────────────────────────
+   Alles, was das Diagramm steuert, steht ueber dem Diagramm und
+   zeichnet ausschliesslich das Diagramm neu. Kein Seitenaufbau,
+   kein Sprung an den Seitenanfang. */
+.werkzeug{background:var(--card2);border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;margin-bottom:14px}
+.werkzeug+.werkzeug{margin-top:-6px}
+.wz{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.wz+.wz{margin-top:9px;padding-top:9px;border-top:1px solid var(--line2)}
+.wz>.lab{margin:0;min-width:86px;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff}
+.seg button{border:0;border-radius:0;padding:4px 12px;font-size:12px;background:none;color:var(--muted);border-right:1px solid var(--line2)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--ink);color:#fff}
+.chip.stoff{padding-left:8px}
+.chip.stoff .dot{width:9px;height:9px}
+.chip.aus{opacity:.55}
+.legend .pos{cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:14px;border:1px solid transparent}
+.legend .pos:hover{border-color:var(--line);background:var(--card2)}
+.legend .pos.aus{opacity:.4;text-decoration:line-through}
+.legend .pos svg{display:block;overflow:visible}
+.diagramm{position:relative}
+.diagramm svg{display:block;touch-action:pan-y}
+.diagramm .hit{fill:transparent}
+.diagramm .hit:hover{fill:rgba(20,29,23,.10)}
+
+/* Sofort sichtbares Infokaestchen statt des <title>-Tooltips des Browsers,
+   der erst nach rund einer Sekunde erscheint und nicht gestaltbar ist. */
+.tipp{position:fixed;z-index:80;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;
+  padding:8px 11px;font-size:12px;line-height:1.45;max-width:290px;box-shadow:0 6px 20px rgba(20,29,23,.28);opacity:0;transition:opacity .09s}
+.tipp.an{opacity:1}
+.tipp b{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12.5px;margin-bottom:3px}
+.tipp b i{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.tipp .z{color:#C9D6C9;white-space:nowrap}
+.tipp .z .w,.tipp .z.w{color:#fff;font-family:'JetBrains Mono',monospace}
+.tipp .k{color:#9FB39F;margin-top:4px;font-size:11px;white-space:normal}
 .vorschlag{border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;margin-bottom:9px;background:var(--card2)}
 .vorschlag.dringend{border-color:var(--alarm-line);background:var(--alarm-soft)}
 .vorschlag .wann{font-family:'JetBrains Mono',monospace;font-weight:500}
@@ -166,6 +202,12 @@ details[open]>summary:before{content:'▾ '}
 <script>
 "use strict";
 /* ══════════ 1 · Werkzeug ══════════ */
+/* Alle Klickziele laufen über data-Attribute statt über zusammengesetzte
+   onclick-Zeichenketten. Ein Apostroph in einem Logbuchtitel kann damit
+   keinen Aufruf mehr zerlegen. Die Ablage steht zuoberst, damit auch die
+   Diagramme ihre Aktionen dort eintragen können.
+   Verdrahtet wird sie in Abschnitt 7. */
+const AKTION={};
 const NUM=/^[<>]?-?\d+(?:[.,]\d+)?$/;
 const toNum=t=>{if(t==null||t==='')return null;const v=parseFloat(String(t).trim().replace(/^[<>]\s*/,'').replace(',','.'));return isNaN(v)?null:v};
 const isLim=t=>/^[<>]/.test(String(t).trim());
@@ -558,6 +600,9 @@ const leer=()=>({schema:5,version:0,gespeichert:null,analysen:[],ereignisse:[],m
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
 let db=leer(),tab='lage',dirty=false,nachRender=null;
+/* Registrierung des aktiven Diagramms: erlaubt es, nur das Diagramm samt
+   seiner Bedienung neu zu bauen statt der ganzen Seite. Siehe diagFrisch(). */
+let DIAG=null;
 
 /* Ältere Sicherungsdateien einlesen, ohne dass etwas verloren geht. */
 function migriere(roh){
@@ -1089,27 +1134,119 @@ const FARBEN=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A71
 const svgAuf=(w,h,t)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(t)}" style="display:block">`;
 const leerBox=(box,t)=>{box.innerHTML=`<p class="muted small" style="padding:18px 0">${esc(t)}</p>`};
 
-function chartLinien(box,o){
-  const {serien=[],band,bands3,xTyp='datum',xLabel='',ereignisse=[],hoehe=290,bandLabel='Optimum'}=o;
-  const W=Math.max(box.clientWidth||820,540),H=hoehe,ml=bands3?96:64,mr=20,mt=24,mb=42;
-  const pts=serien.flatMap(s=>s.punkte);
-  if(!pts.length)return leerBox(box,'Keine Werte für diese Auswahl.');
+/* ── Sofort-Tooltip ──────────────────────────────────────
+   Der eingebaute <title>-Tooltip der Browser erscheint erst nach rund einer
+   Sekunde, laesst sich nicht gestalten und bricht lange Texte hart um.
+   Stattdessen traegt jedes anfassbare Element data-tipp mit fertigem,
+   bereits maskiertem HTML; ein einziger Zeiger-Beobachter zeigt es an. */
+let TIPP=null;
+function tippKasten(){
+  if(!TIPP){TIPP=document.createElement('div');TIPP.className='tipp';document.body.appendChild(TIPP)}
+  return TIPP;
+}
+function tippZeigen(html,x,y){
+  const t=tippKasten();
+  t.innerHTML=html;t.classList.add('an');
+  const b=t.getBoundingClientRect();
+  let lx=x+14,ly=y+16;
+  if(lx+b.width>window.innerWidth-8)lx=x-b.width-14;
+  if(lx<8)lx=8;
+  if(ly+b.height>window.innerHeight-8)ly=y-b.height-14;
+  if(ly<8)ly=8;
+  t.style.left=lx+'px';t.style.top=ly+'px';
+}
+const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an')};
+/* Ein Beobachter fuer das ganze Dokument statt einer Bindung je Diagramm:
+   ueberlebt jedes Neuzeichnen, weil er nicht an den Elementen haengt. */
+document.addEventListener('mousemove',ev=>{
+  const t=ev.target&&ev.target.closest?ev.target.closest('[data-tipp]'):null;
+  if(!t)return tippWeg();
+  tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
+},{passive:true});
+document.addEventListener('mouseleave',tippWeg);
+window.addEventListener('scroll',tippWeg,{passive:true});
+document.addEventListener('click',ev=>{
+  const t=ev.target&&ev.target.closest?ev.target.closest('[data-tipp]'):null;
+  if(t&&t.dataset.tun===undefined)tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
+});
+
+/* ── Markierungsformen ───────────────────────────────────
+   Die Farbe steht fuer den Naehrstoff, die Form fuer die zweite Dimension
+   (Blattalter bzw. Entnahmestelle). Wer nur die Farbe unterscheiden kann,
+   liest die Form – und umgekehrt. */
+const FORMEN=['kreis','raute','quadrat','dreieck','kreuz','ring'];
+function marke(form,x,y,r,farbe,deckung){
+  const o=deckung!=null?deckung:1,f=`fill="${farbe}" opacity="${o}"`;
+  switch(form){
+    case 'raute':   return `<polygon points="${x},${y-r*1.25} ${x+r*1.15},${y} ${x},${y+r*1.25} ${x-r*1.15},${y}" ${f}/>`;
+    case 'quadrat': return `<rect x="${x-r*0.92}" y="${y-r*0.92}" width="${r*1.84}" height="${r*1.84}" rx="1" ${f}/>`;
+    case 'dreieck': return `<polygon points="${x},${y-r*1.3} ${x+r*1.2},${y+r*0.85} ${x-r*1.2},${y+r*0.85}" ${f}/>`;
+    case 'kreuz':   return `<path d="M${x-r} ${y-r}L${x+r} ${y+r}M${x-r} ${y+r}L${x+r} ${y-r}" stroke="${farbe}" stroke-width="${r*0.75}" stroke-linecap="round" fill="none" opacity="${o}"/>`;
+    case 'ring':    return `<circle cx="${x}" cy="${y}" r="${r*0.95}" fill="#fff" stroke="${farbe}" stroke-width="${r*0.62}" opacity="${o}"/>`;
+    default:        return `<circle cx="${x}" cy="${y}" r="${r}" ${f}/>`;
+  }
+}
+/* Legende als Bedienelement: ein Klick blendet eine Reihe aus und wieder ein. */
+function legende(serien,aus,zusatz){
+  const t=serien.map(se=>`<span class="pos${aus&&aus.has(se.id)?' aus':''}" data-tun="diagSerie" data-id="${esc(se.id)}"
+      title="Anklicken blendet diese Reihe aus oder wieder ein">
+    <svg width="16" height="14" viewBox="0 0 16 14">${marke(se.form,8,7,5,se.farbe)}</svg>${esc(se.name)}</span>`).join('');
+  return t+(zusatz?`<span class="muted">${zusatz}</span>`:'');
+}
+/* Ausgeblendete Reihen: gehoeren zum Diagramm, nicht zu den Daten.
+   Werden beim Reiterwechsel geleert, ueberleben aber jedes Neuzeichnen. */
+let diagAus=new Set();
+AKTION.diagSerie=d=>{diagAus.has(d.id)?diagAus.delete(d.id):diagAus.add(d.id);diagFrisch()};
+AKTION.diagPunkt=d=>{if(DIAG&&DIAG.klick)DIAG.klick(d.id)};
+
+/* ── Punktdiagramm ───────────────────────────────────────
+   Punkte sind die Messung, eine Linie ist eine Behauptung ueber das, was
+   zwischen zwei Messungen geschah. Darum sind Punkte die Vorgabe und Linien
+   zuschaltbar – und selbst dann nie ueber eine Satzgrenze hinweg.
+   o = {serien:[{id,name,farbe,form,punkte:[{x,y,xtext,tipp,kennung,gruppe}]}],
+        yTyp:'wert'|'lage', band, bandLabel, xTyp:'datum'|'zahl', xLabel, yLabel,
+        ereignisse, linien, hoehe, aufKlick} */
+function chartPunkte(box,o){
+  const {band,bandLabel='Optimum',xTyp='datum',xLabel='',yLabel='',ereignisse=[],hoehe=320,linien=false,aufKlick=null}=o;
+  const lageSkala=o.yTyp==='lage';
+  const serien=(o.serien||[]).filter(se=>se.punkte&&se.punkte.length&&!diagAus.has(se.id));
+  const pts=serien.flatMap(se=>se.punkte);
+  if(!pts.length)return leerBox(box,(o.serien||[]).length?'Alle Reihen sind ausgeblendet – in der Legende wieder einblenden.':'Keine Werte für diese Auswahl.');
+  const W=Math.max(box.clientWidth||820,540),H=hoehe,ml=lageSkala?100:66,mr=22,mt=26,mb=48;
   const xs=pts.map(p=>p.x);
   let x0=Math.min(...xs),x1=Math.max(...xs);
   if(x0===x1){const d=xTyp==='datum'?6048e5:1;x0-=d;x1+=d}
-  const sp=(x1-x0)*0.06;x0-=sp;x1+=sp;
+  const sp=(x1-x0)*0.07;x0-=sp;x1+=sp;
   let y0,y1;
-  if(bands3){y0=0;y1=3}
+  if(lageSkala){y0=0;y1=3}
   else{
     const ys=pts.map(p=>p.y);
     y0=Math.min(...ys,band&&band[0]!=null?band[0]:Infinity);
     y1=Math.max(...ys,band&&band[1]!=null?band[1]:-Infinity);
-    if(!isFinite(y0))y0=Math.min(...ys);if(!isFinite(y1))y1=Math.max(...ys);
-    const pad=((y1-y0)||Math.abs(y1)||1)*0.14;y0-=pad;y1+=pad;if(y0>0&&y0<pad*3)y0=0;
+    if(!isFinite(y0))y0=Math.min(...ys);
+    if(!isFinite(y1))y1=Math.max(...ys);
+    const pad=((y1-y0)||Math.abs(y1)||1)*0.14;y0-=pad;y1+=pad;
+    if(y0>0&&y0<pad*3)y0=0;
   }
   const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr),Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(H-mt-mb);
+
+  /* Punkte auf derselben Senkrechten auffaechern, damit Proben vom selben
+     Tag sichtbar nebeneinander stehen statt sich zu verdecken. */
+  const spalten=new Map();
+  serien.forEach(se=>se.punkte.forEach(p=>{
+    const k=Math.round(X(p.x)*2);
+    if(!spalten.has(k))spalten.set(k,[]);
+    spalten.get(k).push({se,p});
+  }));
+  const lage2=new Map();
+  for(const gr of spalten.values()){
+    const n=gr.length,schritt=n>4?3.4:4.6;
+    gr.forEach((g,i)=>lage2.set(g.p,{x:X(g.p.x)+(n>1?(i-(n-1)/2)*schritt:0),y:Y(g.p.y)}));
+  }
+  const P=p=>lage2.get(p)||{x:X(p.x),y:Y(p.y)};
+
   let s=svgAuf(W,H,xLabel||'Diagramm');
-  if(bands3){
+  if(lageSkala){
     s+=`<rect x="${ml}" y="${Y(3)}" width="${W-ml-mr}" height="${Y(2)-Y(3)}" fill="#FBEEDC"/>`;
     s+=`<rect x="${ml}" y="${Y(2)}" width="${W-ml-mr}" height="${Y(1)-Y(2)}" fill="#E3F0E1"/>`;
     s+=`<rect x="${ml}" y="${Y(1)}" width="${W-ml-mr}" height="${Y(0)-Y(1)}" fill="#FBEEDC"/>`;
@@ -1118,30 +1255,69 @@ function chartLinien(box,o){
     s+=`<text x="${ml-8}" y="${(Y(1)+Y(0))/2+4}" text-anchor="end" font-size="11" fill="#BE6F16">unter Optimum</text>`;
     s+=`<line x1="${ml}" x2="${W-mr}" y1="${Y(2)}" y2="${Y(2)}" stroke="#A8CDA6"/><line x1="${ml}" x2="${W-mr}" y1="${Y(1)}" y2="${Y(1)}" stroke="#A8CDA6"/>`;
   }else{
-    if(band){
+    if(band&&(band[0]!=null||band[1]!=null)){
       const b1=Y(band[1]!=null?band[1]:y1),b0=Y(band[0]!=null?band[0]:y0);
-      s+=`<rect x="${ml}" y="${b1}" width="${W-ml-mr}" height="${Math.max(1,b0-b1)}" fill="#E3F0E1"/><text x="${W-mr-4}" y="${b1+13}" text-anchor="end" font-size="10.5" fill="#2C7A4B">${esc(bandLabel)}</text>`;
+      s+=`<rect x="${ml}" y="${b1}" width="${W-ml-mr}" height="${Math.max(1,b0-b1)}" fill="#E3F0E1"/>`;
+      s+=`<text x="${W-mr-4}" y="${b1+13}" text-anchor="end" font-size="10.5" fill="#2C7A4B">${esc(bandLabel)}</text>`;
     }
     for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4,y=Y(v);
       s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/><text x="${ml-8}" y="${y+4}" text-anchor="end" font-size="10.5" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v)}</text>`}
   }
+  if(yLabel)s+=`<text x="${ml}" y="${mt-9}" font-size="10.5" fill="#697A6C">${esc(yLabel)}</text>`;
+  let davor=0,danach=0;
   for(const ev of ereignisse){
-    const x=X(ev.x);if(x<ml||x>W-mr)continue;
-    s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${H-mb}" stroke="#141D17" stroke-dasharray="3 4" opacity=".5"/><text x="${x+3}" y="${mt+10}" font-size="10" fill="#141D17">${esc(String(ev.label).slice(0,20))}</text>`;
+    if(ev.x<x0){davor++;continue}
+    if(ev.x>x1){danach++;continue}
+    const x=X(ev.x);
+    s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${H-mb}" stroke="#141D17" stroke-dasharray="3 4" opacity=".45"/>`;
+    s+=`<rect x="${x-5}" y="${mt}" width="10" height="${H-mb-mt}" fill="transparent" data-tipp="${esc(`<b>Logbuch</b><span class="z">${esc(ev.label)}</span>`)}" style="cursor:help"/>`;
+    s+=`<text x="${x+3}" y="${mt+10}" font-size="10" fill="#141D17">${esc(String(ev.label).slice(0,20))}</text>`;
   }
-  for(const se of serien){
-    const p=[...se.punkte].sort((a,b)=>a.x-b.x);
-    if(p.length>1&&se.linie!==false)s+=`<polyline fill="none" stroke="${se.farbe}" stroke-width="2" stroke-dasharray="${se.strich||''}" points="${p.map(q=>X(q.x)+','+Y(q.y)).join(' ')}"/>`;
-    for(const q of p)s+=`<circle cx="${X(q.x)}" cy="${Y(q.y)}" r="4" fill="${se.farbe}"><title>${esc(se.name)} · ${esc(q.titel||q.label||'')}</title></circle>`;
+  if(davor)s+=`<text x="${ml+2}" y="${mt-9}" font-size="10" fill="#697A6C">← ${davor} Logbucheintrag${davor>1?'e':''} davor</text>`;
+  if(danach)s+=`<text x="${W-mr-2}" y="${mt-9}" text-anchor="end" font-size="10" fill="#697A6C">${danach} danach →</text>`;
+
+  /* Linien nur innerhalb einer Gruppe – ueber eine Satzgrenze hinweg waere
+     die Verbindung eine Behauptung ueber zwei verschiedene Bestaende. */
+  if(linien)for(const se of serien){
+    const gr=new Map();
+    for(const q of se.punkte){const g=q.gruppe==null?'':String(q.gruppe);if(!gr.has(g))gr.set(g,[]);gr.get(g).push(q)}
+    for(const liste of gr.values()){
+      if(liste.length<2)continue;
+      const sp2=[...liste].sort((a,b)=>a.x-b.x).map(q=>{const c=P(q);return c.x+','+c.y});
+      s+=`<polyline fill="none" stroke="${se.farbe}" stroke-width="1.8" opacity=".55" stroke-dasharray="${se.strich||''}" points="${sp2.join(' ')}"/>`;
+    }
   }
-  const seen=new Set();
+  let hits='';
+  for(const se of serien)for(const q of se.punkte){
+    const c=P(q);
+    s+=marke(se.form,c.x,c.y,5,se.farbe,q.blass?0.4:1);
+    hits+=`<circle class="hit" cx="${c.x}" cy="${c.y}" r="10" data-tipp="${esc(q.tipp||'')}"${
+      aufKlick&&q.kennung?` data-tun="diagPunkt" data-id="${esc(q.kennung)}" style="cursor:pointer"`:' style="cursor:help"'}/>`;
+  }
+  s+=hits;
+  /* Achsenbeschriftung: doppelte und zu dicht stehende Marken weglassen */
+  let letztX=-1e9;const gesehen=new Set();
   for(const p of [...pts].sort((a,b)=>a.x-b.x)){
-    if(!p.xtext||seen.has(p.xtext))continue;seen.add(p.xtext);
-    s+=`<text x="${X(p.x)}" y="${H-mb+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(p.xtext)}</text>`;
+    if(!p.xtext||gesehen.has(p.xtext))continue;
+    const x=X(p.x);
+    if(x-letztX<38)continue;
+    gesehen.add(p.xtext);letztX=x;
+    s+=`<text x="${x}" y="${H-mb+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(p.xtext)}</text>`;
   }
   s+=`<text x="${(ml+W-mr)/2}" y="${H-6}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}</text>`;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
   box.innerHTML=s+'</svg>';
+}
+/* Baustein fuer den Inhalt des Infokaestchens. Alles wird hier maskiert,
+   damit ein Satzname mit spitzer Klammer kein Markup einschleusen kann. */
+function tippBau(kopf,farbe,zeilen,fuss){
+  let t=`<b><i style="background:${farbe}"></i>${esc(kopf)}</b>`;
+  for(const z of zeilen.filter(Boolean)){
+    if(Array.isArray(z))t+=`<div class="z">${esc(z[0])}: <span class="w">${esc(z[1])}</span></div>`;
+    else t+=`<div class="z">${esc(z)}</div>`;
+  }
+  if(fuss)t+=`<div class="k">${esc(fuss)}</div>`;
+  return t;
 }
 
 /* Anteil im Optimum über die Zeit.
@@ -1167,7 +1343,8 @@ function chartIndex(box,erh){
     if(t<x0){davor++;continue}
     if(t>x1){danach++;continue}
     const x=X(t);
-    s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${H-mb}" stroke="#141D17" stroke-dasharray="3 4" opacity=".5"><title>${esc(ev.titel||ev.typ)} · ${fmt(ev.datum)}</title></line>`;
+    s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${H-mb}" stroke="#141D17" stroke-dasharray="3 4" opacity=".5"/>`;
+    s+=`<rect x="${x-5}" y="${mt}" width="10" height="${H-mb-mt}" fill="transparent" style="cursor:help" data-tipp="${esc(tippBau('Logbuch','#141D17',[[fmt(ev.datum),ev.titel||ev.typ]]))}"/>`;
     s+=`<text x="${x+3}" y="${mt-8}" font-size="10" fill="#141D17">${esc(String(ev.titel||ev.typ).slice(0,18))}</text>`;
   }
   if(davor)s+=`<text x="${ml+2}" y="${mt-8}" font-size="10" fill="#697A6C">← ${davor} Eintrag${davor>1?'e':''} davor</text>`;
@@ -1186,7 +1363,10 @@ function chartIndex(box,erh){
       const mitte=X(+new Date(d)),off=(i-(n-1)/2)*(bw+2);
       const x=mitte+off,y=Y(e.index.anteil);
       const farbe=e.zustand==='gelb'?'#BE6F16':'#2C7A4B';
-      s+=`<rect x="${x-bw/2}" y="${y}" width="${bw}" height="${Math.max(1,H-mb-y)}" rx="3" fill="${farbe}" opacity=".75"><title>Satz ${esc(e.satz)}${e.zustand?' ('+esc(e.zustand)+')':''} · ${fmt(e.datum)} · ${e.index.ok} von ${e.index.n} im Optimum${e.alter.woche!=null?` · rund ${nz(e.alter.woche,1)} Wochen alt`:''}</title></rect>`;
+      const tp=tippBau('Satz '+(e.satz||'?')+(e.zustand?' · '+e.zustand:''),farbe,
+        [['Probe',fmt(e.datum)],e.alter.woche!=null?['Kulturwoche',nz(e.alter.woche,1)]:null,
+         ['Im Optimum',`${e.index.ok} von ${e.index.n} (${Math.round(e.index.anteil*100)} %)`]],'Anklicken öffnet alle Werte dieser Erhebung.');
+      s+=`<rect x="${x-bw/2}" y="${y}" width="${bw}" height="${Math.max(1,H-mb-y)}" rx="3" fill="${farbe}" opacity=".75" style="cursor:pointer" data-tipp="${esc(tp)}" data-tun="erhebung" data-id="${esc(e.id)}"/>`;
       s+=`<text x="${x}" y="${y-6}" text-anchor="middle" font-size="10.5" fill="#141D17" font-weight="500">${Math.round(e.index.anteil*100)}</text>`;
       s+=`<text x="${x}" y="${H-mb+15}" text-anchor="middle" font-size="9.5" fill="#697A6C">${esc(String(e.satz||''))}</text>`;
       if(n>1&&e.zustand)s+=`<text x="${x}" y="${H-mb+26}" text-anchor="middle" font-size="9" fill="#697A6C">${esc(e.zustand)}</text>`;
@@ -1208,7 +1388,7 @@ function chartProfil(box,zeilen){
   zeilen.forEach((z,i)=>{
     const y=22+i*zh,len=Math.abs(z.delta)/max*halb*0.92,pos=z.delta>0;
     s+=`<text x="${ml-8}" y="${y+13}" text-anchor="end" font-size="11.5" fill="#141D17">${esc(NAME[z.k]||z.k)}</text>`;
-    s+=`<rect x="${pos?mitte:mitte-len}" y="${y+3}" width="${Math.max(1.5,len)}" height="14" rx="3" fill="${pos?'#2C7A4B':'#BE6F16'}" opacity=".85"><title>${esc(NAME[z.k])} am ${esc(z.blatt)}blatt: ${nz(z.vor)} → ${nz(z.nach)} ${einheit(z.k)}</title></rect>`;
+    s+=`<rect x="${pos?mitte:mitte-len}" y="${y+3}" width="${Math.max(1.5,len)}" height="14" rx="3" fill="${pos?'#2C7A4B':'#BE6F16'}" opacity=".85" style="cursor:help" data-tipp="${esc(tippBau(NAME[z.k]||z.k,pos?'#2C7A4B':'#BE6F16',[['Blatt',z.blatt+'blatt'],['Vorher',nz(z.vor)+' '+einheit(z.k)],['Nachher',nz(z.nach)+' '+einheit(z.k)]],pos?'Richtung Optimum':'weiter weg vom Optimum'))}"/>`;
     s+=`<text x="${W-mr+8}" y="${y+14}" font-size="11" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(z.vor)} → ${nz(z.nach)}${istOk(z.stNach)?' ✓':''}</text>`;
   });
   s+=`<line x1="${mitte}" x2="${mitte}" y1="16" y2="${H-8}" stroke="#141D17" opacity=".5"/>`;
@@ -1228,18 +1408,19 @@ function chartSaetze(box,saetze){
   for(const ev of db.ereignisse){
     const t=+new Date(ev.datum);if(isNaN(t))continue;
     const x=X(t);if(x<ml||x>W-mr)continue;
-    s+=`<line x1="${x}" x2="${x}" y1="18" y2="${H-30}" stroke="#141D17" stroke-dasharray="3 4" opacity=".4"><title>${esc(ev.titel||ev.typ)} · ${fmt(ev.datum)}</title></line>`;
+    s+=`<line x1="${x}" x2="${x}" y1="18" y2="${H-30}" stroke="#141D17" stroke-dasharray="3 4" opacity=".4"/>`;
+    s+=`<rect x="${x-4}" y="18" width="8" height="${H-48}" fill="transparent" style="cursor:help" data-tipp="${esc(tippBau('Logbuch','#141D17',[[fmt(ev.datum),ev.titel||ev.typ]]))}"/>`;
   }
   const xh=X(heuteT);
   if(xh>=ml&&xh<=W-mr)s+=`<line x1="${xh}" x2="${xh}" y1="18" y2="${H-30}" stroke="#A2432E" stroke-width="1.5"/><text x="${xh+4}" y="14" font-size="10.5" fill="#A2432E">heute</text>`;
   mit.forEach((z,i)=>{
     const y=22+i*zh,xa=X(+new Date(z.aussaat)),xe=X(+new Date(z.ende));
     s+=`<text x="${ml-8}" y="${y+13}" text-anchor="end" font-size="11.5" fill="#141D17" font-family="JetBrains Mono,monospace">${esc(z.id)}</text>`;
-    s+=`<rect x="${xa}" y="${y+4}" width="${Math.max(3,xe-xa)}" height="13" rx="3" fill="${z.laufend?'#2C7A4B':'#DCE3D5'}" opacity="${z.laufend?.55:.9}"><title>${esc(z.id)}: ${fmt(z.aussaat)} bis etwa ${fmt(z.ende)}${z.laufend?` · heute Woche ${nz(z.woche,1)}`:''}</title></rect>`;
+    s+=`<rect x="${xa}" y="${y+4}" width="${Math.max(3,xe-xa)}" height="13" rx="3" fill="${z.laufend?'#2C7A4B':'#DCE3D5'}" opacity="${z.laufend?.55:.9}" style="cursor:help" data-tipp="${esc(tippBau('Satz '+z.id,z.laufend?'#2C7A4B':'#8C9A88',[['Aussaat',fmt(z.aussaat)],['Ende etwa',fmt(z.ende)],z.laufend?['Heute Woche',nz(z.woche,1)]:null]))}"/>`;
     for(const an of z.analysen){const x=X(+new Date(an.datum));
-      s+=`<circle cx="${x}" cy="${y+10.5}" r="4.5" fill="#141D17"><title>Beprobung ${fmt(an.datum)} · Woche ${nz(an.woche,1)}</title></circle>`}
+      s+=`<circle cx="${x}" cy="${y+10.5}" r="4.5" fill="#141D17" style="cursor:help" data-tipp="${esc(tippBau('Beprobung','#141D17',[['Datum',fmt(an.datum)],['Kulturwoche',nz(an.woche,1)]]))}"/>`}
     for(const g of z.geplant){const x=X(+new Date(g.datum));
-      s+=`<circle cx="${x}" cy="${y+10.5}" r="4.5" fill="none" stroke="#3A6DA6" stroke-width="1.6"><title>geplant ${fmt(g.datum)} · Woche ${nz(g.woche,1)}</title></circle>`}
+      s+=`<circle cx="${x}" cy="${y+10.5}" r="4.5" fill="none" stroke="#3A6DA6" stroke-width="1.6" style="cursor:help" data-tipp="${esc(tippBau('Geplante Beprobung','#3A6DA6',[['Datum',fmt(g.datum)],['Kulturwoche',nz(g.woche,1)]]))}"/>`}
   });
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-30}" y2="${H-30}" stroke="#141D17"/>`;
   for(let i=0;i<=4;i++){const t=x0+(x1-x0)*i/4;
@@ -1248,10 +1429,7 @@ function chartSaetze(box,saetze){
 }
 
 /* ══════════ 7 · Gerüst ══════════ */
-/* Alle Klickziele laufen über data-Attribute statt über zusammengesetzte
-   onclick-Zeichenketten. Ein Apostroph in einem Logbuchtitel kann damit
-   keinen Aufruf mehr zerlegen. */
-const AKTION={};
+/* AKTION ist in Abschnitt 1 angelegt; hier wird sie verdrahtet. */
 document.addEventListener('click',ev=>{
   const t=ev.target.closest?ev.target.closest('[data-tun]'):null;
   if(!t)return;
@@ -1270,16 +1448,37 @@ const TABS=[['lage','Überblick'],['analysen','Analysen'],['naehrstoff','Nährst
 const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),naehrstoff:()=>vNaehr(),wirkung:()=>vWirkung(),
  substrat:()=>vSubstrat(),giess:()=>vGiess(),logbuch:()=>vLogbuch(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
 function render(){
+  const yVor=window.scrollY||window.pageYOffset||0;
+  tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
   el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
   el('stand').textContent=dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
   const f=ANSICHT[tab]||ANSICHT.lage;
+  DIAG=null;
+  if(letzterTab!==tab)diagAus.clear();
   try{el('view').innerHTML=f()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
     <p class="muted">Die übrigen Reiter funktionieren weiter, und deine Daten sind unverändert. Sichere sie und schick mir die Meldung unten.</p>
     <pre class="tiny mono" style="white-space:pre-wrap;background:var(--card2);padding:12px;border-radius:8px;border:1px solid var(--line)">${esc(err&&err.stack||err)}</pre></div>`;
     nachRender=null}
-  window.scrollTo({top:0});
+  /* Nur ein echter Reiterwechsel springt an den Seitenanfang. Frueher tat
+     das jede Zustandsaenderung – wer unten im Diagramm den Naehrstoff
+     wechselte, landete wieder ganz oben. */
+  if(letzterTab!==tab){letzterTab=tab;window.scrollTo({top:0})}
+  else window.scrollTo({top:yVor});
   if(nachRender){const g=nachRender;nachRender=null;try{g()}catch(err){}}
+}
+let letzterTab=null;
+
+/* Diagramm allein neu bauen: die Bedienelemente und das Diagramm werden
+   ersetzt, der Rest der Seite und die Scrollposition bleiben unberuehrt.
+   Faellt etwas aus, wird auf den vollstaendigen Aufbau zurueckgefallen. */
+function diagFrisch(){
+  tippWeg();
+  if(!DIAG)return render();
+  try{
+    for(const [id,fn] of DIAG.teile){const b=el(id);if(!b)return render();b.innerHTML=fn()}
+    if(DIAG.zeichnen)DIAG.zeichnen();
+  }catch(err){render()}
 }
 AKTION.reiter=d=>{const dg=el('dlg');if(dg.open)dg.close();tab=d.reiter;render()};
 function setTab(t){tab=t;render()}
@@ -1349,7 +1548,7 @@ function datenlage(){
 }
 
 /* ══════════ 8 · Überblick ══════════ */
-let ueParams=null;
+let ueParams=null,ueLinien='aus',ueLog=true;
 function vLage(){
   if(!db.analysen.length)return `<div class="card"><h2>Willkommen</h2>
     <p class="muted" style="max-width:64ch">Dieses Werkzeug sammelt eure Blattsaft- und Substratanalysen und beantwortet drei Fragen:
@@ -1373,19 +1572,55 @@ function vLage(){
   ueParams=ueParams.filter(k=>verf.includes(k));
   if(!ueParams.length)ueParams=verf.slice(0,4);
 
-  nachRender=()=>{
-    if(erh.length<2)return;                 /* bei einer Erhebung gibt es keine Diagramme */
-    chartIndex(el('cIndex'),erh);
-    const serien=ueParams.map((k,i)=>({name:NAME[k],farbe:FARBEN[i%FARBEN.length],
+  /* Die Farbvergabe hängt von der Auswahl ab und wird deshalb bei jedem
+     Neuzeichnen frisch bestimmt, nicht einmal beim Seitenaufbau. */
+  const ueFarben=()=>farbenFuer(ueParams);
+  function ueSerien(){
+    const ueFarbe=ueFarben();
+    return ueParams.map((k,i)=>({id:'ue|'+k,name:NAME[k]||k,farbe:ueFarbe[k],form:FORMEN[i%FORMEN.length],
       punkte:erh.map(e=>{const b=e.bew[k];if(!b||b.fehlt)return null;
         const l=mittel(b.werte.map(x=>lage(x.wert,x.opt)).filter(v=>v!=null));
-        return l==null?null:{x:+new Date(e.datum),y:l,xtext:fmtK(e.datum),
-          titel:`${e.satz} · ${fmt(e.datum)}: ${b.werte.filter(x=>x.st!=null).map(x=>x.blattalter+' '+nz(x.wert)).join(', ')} ${einheit(k)}`}}).filter(Boolean)}))
-      .filter(s=>s.punkte.length);
-    chartLinien(el('cBand'),{serien,bands3:true,xTyp:'datum',xLabel:'Probendatum',
-      ereignisse:db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})),hoehe:300});
-    el('legBand').innerHTML=serien.map(s=>`<span><i style="background:${s.farbe}"></i>${esc(s.name)}</span>`).join('');
-  };
+        if(l==null)return null;
+        return {x:+new Date(e.datum),y:l,xtext:fmtK(e.datum),gruppe:ueLinien==='alle'?null:e.satz,kennung:e.id,
+          tipp:tippBau(NAME[k]||k,ueFarbe[k],[
+            ['Satz',(e.satz||'?')+(e.zustand?' · '+e.zustand:'')],
+            ['Probe',fmt(e.datum)],
+            e.alter.woche!=null?['Kulturwoche',nz(e.alter.woche,1)]:null,
+            ...b.werte.filter(x=>x.st!=null).map(x=>[x.blattalter==='misch'?'Mischprobe':x.blattalter+'es Blatt',nz(x.wert)+' '+einheit(k)]),
+            ['Beurteilung',b.ok?(b.rand?'im Sollbereich, knapp':'im Sollbereich'):(b.st==='tief'?'unter dem Sollbereich':'über dem Sollbereich')]],
+            'Anklicken öffnet alle Werte dieser Erhebung.')}}).filter(Boolean)}))
+      .filter(x=>x.punkte.length);
+  }
+  function ueZeichnen(){
+    if(erh.length<2)return;                 /* bei einer Erhebung gibt es keine Diagramme */
+    chartIndex(el('cIndex'),erh);
+    const serien=ueSerien();
+    chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,
+      linien:ueLinien!=='aus',aufKlick:true,
+      ereignisse:ueLog?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+    el('legBand').innerHTML=legende(serien,diagAus,'Skala 0–3: 1 bis 2 ist der Sollbereich');
+  }
+  function ueKopf(){
+    const ueFarbe=ueFarben();
+    return `<div class="hd"><div><h2>Nährstofflage über die Zeit</h2>
+      <p class="sub">Alle Nährstoffe auf einer gemeinsamen Skala: das grüne Band ist der Sollbereich, unabhängig von der Einheit.
+      Farbe und Form kennzeichnen den Nährstoff. Mit dem Zeiger über einem Punkt stehen Satz, Datum und die gemessenen Werte; ein Klick öffnet die Erhebung.</p></div></div>
+      <div class="werkzeug">
+        <div class="wz"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+          ${verf.map(k=>`<span class="chip stoff ${ueParams.includes(k)?'on':''}" data-tun="ueParam" data-k="${esc(k)}"><span class="dot" style="background:${ueParams.includes(k)?ueFarbe[k]:'#C3CDBF'}"></span>${esc(NAME[k]||k)}</span>`).join('')}
+        </span></div>
+        <div class="wz"><span class="lab">Linien</span>
+          <span class="seg">${[['aus','keine'],['satz','je Satz'],['alle','durchgehend']].map(([v,l])=>`<button class="${ueLinien===v?'on':''}" data-tun="ueLinien" data-v="${v}">${l}</button>`).join('')}</span>
+          <span class="chip ${ueLog?'on':''}" data-tun="ueLog" style="margin-left:8px">Logbuch einblenden</span>
+          <button class="ghost" data-tun="ueSatzWahl" data-v="problem" style="margin-left:auto">Was daneben liegt</button>
+          <button class="ghost" data-tun="ueSatzWahl" data-v="kern">Alle der Kennzahl</button>
+        </div></div>
+      <div id="cBand" class="diagramm"></div><div class="legend" id="legBand"></div>`;
+  }
+  if(erh.length>1){
+    DIAG={teile:[['ueKarte',ueKopf]],zeichnen:ueZeichnen,klick:id=>erhebungDetail(id)};
+  }
+  nachRender=ueZeichnen;
 
   let s='';
   if(dl.unplausibel)s+=`<div class="note warn"><strong>${dl.unplausibel} Altersangabe${dl.unplausibel>1?'n sind':' ist'} unplausibel.</strong>
@@ -1404,9 +1639,7 @@ function vLage(){
     <div class="kpi"><h4>Sätze laufend</h4><b>${laufend}</b><span class="tiny muted">von ${alleSaetze().length} erfasst</span></div>
   </div>`;
 
-  s+=befundKarten();
-
-  s+= erh.length>1
+  const indexKarte=()=> erh.length>1
    ? `<div class="card"><div class="hd"><div><h2>Nähern wir uns dem Optimum?</h2>
       <p class="sub">Anteil der Kernnährstoffe im Sollbereich, je Erhebung. Senkrechte Linien sind Einträge aus dem Logbuch. Grün und gelb desselben Tages stehen nebeneinander.</p></div></div>
       <div id="cIndex" class="scroll"></div>
@@ -1418,6 +1651,19 @@ function vLage(){
       <div class="leer"><h3>Dafür braucht es eine zweite Erhebung</h3>
       <p class="muted" style="max-width:58ch;margin:0 auto">Mit einer einzigen Analyse gibt es keinen Verlauf – nur einen Zustand.
       Sobald eine zweite Erhebung dazukommt, erscheint hier der Anteil der Nährstoffe im Sollbereich über die Zeit, mit den Einträgen aus dem Logbuch als senkrechte Linien.</p></div></div>`;
+
+  /* Bei mehr als einer Erhebung ist das Diagramm das Herzstück und steht
+     zuoberst, gleich unter den Kennzahlen. Bei einer einzigen Analyse gäbe es
+     dort nichts zu sehen – dann stehen die Befunde oben, wo sonst das
+     Diagramm steht, statt unter zwei fast leeren Kästen. */
+  if(erh.length>1){
+    s+=`<div class="card" id="ueKarte">${ueKopf()}</div>`;
+    s+=indexKarte();
+    s+=befundKarten();
+  }else{
+    s+=befundKarten();
+    s+=indexKarte();
+  }
 
   if(wk.length)s+=`<div class="card"><div class="hd"><div><h2>Was immer wieder auftritt</h2>
     <p class="sub">Befunde, die in mehr als einer Erhebung entstanden sind. Bei wenigen Analysen ist das die belastbarere Frage als ein Einzelbefund – ein wiederholtes Muster ist kein Ausreisser.</p></div></div>
@@ -1438,14 +1684,6 @@ function vLage(){
       <td style="min-width:150px">${lageBalken(b.mittel)}</td></tr>`).join('')}
     </tbody></table></div>
     ${bil.filter(b=>b.quote===0&&b.haupt).length?`<div class="note">${bil.filter(b=>b.quote===0&&b.haupt).map(b=>NAME[b.k]).join(', ')} lag in keiner einzigen Erhebung im Optimum. Das ist kein Ausreisser, sondern ein Grundzustand der Düngung – dort liegt der grösste Hebel.</div>`:''}
-  </div>`;
-
-  if(erh.length>1)s+=`<div class="card"><div class="hd"><div><h2>Nährstofflage über die Zeit</h2>
-    <p class="sub">Alle Nährstoffe auf eine gemeinsame Skala gebracht: das grüne Band ist der Sollbereich, unabhängig von der Einheit.</p></div></div>
-    <div class="row" style="margin-bottom:12px"><div style="flex:1"><label class="lab">Nährstoffe</label><div class="row" style="gap:6px">
-      ${verf.map(k=>`<span class="chip ${ueParams.includes(k)?'on':''}" data-tun="ueParam" data-k="${esc(k)}"><span class="dot" style="background:${FARBEN[Math.max(0,ueParams.indexOf(k))%FARBEN.length]};${ueParams.includes(k)?'':'opacity:.25'}"></span>${esc(NAME[k])}</span>`).join('')}
-    </div></div></div>
-    <div id="cBand" class="scroll"></div><div class="legend" id="legBand"></div>
   </div>`;
 
   /* Die Befunde sind der Inhalt, nicht die Diagramme. Sie stehen deshalb
@@ -1475,7 +1713,20 @@ function vLage(){
   }
   return s;
 }
-AKTION.ueParam=d=>{const i=ueParams.indexOf(d.k);i<0?ueParams.push(d.k):ueParams.splice(i,1);render()};
+AKTION.ueParam=d=>{
+  const i=ueParams.indexOf(d.k);
+  if(i>=0){if(ueParams.length>1)ueParams.splice(i,1);else return toast('Mindestens ein Nährstoff muss ausgewählt bleiben.')}
+  else{if(ueParams.length>=NS_MAX)return toast(`Mehr als ${NS_MAX} Nährstoffe werden unübersichtlich – nimm zuerst einen weg.`);ueParams.push(d.k)}
+  diagFrisch();
+};
+AKTION.ueLinien=d=>{ueLinien=d.v;diagFrisch()};
+AKTION.ueLog=()=>{ueLog=!ueLog;diagFrisch()};
+AKTION.ueSatzWahl=d=>{
+  const b=bilanz();
+  const w=(d.v==='kern'?b.map(x=>x.k):b.filter(x=>x.quote<1).map(x=>x.k)).slice(0,NS_MAX);
+  if(!w.length)return toast('Für diese Zusammenstellung liegen keine Messwerte vor.');
+  ueParams=w;diagAus.clear();diagFrisch();
+};
 
 /* ── Eine Erhebung als Ganzes ────────────────────────────
    Der Weg «Datei hochladen und verstehen» endet hier: alle Werte des
@@ -1820,84 +2071,210 @@ AKTION.uebernehmen=()=>{
   toast(PRUEF_BEARB?'Gespeichert.':`${n} Probe${n>1?'n':''} übernommen. Nicht vergessen: sichern.`);
 };
 
-/* ══════════ 10 · Nährstoffe ══════════ */
-let sb='K',sbAchse='datum',sbRel=false;
+/* ══════════ 10 · Nährstoffe ══════════
+   Das Diagramm ist hier das Herzstück: es steht zuoberst, alle Regler stehen
+   darüber, und jeder Regler zeichnet nur das Diagramm neu – die Seite bleibt
+   stehen, wo sie ist. Die Tabellen darunter beantworten dieselbe Frage in
+   Zahlen, für alle ausgewählten Nährstoffe. */
+
+/* Feste Reihenfolge für die Farbvergabe: derselbe Nährstoff bekommt beim
+   Zusammenstellen möglichst immer dieselbe Farbe, damit man ihn wiedererkennt. */
+const STOFFREIHE=['NO3','N_gesamt','N_aus_NO3','NH4','K','Ca','Mg','P','S','Fe','Mn','Zn','B','Cu','Mo','Si','Na','Cl','Al','Zucker','pH','EC'];
+const FARBSTOFF=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A7118','#556B2F','#B0446F','#1F5F86','#96601C','#4B5D2A'];
+/* Wunschfarbe je Nährstoff, aber innerhalb einer Auswahl nie doppelt. */
+function farbenFuer(keys){
+  const m={},belegt=new Set();
+  for(const k of keys){
+    const i=STOFFREIHE.indexOf(k);
+    let c=FARBSTOFF[(i<0?keys.indexOf(k):i)%FARBSTOFF.length];
+    if(belegt.has(c))c=FARBSTOFF.find(x=>!belegt.has(x))||c;
+    belegt.add(c);m[k]=c;
+  }
+  return m;
+}
+const BLATTFORM={jung:'kreis',alt:'raute',misch:'quadrat'};
+/* Bei mehreren Nährstoffen steht die Farbe für den Nährstoff und die Form
+   für das Blatt. Ist nur ein Nährstoff gewählt, wäre die Farbe leer – dann
+   übernimmt sie das Blattalter. So trägt sie immer eine Information. */
+const BLATTFARBE={jung:'#2C7A4B',alt:'#BE6F16',misch:'#3A6DA6'};
+/* Wie gross sind die Zahlen dieses Parameters ueblicherweise? Der Median der
+   Messwerte reicht dafuer und ist gegen einen Ausreisser unempfindlich. */
+function groessenordnung(werte){
+  const v=werte.filter(x=>x!=null&&x>0).sort((a,b)=>a-b);
+  return v.length?v[Math.floor(v.length/2)]:null;
+}
+/* Duerfen diese Parameter auf eine gemeinsame Messwert-Achse?
+   Nur wenn sie dieselbe Einheit haben UND in derselben Groessenordnung
+   liegen. Kalium (rund 5000 ppm) und Eisen (rund 2 ppm) teilen zwar die
+   Einheit, aber auf einer gemeinsamen Achse waere Eisen eine Linie auf null. */
+const SPANNE_MAX=25;
+function gemeinsameAchse(keys,einheitVon,groesseVon){
+  const einh=[...new Set(keys.map(einheitVon))];
+  if(einh.length>1)return {ok:false,grund:'einheit',einheiten:einh};
+  const gr=keys.map(k=>({k,g:groesseVon(k)})).filter(x=>x.g!=null);
+  if(gr.length<2)return {ok:true,einheiten:einh};
+  const hoch=gr.reduce((a,b)=>b.g>a.g?b:a),tief=gr.reduce((a,b)=>b.g<a.g?b:a);
+  if(hoch.g/tief.g>SPANNE_MAX)return {ok:false,grund:'groesse',einheiten:einh,hoch,tief};
+  return {ok:true,einheiten:einh};
+}
+const SATZ_HAUPT=['NO3','K','Ca','Mg','P','S'];
+const SATZ_SPUR=['Fe','Mn','Zn','B','Cu','Mo'];
+const SATZ_BALLAST=['Na','Cl','EC'];
+const NS_MAX=8;
+
+let nsWahl=null,nsAchse='datum',nsSkala='auto',nsLinien='aus',nsBlatt='beide',nsLog=true;
 function vNaehr(){
   const erh=erhebungen();
-  if(!erh.length)return leerHinweis('Noch keine Blattsaftanalyse','Dieser Reiter zeigt einen einzelnen Nährstoff über die Zeit oder über das Kulturalter.',
+  if(!erh.length)return leerHinweis('Noch keine Blattsaftanalyse','Dieser Reiter zeigt Nährstoffe über die Zeit oder über das Kulturalter – einzeln oder mehrere nebeneinander.',
     '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
-  const params=[...new Set(erh.flatMap(e=>alleProben(e).flatMap(p=>Object.keys(p.werte))))].filter(k=>k!=='K/Ca'&&NAME[k]);
-  if(!params.includes(sb))sb=params.includes('K')?'K':params[0];
-  const mob=MOBIL[sb]||'unbekannt';
-  const inKern=kern().includes(sb);
-  const ov=erh.map(e=>optVon(leitProbe(e)||{optima:{}},sb)).find(Boolean);
-  const nachAlter=sbAchse==='woche';
+  const params=STOFFREIHE.concat([...new Set(erh.flatMap(e=>alleProben(e).flatMap(p=>Object.keys(p.werte))))])
+    .filter((k,i,a)=>a.indexOf(k)===i)
+    .filter(k=>k!=='K/Ca'&&NAME[k]&&erh.some(e=>alleProben(e).some(p=>p.werte[k])));
+  if(!nsWahl)nsWahl=params.includes('K')?['K']:params.slice(0,1);
+  const blattArten=['jung','alt','misch'].filter(al=>erh.some(e=>e.proben[al]));
   const mitAlter=erh.filter(e=>e.alter.woche!=null&&e.alter.plausibel);
-  const proSatz=new Map();
-  mitAlter.forEach(e=>{const l=proSatz.get(e.satz)||[];l.push(e);proSatz.set(e.satz,l)});
-  const mehrfach=[...proSatz.values()].filter(a=>a.length>1).length;
+  const nsGroesse=k=>groessenordnung(erh.flatMap(e=>alleProben(e).map(p=>p.werte[k]))
+    .filter(w=>w&&w.wert!=null&&!w.unter).map(w=>Math.abs(w.wert)));
 
-  nachRender=()=>{
-    let serien;
-    if(nachAlter){
-      serien=[...proSatz].map(([satz,liste],i)=>({name:'Satz '+satz,farbe:FARBEN[i%FARBEN.length],linie:liste.length>1,
-        punkte:liste.map(e=>{const p=e.proben.jung||e.proben.misch||e.proben.alt;
-          const wv=p&&p.werte[sb];if(!wv||wv.wert==null||wv.unter)return null;
-          const y=sbRel?lage(wv.wert,optVon(p,sb)):wv.wert;
-          return y==null?null:{x:e.alter.woche,y,xtext:nz(e.alter.woche,0)+' W',
-            titel:`${satz} · ${fmt(e.datum)} · Woche ${nz(e.alter.woche,1)}: ${nz(wv.wert)} ${einheit(sb)}`}}).filter(Boolean)}))
-        .filter(s=>s.punkte.length);
-    }else{
-      const gr=new Map();
-      for(const e of erh)for(const al of ['jung','alt','misch']){
-        const p=e.proben[al];if(!p)continue;
-        const wv=p.werte[sb];if(!wv||wv.wert==null||wv.unter)continue;
-        if(!gr.has(al))gr.set(al,[]);
-        gr.get(al).push({e,p,v:wv.wert});
+  /* Alles, was von der Auswahl abhängt, wird bei jedem Neuzeichnen frisch
+     bestimmt. Läge es im äusseren Gültigkeitsbereich, zeigte das Diagramm
+     nach einer Änderung noch die Farben und Hinweise der vorigen Auswahl. */
+  function nsAb(){
+    nsWahl=nsWahl.filter(k=>params.includes(k));
+    if(!nsWahl.length)nsWahl=params.slice(0,1);
+    if(nsBlatt!=='beide'&&!blattArten.includes(nsBlatt))nsBlatt='beide';
+    if(nsAchse==='woche'&&!mitAlter.length)nsAchse='datum';
+    const achse=gemeinsameAchse(nsWahl,einheit,nsGroesse);
+    const skala=nsSkala==='lage'?'lage':(achse.ok?'wert':'lage');
+    return {achse,einheiten:achse.einheiten,gleich:achse.ok,skala,
+      erzwungen:nsSkala!=='lage'&&!achse.ok,
+      farbe:farbenFuer(nsWahl),
+      band:(nsWahl.length===1&&skala==='wert')?(erh.map(e=>optVon(leitProbe(e)||{optima:{}},nsWahl[0])).find(Boolean)||null):null};
+  }
+
+  function serienBauen(Z){
+    const arten=nsBlatt==='beide'?blattArten:[nsBlatt];
+    const basis=nsAchse==='woche'?mitAlter:erh;
+    const out=[];
+    for(const k of nsWahl)for(const al of arten){
+      const punkte=[];
+      for(const e of basis){
+        const pr=e.proben[al];if(!pr)continue;
+        const w=pr.werte[k];if(!w||w.wert==null||w.unter)continue;
+        const o=optVon(pr,k);
+        const y=Z.skala==='lage'?lage(w.wert,o):w.wert;
+        if(y==null)continue;
+        const st=status(w.wert,o,w.unter);
+        punkte.push({
+          x:nsAchse==='woche'?e.alter.woche:+new Date(e.datum),
+          y,gruppe:nsLinien==='alle'?null:e.satz,kennung:e.id,
+          xtext:nsAchse==='woche'?nz(e.alter.woche,0)+' W':fmtK(e.datum),
+          tipp:tippBau(NAME[k]||k,nsWahl.length>1?Z.farbe[k]:(BLATTFARBE[al]||Z.farbe[k]),[
+            ['Satz',(e.satz||'?')+(e.zustand?' · '+e.zustand:'')],
+            ['Probe',fmt(e.datum)],
+            e.alter.woche!=null?['Kulturwoche',nz(e.alter.woche,1)]:null,
+            ['Blatt',al==='misch'?'Mischprobe':al+'es Blatt'],
+            ['Messwert',nz(w.wert)+' '+einheit(k)],
+            o?['Sollbereich',(o[0]!=null?nz(o[0]):'offen')+'–'+(o[1]!=null?nz(o[1]):'offen')+' '+einheit(k)]:null,
+            st?['Beurteilung',STTEXT[st]]:null],
+            'Anklicken öffnet alle Werte dieser Erhebung.')});
       }
-      serien=[...gr].map(([al,arr],i)=>({name:al,farbe:FARBEN[i%FARBEN.length],strich:al==='alt'?'5 4':'',linie:true,
-        punkte:arr.map(x=>({x:+new Date(x.e.datum),y:sbRel?lage(x.v,optVon(x.p,sb)):x.v,xtext:fmtK(x.e.datum),
-          titel:`${x.e.satz} · ${fmt(x.e.datum)} · ${al}: ${nz(x.v)} ${einheit(sb)}`}))}));
+      if(punkte.length)out.push({id:k+'|'+al,name:(nsWahl.length>1?(NAME[k]||k)+' · ':'')+(al==='misch'?'Mischprobe':al),
+        farbe:nsWahl.length>1?Z.farbe[k]:(BLATTFARBE[al]||Z.farbe[k]),form:BLATTFORM[al]||'kreis',punkte});
     }
-    chartLinien(el('cNaehr'),{serien,band:sbRel?null:ov,bands3:sbRel,xTyp:nachAlter?'zahl':'datum',
-      xLabel:nachAlter?'Kulturwoche bei der Probenahme':'Probendatum',
-      ereignisse:nachAlter?[]:db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})),hoehe:300});
-    el('legNaehr').innerHTML=serien.map(s=>`<span><i style="background:${s.farbe}"></i>${esc(s.name)}</span>`).join('')
-      +`<span class="muted">${sbRel?'Lage auf der Skala 0–3':'Einheit '+esc(einheit(sb))}</span>`;
-  };
+    return out;
+  }
 
-  const zeilen=erh.map(e=>{
-    const wj=e.proben.jung&&e.proben.jung.werte[sb],wa=e.proben.alt&&e.proben.alt.werte[sb],wm=e.proben.misch&&e.proben.misch.werte[sb];
-    const o=optVon(leitProbe(e),sb);
-    const vj=wj&&!wj.unter?wj.wert:null,va=wa&&!wa.unter?wa.wert:null;
-    return {e,wj,wa,wm,o,v:(vj!=null&&va)?vj/va:null,b:e.bew[sb]};
-  });
+  function nsZeichnen(){
+    const Z=nsAb(),serien=serienBauen(Z);
+    chartPunkte(el('cNs'),{serien,yTyp:Z.skala==='lage'?'lage':'wert',
+      band:Z.band,bandLabel:'Sollbereich',
+      xTyp:nsAchse==='woche'?'zahl':'datum',
+      xLabel:nsAchse==='woche'?'Kulturwoche bei der Probenahme':'Probendatum',
+      yLabel:Z.skala==='lage'?'Lage auf der Skala 0–3':Z.einheiten.join(' · '),
+      linien:nsLinien!=='aus',hoehe:340,aufKlick:true,
+      ereignisse:(nsLog&&nsAchse==='datum')?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum)))
+        .map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+    el('legNs').innerHTML=legende(serien,diagAus,
+      Z.skala==='lage'?'Skala 0–3: 1 bis 2 ist der Sollbereich':'Einheit '+esc(Z.einheiten.join(' · ')));
+  }
 
-  return `<div class="card"><div class="hd"><div><h2>${esc(NAME[sb]||sb)}</h2>
-      <p class="sub">Ein Nährstoff, beide Blattalter, mit Sollbereich.</p></div>
-    <div class="row">
-      <select data-aend="sbWahl">${params.map(p=>`<option value="${esc(p)}"${sb===p?' selected':''}>${esc(NAME[p]||p)}</option>`).join('')}</select>
-      <select data-aend="sbAchse">
-        <option value="datum"${!nachAlter?' selected':''}>nach Probendatum</option>
-        <option value="woche"${nachAlter?' selected':''}>nach Kulturwoche</option></select>
-      <span class="chip ${sbRel?'on':''}" data-tun="sbRel">Lage statt Absolutwert</span></div></div>
-    <div class="row" style="gap:20px;align-items:flex-start;margin-bottom:14px">
-      <div style="flex:1;min-width:290px"><h4>Verhalten in der Pflanze</h4><p class="small">${MOBILTEXT[mob]}</p></div>
-      <div style="min-width:200px"><h4>Einordnung</h4>
-        <div class="small">Mobilität: <strong>${esc(mob)}</strong></div>
-        <div class="small">Massgebliches Blatt: <strong>${mob==='mobil'?'Altblatt':mob==='immobil'?'Jungblatt':'beide'}</strong></div>
-        <div class="small">Einheit: ${esc(einheit(sb))}</div>
-        <div class="small">Optimum: ${ov?`${ov[0]!=null?nz(ov[0]):'offen'}–${ov[1]!=null?nz(ov[1]):'offen'} <span class="tiny muted">(${esc(optQuelle(leitProbe(erh[0]),sb)||'')})</span>`:'nicht hinterlegt'}</div>
-        <div class="small">In der Kennzahl: <strong>${inKern?'ja':'nein'}</strong></div></div>
-    </div>
-    <div id="cNaehr" class="scroll"></div><div class="legend" id="legNaehr"></div>
-    ${nachAlter?(mehrfach?`<div class="note gut">${mehrfach} Satz${mehrfach>1?' wurden':' wurde'} mehrfach beprobt – dort entsteht eine echte Entwicklungskurve statt einer Punktwolke.</div>`
-      :`<div class="note">Bisher wurde kein Satz zweimal beprobt. Jeder Punkt ist deshalb eine Momentaufnahme eines anderen Satzes an seinem jeweiligen Alter – zusammen ein grobes Bild, aber keine Entwicklung. Im Planer kannst du festlegen, welchen Satz ihr über seine Kulturzeit begleiten wollt.</div>`)
-      :''}
-    ${nachAlter&&erh.length>mitAlter.length?`<p class="tiny muted">${erh.length-mitAlter.length} Erhebung(en) fehlen hier, weil ihr Kulturalter unbekannt oder unplausibel ist.</p>`:''}
-  </div>
-  <div class="card"><h2>${esc(NAME[sb]||sb)} je Erhebung</h2>
-    <div class="scroll"><table><thead><tr><th>Datum</th><th>Satz</th><th>Alter</th><th>jung</th><th>alt</th><th>jung/alt</th><th>Bewertung</th><th>Lesart</th></tr></thead><tbody>
+  function segment(name,wert,liste){
+    return `<span class="seg">${liste.map(([v,l,aus,grund])=>`<button class="${wert===v?'on':''}"${aus?' disabled title="'+esc(grund||'')+'"':''} data-tun="${name}" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</span>`;
+  }
+
+  function nsKopf(){
+    const Z=nsAb();
+    const chips=params.map(k=>`<span class="chip stoff ${nsWahl.includes(k)?'on':''}" data-tun="nsStoff" data-k="${esc(k)}"><span class="dot" style="background:${nsWahl.includes(k)?Z.farbe[k]:'#C3CDBF'}"></span>${esc(NAME[k]||k)}</span>`).join('');
+    let t=`<div class="hd"><div><h2>${nsWahl.length===1?esc(NAME[nsWahl[0]]||nsWahl[0]):nsWahl.length+' Nährstoffe im Verlauf'}</h2>
+      <p class="sub">Jeder Punkt ist eine Messung – Linien sind zuschaltbar, aber nicht die Vorgabe.
+      ${nsWahl.length>1?'Die Farbe steht für den Nährstoff, die Form für das Blatt.':'Farbe und Form stehen für das Blattalter.'}
+      Mit dem Zeiger über einem Punkt erscheinen Satz, Datum und Wert; ein Klick öffnet die ganze Erhebung.
+      Ein Klick in der Legende blendet eine Reihe aus.</p></div></div>`;
+    t+=`<div class="werkzeug">
+      <div class="wz"><span class="lab">Zusammenstellung</span>
+        ${[['haupt','Hauptnährstoffe'],['spur','Spurenelemente'],['ballast','Ballast'],['problem','Was daneben liegt'],['kern','Alle der Kennzahl']]
+          .map(([v,l])=>`<button class="ghost" data-tun="nsSatzWahl" data-v="${v}">${l}</button>`).join('')}
+      </div>
+      <div class="wz"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">${chips}</span></div>
+      <div class="wz">
+        <span class="lab">Waagrecht</span>${segment('nsAchse',nsAchse,[['datum','Probendatum'],['woche','Kulturwoche',!mitAlter.length,'Dafür braucht es Erhebungen mit bekanntem Aussaatdatum.']])}
+        <span class="lab" style="min-width:0;margin-left:8px">Senkrecht</span>${segment('nsSkala',Z.skala,[['wert','Messwert',!Z.gleich,
+          Z.achse.grund==='einheit'?'Die ausgewählten Nährstoffe haben verschiedene Einheiten – nur die Lage 0–3 ist gemeinsam lesbar.'
+            :'Die ausgewählten Nährstoffe liegen zu weit auseinander für eine gemeinsame Messwert-Achse.'],['lage','Lage 0–3']])}
+      </div>
+      <div class="wz">
+        <span class="lab">Blatt</span>${segment('nsBlatt',nsBlatt,[['beide','alle']].concat(blattArten.map(a=>[a,a==='misch'?'Mischprobe':a])))}
+        <span class="lab" style="min-width:0;margin-left:8px">Linien</span>${segment('nsLinien',nsLinien,[['aus','keine'],['satz','je Satz'],['alle','durchgehend']])}
+        ${nsAchse==='datum'?`<span class="chip ${nsLog?'on':''}" data-tun="nsLog" style="margin-left:8px">Logbuch einblenden</span>`:''}
+      </div></div>`;
+    t+=`<div id="cNs" class="diagramm"></div><div class="legend" id="legNs"></div>`;
+    if(Z.erzwungen)t+=`<div class="note">${Z.achse.grund==='einheit'
+        ?`Die Auswahl umfasst verschiedene Einheiten (${esc(Z.einheiten.join(', '))}).`
+        :`${esc(NAME[Z.achse.hoch.k]||Z.achse.hoch.k)} liegt bei rund ${nz(Z.achse.hoch.g)} ${esc(Z.einheiten[0])}, ${esc(NAME[Z.achse.tief.k]||Z.achse.tief.k)} bei rund ${nz(Z.achse.tief.g)} – auf einer gemeinsamen Messwert-Achse wäre ${esc(NAME[Z.achse.tief.k]||Z.achse.tief.k)} eine Linie auf null.`}
+      Gezeigt wird deshalb die Lage 0–3: 0 bis 1 heisst unter dem Sollbereich, 1 bis 2 im Sollbereich, 2 bis 3 darüber.
+      Wähle einen einzelnen Nährstoff oder Nährstoffe ähnlicher Grössenordnung, um wieder Messwerte zu sehen.</div>`;
+    if(nsLinien==='alle')t+=`<p class="tiny muted">Die Linien laufen durchgehend, auch über Satzgrenzen hinweg. Zwischen zwei Sätzen liegt kein Verlauf, sondern ein Wechsel des Bestands – lies solche Abschnitte mit Vorbehalt.</p>`;
+    else if(nsLinien==='satz'&&!erh.some(e=>erh.filter(x=>x.satz===e.satz).length>1))
+      t+=`<p class="tiny muted">Es sind keine Linien zu sehen, weil bisher kein Satz zweimal beprobt wurde. Verbunden wird nur, was zum selben Bestand gehört.</p>`;
+    if(nsAchse==='woche'){
+      const proSatz=new Map();mitAlter.forEach(e=>{const l=proSatz.get(e.satz)||[];l.push(e);proSatz.set(e.satz,l)});
+      const mehrfach=[...proSatz.values()].filter(a=>a.length>1).length;
+      t+=mehrfach?`<div class="note gut">${mehrfach} Satz${mehrfach>1?' wurden':' wurde'} mehrfach beprobt – dort entsteht eine echte Entwicklungskurve statt einer Punktwolke.</div>`
+        :`<div class="note">Bisher wurde kein Satz zweimal beprobt. Jeder Punkt ist deshalb eine Momentaufnahme eines anderen Satzes an seinem jeweiligen Alter – zusammen ein grobes Bild, aber keine Entwicklung. Im Planer kannst du festlegen, welchen Satz ihr über seine Kulturzeit begleiten wollt.</div>`;
+      if(erh.length>mitAlter.length)t+=`<p class="tiny muted">${erh.length-mitAlter.length} Erhebung(en) fehlen hier, weil ihr Kulturalter unbekannt oder unplausibel ist.</p>`;
+    }
+    if(erh.some(e=>alleProben(e).some(p=>nsWahl.some(k=>p.werte[k]&&p.werte[k].unter))))
+      t+=`<p class="tiny muted">Werte unter der Nachweisgrenze sind nicht eingezeichnet – eine Zahl dafür wäre erfunden. In der Tabelle stehen sie mit vorangestelltem &lt;.</p>`;
+    return t;
+  }
+
+  /* ── Einordnung und Zahlen ── */
+  function einordnung(farbe){
+    return `<div class="card"><div class="hd"><div><h2>Einordnung</h2>
+      <p class="sub">Woran der Nährstoff überhaupt zu messen ist – und mit welchem Sollbereich gerechnet wird.</p></div></div>
+      <div class="scroll"><table><thead><tr><th>Nährstoff</th><th>Mobilität</th><th>massgebliches Blatt</th><th>Einheit</th><th>Sollbereich</th><th>Herkunft</th><th>in der Kennzahl</th></tr></thead><tbody>
+      ${nsWahl.map(k=>{const mob=MOBIL[k]||'unbekannt',o=erh.map(e=>optVon(leitProbe(e)||{optima:{}},k)).find(Boolean);
+        return `<tr><td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${farbe[k]};margin-right:6px"></span><strong>${esc(NAME[k]||k)}</strong></td>
+        <td>${esc(mob)}</td><td>${mob==='mobil'?'Altblatt':mob==='immobil'?'Jungblatt':'beide'}</td>
+        <td class="tiny muted">${esc(einheit(k))}</td>
+        <td class="mono">${o?`${o[0]!=null?nz(o[0]):'offen'}–${o[1]!=null?nz(o[1]):'offen'}`:'nicht hinterlegt'}</td>
+        <td class="tiny muted">${esc(optQuelle(leitProbe(erh[erh.length-1])||{},k)||'–')}</td>
+        <td>${kern().includes(k)?'ja':'nein'}</td></tr>`}).join('')}
+      </tbody></table></div>
+      ${nsWahl.length===1?`<p class="small" style="margin-top:10px">${MOBILTEXT[MOBIL[nsWahl[0]]||'unbekannt']}</p>`:''}
+    </div>`;
+  }
+
+  function tabelleFuer(k){
+    const mob=MOBIL[k]||'unbekannt';
+    const zeilen=erh.map(e=>{
+      const wj=e.proben.jung&&e.proben.jung.werte[k],wa=e.proben.alt&&e.proben.alt.werte[k];
+      const o=optVon(leitProbe(e),k);
+      const vj=wj&&!wj.unter?wj.wert:null,va=wa&&!wa.unter?wa.wert:null;
+      return {e,wj,wa,o,v:(vj!=null&&va)?vj/va:null,b:e.bew[k]};
+    });
+    return `<div class="scroll"><table><thead><tr><th>Datum</th><th>Satz</th><th>Alter</th><th>jung</th><th>alt</th><th>jung/alt</th><th>Bewertung</th><th>Lesart</th></tr></thead><tbody>
     ${zeilen.map(r=>{
       const stj=r.wj?status(r.wj.wert,r.o,r.wj.unter):null,sta=r.wa?status(r.wa.wert,r.o,r.wa.unter):null;
       let lese='–';
@@ -1912,20 +2289,80 @@ function vNaehr(){
       }else{
         lese=(stj==='tief'||sta==='tief')?'unter Optimum':(stj==='hoch'||sta==='hoch')?'über Optimum':'unauffällig';
       }
-      return `<tr><td class="mono">${fmt(r.e.datum)}</td><td class="mono">${esc(r.e.satz||'')} ${zustandTag(r.e.zustand)}</td>
+      return `<tr class="klick" data-tun="erhebung" data-id="${esc(r.e.id)}"><td class="mono">${fmt(r.e.datum)}</td><td class="mono">${esc(r.e.satz||'')} ${zustandTag(r.e.zustand)}</td>
         <td class="tiny">${alterTag(r.e.alter)}</td>
         <td style="min-width:150px">${balken(r.wj,r.o)}</td><td style="min-width:150px">${balken(r.wa,r.o)}</td>
         <td class="mono">${r.v!=null?nz(r.v,2):'–'}</td>
         <td>${r.b&&!r.b.fehlt?stPill(r.b.ok?(r.b.rand?'randtief':'ok'):(r.b.st==='tief'?'tief':'hoch')):'<span class="pill na">nicht in der Kennzahl</span>'}</td>
         <td class="small">${esc(lese)}</td></tr>`}).join('')}
-    </tbody></table></div>
-    ${zeilen.some(r=>(r.wj&&r.wj.unter)||(r.wa&&r.wa.unter))?'<p class="tiny muted" style="margin-top:8px">Werte mit vorangestelltem &lt; lagen unter der Nachweisgrenze und werden nicht bewertet.</p>':''}
-    ${erh.some(e=>e.proben.misch)?'<p class="tiny muted">Mischproben erscheinen in dieser Tabelle nicht in den Spalten jung und alt – im Streifen im Überblick sind sie enthalten.</p>':''}
-  </div>`;
+    </tbody></table></div>`;
+  }
+
+  /* Mehrere Nährstoffe nebeneinander: eine Zeile je Erhebung, eine Spalte je
+     Nährstoff, jeweils am massgeblichen Blatt. Beantwortet die Frage, die das
+     Diagramm aufwirft – welche Zahl steckt hinter diesem Punkt. */
+  function nebeneinander(farbe){
+    return `<div class="card"><div class="hd"><div><h2>Die ausgewählten Nährstoffe nebeneinander</h2>
+      <p class="sub">Je Erhebung eine Zeile. Gezeigt wird der Wert an dem Blatt, an dem der Nährstoff aussagekräftig ist – phloemmobile am Altblatt, immobile am Jungblatt.</p></div></div>
+      <div class="scroll"><table><thead><tr><th>Datum</th><th>Satz</th><th>Alter</th>
+      ${nsWahl.map(k=>`<th><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${farbe[k]};margin-right:5px"></span>${esc(NAME[k]||k)}<div style="font-weight:400;text-transform:none;letter-spacing:0">${esc(einheit(k))}</div></th>`).join('')}
+      </tr></thead><tbody>
+      ${erh.map(e=>`<tr class="klick" data-tun="erhebung" data-id="${esc(e.id)}">
+        <td class="mono">${fmt(e.datum)}</td><td class="mono">${esc(e.satz||'')} ${zustandTag(e.zustand)}</td><td class="tiny">${alterTag(e.alter)}</td>
+        ${nsWahl.map(k=>{
+          const m=massgebliche(e,k);
+          if(!m)return '<td class="mono muted">–</td>';
+          const pr=m.ps[0],w=pr.werte[k],o=optVon(pr,k),st=status(w.wert,o,w.unter);
+          return `<td class="mono${st==='tief'||st==='hoch'?' val-off':istOk(st)?' val-ok':''}" title="${esc((m.art==='beide'?'Jung- und Altblatt':m.art+'blatt')+(st?' · '+STTEXT[st]:''))}">${zeigeWert(w)}</td>`;
+        }).join('')}
+      </tr>`).join('')}
+      </tbody></table></div>
+      <p class="tiny muted" style="margin-top:8px">Grün heisst im Sollbereich, rot daneben. Eine Zeile anklicken öffnet alle Werte dieser Erhebung.</p></div>`;
+  }
+
+  function nsUnten(){
+    const Z=nsAb();
+    let t=einordnung(Z.farbe);
+    if(nsWahl.length>1){
+      t+=nebeneinander(Z.farbe);
+      t+=`<div class="card"><h2>Je Nährstoff im Einzelnen</h2>
+        ${nsWahl.map((k,i)=>`<details${i===0?' open':''}><summary>${esc(NAME[k]||k)} je Erhebung</summary><div style="margin-top:10px">${tabelleFuer(k)}</div></details>`).join('')}</div>`;
+    }else{
+      t+=`<div class="card"><h2>${esc(NAME[nsWahl[0]]||nsWahl[0])} je Erhebung</h2>${tabelleFuer(nsWahl[0])}
+        ${erh.some(e=>e.proben.misch)?'<p class="tiny muted">Mischproben erscheinen in dieser Tabelle nicht in den Spalten jung und alt – im Diagramm oben sind sie als Quadrate enthalten.</p>':''}</div>`;
+    }
+    return t;
+  }
+
+  DIAG={teile:[['nsKarte',nsKopf],['nsUnten',nsUnten]],zeichnen:nsZeichnen,klick:id=>erhebungDetail(id)};
+  nachRender=nsZeichnen;
+  return `<div class="card" id="nsKarte">${nsKopf()}</div><div id="nsUnten">${nsUnten()}</div>`;
 }
-AKTION.sbRel=()=>{sbRel=!sbRel;render()};
-AKTION.sbWahl=(d,ev)=>{sb=ev.target.value;render()};
-AKTION.sbAchse=(d,ev)=>{sbAchse=ev.target.value;render()};
+/* Alle Regler des Diagramms zeichnen nur das Diagramm neu. */
+AKTION.nsStoff=d=>{
+  const i=nsWahl.indexOf(d.k);
+  if(i>=0){if(nsWahl.length>1)nsWahl.splice(i,1);else return toast('Mindestens ein Nährstoff muss ausgewählt bleiben.')}
+  else{if(nsWahl.length>=NS_MAX)return toast(`Mehr als ${NS_MAX} Nährstoffe werden unübersichtlich – nimm zuerst einen weg.`);nsWahl.push(d.k)}
+  diagFrisch();
+};
+AKTION.nsSatzWahl=d=>{
+  const erh=erhebungen();
+  const da=k=>erh.some(e=>alleProben(e).some(p=>p.werte[k]));
+  let w;
+  if(d.v==='haupt')w=SATZ_HAUPT.filter(da);
+  else if(d.v==='spur')w=SATZ_SPUR.filter(da);
+  else if(d.v==='ballast')w=SATZ_BALLAST.filter(da);
+  else if(d.v==='kern')w=kern().filter(da);
+  else w=bilanz().filter(b=>b.quote<1).slice(0,NS_MAX).map(b=>b.k);
+  w=w.slice(0,NS_MAX);
+  if(!w.length)return toast('Für diese Zusammenstellung liegen keine Messwerte vor.');
+  nsWahl=w;diagAus.clear();diagFrisch();
+};
+AKTION.nsAchse=d=>{nsAchse=d.v;diagFrisch()};
+AKTION.nsSkala=d=>{nsSkala=d.v;diagFrisch()};
+AKTION.nsBlatt=d=>{nsBlatt=d.v;diagFrisch()};
+AKTION.nsLinien=d=>{nsLinien=d.v;diagFrisch()};
+AKTION.nsLog=()=>{nsLog=!nsLog;diagFrisch()};
 
 /* ══════════ 11 · Wirkung ══════════ */
 let wk=null,wkVor=null,wkNach=null;
@@ -2184,13 +2621,18 @@ const gwRichtVon=k=>{
 const gwProben=()=>db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum)
   .slice().sort((a,b)=>b.datum.localeCompare(a.datum)||String(a.stelle||'').localeCompare(String(b.stelle||'')));
 const gwStelle=a=>a.stelle||'ohne Namen';
-/* Farbe je Entnahmestelle, damit Proben vom selben Tag unterscheidbar bleiben */
+/* Kurzname eines Wasserparameters – der Zusatz «(Wasser)» steht in jeder
+   Überschrift des Reiters schon im Zusammenhang. */
+const gwName=k=>String(NAME[k]||k).replace(' (Wasser)','').replace(' (Giesswasser)','');
+/* Farbe je Entnahmestelle, damit Proben vom selben Tag unterscheidbar bleiben.
+   Im Diagramm steht die Farbe für den Parameter und die Form für die Stelle –
+   in den Karten und Tabellen bleibt die Farbe die Kennung der Stelle. */
 function gwFarben(){
   const st=[...new Set(gwProben().map(gwStelle))].sort();
   const m={};st.forEach((x,i)=>m[x]=FARBEN[i%FARBEN.length]);
   return m;
 }
-let gwParam='gw_HCO3';
+let gwWahl=null,gwSkala='auto',gwLinien='aus',gwLog=true;
 function vGiess(){
   const alle=gwProben();
   const farbe=gwFarben();
@@ -2203,32 +2645,121 @@ function vGiess(){
     'Das Giesswasser ist die Quelle des Kreislaufs. In einem Ebbe-Flut-System fliesst nichts ab – was im Wasser hereinkommt, bleibt drin und reichert sich an. Ohne diese Analyse lässt sich nicht sagen, ob Natrium und Chlorid von aussen kommen oder erst im Umlauf entstehen.<br><br>Die Wasserberichte von NovaCropControl werden automatisch gelesen, auch die mit Historie.',
     '<button class="primary" data-tun="pdfWaehlen">Wasserbericht einlesen</button> <button data-tun="manuellNeu" data-typ="giesswasser">Von Hand erfassen</button>');
 
-  nachRender=()=>{
-    /* Verlauf: eine Serie je Entnahmestelle, der Name steht im Tooltip */
-    const serien=stellen.map(st=>({name:st,farbe:farbe[st],
-      punkte:alle.filter(a=>gwStelle(a)===st&&a.werte[gwParam]&&a.werte[gwParam].wert!=null)
-        .map(a=>({x:+new Date(a.datum),y:a.werte[gwParam].wert,xtext:fmtK(a.datum),
-          titel:`${fmt(a.datum)}: ${a.werte[gwParam].unter?'unter der Nachweisgrenze, ':''}${nz(a.werte[gwParam].wert)} ${einheit(gwParam)}`}))}))
-      .filter(x=>x.punkte.length);
-    const r=gwRichtVon(gwParam);
-    chartLinien(el('cGw'),{serien,band:r?[null,r.bis]:null,bandLabel:'Richtwert (Annahme)',xTyp:'datum',xLabel:'Probendatum',hoehe:280});
-    el('legGw').innerHTML=serien.map(x=>`<span><i style="background:${x.farbe}"></i>${esc(x.name)}</span>`).join('')
-      +`<span class="muted">${esc(einheit(gwParam))}</span>`+(r?`<span class="muted">grünes Band: bis ${nz(r.bis)} <span class="tag schaetz">Annahme</span></span>`:'');
+  /* ── Verlauf: Farbe = Parameter, Form = Entnahmestelle ──
+     So bleiben zwei Proben vom selben Tag aus verschiedenen Stellen
+     auseinanderzuhalten, auch wenn sie denselben Parameter zeigen. */
+  const gwVerf=GW_PARAM.map(k=>'gw_'+k).filter(k=>alle.some(a=>a.werte[k]&&a.werte[k].wert!=null));
+  if(!gwWahl)gwWahl=gwVerf.includes('gw_HCO3')?['gw_HCO3']:gwVerf.slice(0,1);
+  const gwForm={};stellen.forEach((st,i)=>gwForm[st]=FORMEN[i%FORMEN.length]);
+  const gwGroesse=k=>groessenordnung(alle.map(a=>a.werte[k]).filter(w=>w&&w.wert!=null&&!w.unter).map(w=>Math.abs(w.wert)));
+
+  /* Wie im Reiter Nährstoffe: alles Abgeleitete hängt an der Auswahl und
+     wird bei jedem Neuzeichnen frisch bestimmt. */
+  function gwAb(){
+    gwWahl=gwWahl.filter(k=>gwVerf.includes(k));
+    if(!gwWahl.length)gwWahl=gwVerf.slice(0,1);
+    const achse=gemeinsameAchse(gwWahl,einheit,gwGroesse);
+    const sk=gwSkala==='rel'?'rel':(achse.ok?'wert':'rel');
+    const max={};gwWahl.forEach(k=>{
+      const v=alle.map(a=>a.werte[k]&&!a.werte[k].unter?a.werte[k].wert:null).filter(x=>x!=null);
+      max[k]=v.length?Math.max.apply(null,v):null;
+    });
+    return {achse,einheiten:achse.einheiten,gleich:achse.ok,sk,max,
+      erzwungen:gwSkala!=='rel'&&!achse.ok,
+      farbe:farbenFuer(gwWahl),
+      band:(gwWahl.length===1&&sk==='wert'&&gwRichtVon(gwWahl[0]))?[null,gwRichtVon(gwWahl[0]).bis]:null};
+  }
+
+  function gwSerien(Z){
+    const gwFarbe=Z.farbe,gwSk=Z.sk,gwMax=Z.max;
+    const out=[];
+    for(const k of gwWahl)for(const st of stellen){
+      const punkte=[];
+      for(const a of alle.filter(x=>gwStelle(x)===st)){
+        const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
+        const y=gwSk==='rel'?(gwMax[k]?w.wert/gwMax[k]*100:null):w.wert;
+        if(y==null)continue;
+        const r=gwRichtVon(k),mg=inMgL(k,w.wert);
+        punkte.push({x:+new Date(a.datum),y,xtext:fmtK(a.datum),gruppe:gwLinien==='alle'?null:st,kennung:a.id,
+          tipp:tippBau(gwName(k),gwWahl.length>1?gwFarbe[k]:(farbe[st]||gwFarbe[k]),[
+            ['Entnahmestelle',st],
+            ['Probe',fmt(a.datum)],
+            a.laborId?['Probennummer',a.laborId]:null,
+            a.kultur?['Anbau',a.kultur]:null,
+            ['Messwert',nz(w.wert)+' '+einheit(k)],
+            mg!=null?['entspricht',nz(mg,1)+' mg/l']:null,
+            r?['Richtwert (Annahme)','bis '+nz(r.bis)+' '+einheit(k)]:null,
+            (r&&w.wert>r.bis)?['Beurteilung','über dem Richtwert']:null],
+            'Anklicken öffnet alle Werte dieser Probe.')});
+      }
+      if(punkte.length)out.push({id:k+'|'+st,name:(gwWahl.length>1?gwName(k)+' · ':'')+st,
+        farbe:gwWahl.length>1?gwFarbe[k]:(farbe[st]||gwFarbe[k]),form:gwForm[st]||'kreis',punkte});
+    }
+    return out;
+  }
+  function gwZeichnen(){
+    if(alle.length>1){
+      const Z=gwAb(),serien=gwSerien(Z),gwSk=Z.sk,gwEinheiten=Z.einheiten,gwBand=Z.band;
+      chartPunkte(el('cGw'),{serien,yTyp:'wert',band:gwBand,bandLabel:'Richtwert (Annahme)',
+        xTyp:'datum',xLabel:'Probendatum',hoehe:330,linien:gwLinien!=='aus',aufKlick:true,
+        yLabel:gwSk==='rel'?'Anteil am höchsten gemessenen Wert, in %':gwEinheiten.join(' · '),
+        ereignisse:gwLog?rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+      el('legGw').innerHTML=legende(serien,diagAus,
+        gwSk==='rel'?'100 % = höchster gemessener Wert des jeweiligen Parameters':'Einheit '+esc(gwEinheiten.join(' · ')))
+        +(gwBand?`<span class="muted">grünes Band: bis ${nz(gwBand[1])} <span class="tag schaetz">Annahme</span></span>`:'');
+    }
     if(messungen.length){
       const ms=[
-        {name:'pH Rücklauf',farbe:FARBEN[0],punkte:db.messungen.filter(x=>x.ph!=null).map(x=>({x:+new Date(x.datum),y:x.ph,xtext:fmtK(x.datum),titel:'pH '+nz(x.ph,2)+' am '+fmt(x.datum)}))},
-        {name:'EC Rücklauf',farbe:FARBEN[1],punkte:db.messungen.filter(x=>x.ec!=null).map(x=>({x:+new Date(x.datum),y:x.ec,xtext:fmtK(x.datum),titel:'EC '+nz(x.ec,2)+' am '+fmt(x.datum)}))},
-        {name:'EC frisch angesetzt',farbe:FARBEN[2],strich:'5 4',punkte:db.messungen.filter(x=>x.ecFrisch!=null).map(x=>({x:+new Date(x.datum),y:x.ecFrisch,xtext:fmtK(x.datum),titel:'EC frisch '+nz(x.ecFrisch,2)}))}
+        {id:'m|ph',name:'pH Rücklauf',farbe:FARBSTOFF[0],form:'kreis',punkte:db.messungen.filter(x=>x.ph!=null).map(x=>({x:+new Date(x.datum),y:x.ph,xtext:fmtK(x.datum),tipp:tippBau('pH Rücklauf',FARBSTOFF[0],[['Datum',fmt(x.datum)],['pH',nz(x.ph,2)]],x.notiz||'')}))},
+        {id:'m|ec',name:'EC Rücklauf',farbe:FARBSTOFF[1],form:'raute',punkte:db.messungen.filter(x=>x.ec!=null).map(x=>({x:+new Date(x.datum),y:x.ec,xtext:fmtK(x.datum),tipp:tippBau('EC Rücklauf',FARBSTOFF[1],[['Datum',fmt(x.datum)],['EC',nz(x.ec,2)+' mS/cm'],x.temp!=null?['Substrattemperatur',nz(x.temp,1)+' °C']:null],x.notiz||'')}))},
+        {id:'m|ecf',name:'EC frisch angesetzt',farbe:FARBSTOFF[2],form:'ring',punkte:db.messungen.filter(x=>x.ecFrisch!=null).map(x=>({x:+new Date(x.datum),y:x.ecFrisch,xtext:fmtK(x.datum),tipp:tippBau('EC frisch angesetzt',FARBSTOFF[2],[['Datum',fmt(x.datum)],['EC',nz(x.ecFrisch,2)+' mS/cm'],x.ec!=null?['Aufnahme bis zum Rücklauf',nz(x.ecFrisch-x.ec,2)+' mS/cm']:null])}))}
       ].filter(x=>x.punkte.length);
-      chartLinien(el('cKreis'),{serien:ms,xTyp:'datum',xLabel:'Datum',
+      chartPunkte(el('cKreis'),{serien:ms,yTyp:'wert',xTyp:'datum',xLabel:'Datum',linien:true,hoehe:290,
+        yLabel:'pH und mS/cm auf derselben Achse',
         ereignisse:rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ}))});
-      el('legKreis').innerHTML=ms.map(x=>`<span><i style="background:${x.farbe}"></i>${esc(x.name)}</span>`).join('');
+      el('legKreis').innerHTML=legende(ms,diagAus,'pH und EC teilen sich die Achse – vergleiche jede Reihe mit sich selbst, nicht mit der anderen.');
     }
-  };
+  }
+  function gwKopf(){
+    const Z=gwAb(),gwFarbe=Z.farbe,gwSk=Z.sk,gwEinheiten=Z.einheiten,gwGleich=Z.gleich,gwAchse=Z.achse,gwErzwungen=Z.erzwungen;
+    let t=`<div class="hd"><div><h2>Verlauf des Giesswassers</h2>
+      <p class="sub">Jeder Punkt ist eine Wasserprobe – Linien sind zuschaltbar, aber nicht die Vorgabe.
+      ${gwWahl.length>1?'Die Farbe steht für den Parameter, die Form für die Entnahmestelle'
+        :'Farbe und Form stehen für die Entnahmestelle – dieselben Farben wie in den Karten darunter'} –
+      so bleiben zwei Proben vom selben Tag unterscheidbar. Mit dem Zeiger über einem Punkt stehen Name, Datum und Wert; ein Klick öffnet die ganze Probe.</p></div></div>
+      <div class="werkzeug">
+        <div class="wz"><span class="lab">Parameter</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+          ${gwVerf.map(k=>`<span class="chip stoff ${gwWahl.includes(k)?'on':''}" data-tun="gwStoff" data-k="${esc(k)}"><span class="dot" style="background:${gwWahl.includes(k)?gwFarbe[k]:'#C3CDBF'}"></span>${esc(gwName(k))}</span>`).join('')}
+        </span></div>
+        <div class="wz"><span class="lab">Zusammenstellung</span>
+          ${[['ballast','Ballast und Puffer'],['naehr','Nährstoffe im Wasser'],['technik','Technik'],['leit','Leitwerte']]
+            .map(([v,l])=>`<button class="ghost" data-tun="gwSatzWahl" data-v="${v}">${l}</button>`).join('')}
+        </div>
+        <div class="wz">
+          <span class="lab">Senkrecht</span>
+          <span class="seg">${[['wert','Messwert',!gwGleich],['rel','relativ, in %',false]].map(([v,l,aus])=>`<button class="${gwSk===v?'on':''}"${aus?' disabled title="'+esc(gwAchse.grund==='einheit'?'Die ausgewählten Parameter haben verschiedene Einheiten.':'Die ausgewählten Parameter liegen zu weit auseinander für eine gemeinsame Messwert-Achse.')+'"':''} data-tun="gwSkala" data-v="${v}">${l}</button>`).join('')}</span>
+          <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
+          <span class="seg">${[['aus','keine'],['stelle','je Stelle'],['alle','durchgehend']].map(([v,l])=>`<button class="${gwLinien===v?'on':''}" data-tun="gwLinien" data-v="${v}">${l}</button>`).join('')}</span>
+          <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>
+        </div></div>
+      <div id="cGw" class="diagramm"></div><div class="legend" id="legGw"></div>`;
+    if(gwErzwungen)t+=`<div class="note">${gwAchse.grund==='einheit'
+        ?`Die Auswahl umfasst verschiedene Einheiten (${esc(gwEinheiten.join(', '))}).`
+        :`${esc(gwName(gwAchse.hoch.k))} liegt bei rund ${nz(gwAchse.hoch.g)} ${esc(gwEinheiten[0])}, ${esc(gwName(gwAchse.tief.k))} bei rund ${nz(gwAchse.tief.g)} – auf einer gemeinsamen Messwert-Achse wäre ${esc(gwName(gwAchse.tief.k))} nicht mehr zu erkennen.`}
+      Gezeigt wird deshalb jeder Parameter als Anteil seines eigenen höchsten Messwerts. Das macht sichtbar, ob zwei Stoffe gemeinsam steigen –
+      es sagt nichts darüber, ob ein Wert hoch oder tief ist. Für Messwerte einen einzelnen Parameter wählen.</div>`;
+    if(gwLinien==='alle')t+=`<p class="tiny muted">Die Linien laufen durchgehend über alle Entnahmestellen hinweg. Zwischen zwei Stellen liegt kein Verlauf, sondern ein Ortswechsel.</p>`;
+    return t;
+  }
+  if(alle.length>1)DIAG={teile:[['gwKarte',gwKopf]],zeichnen:gwZeichnen,klick:id=>detail(id)};
+  nachRender=gwZeichnen;
 
   let s='';
   if(altFormat.length)s+=`<div class="note warn">${altFormat.length} Wasseranalyse${altFormat.length>1?'n wurden':' wurde'} vor der Umstellung von Hand erfasst.
     Damals waren die Felder als mg/l beschriftet, das Labor liefert aber mmol/l und µmol/l. Bitte diese Werte kontrollieren.</div>`;
+
+  /* Das Diagramm zuoberst, sobald es mehr als eine Probe gibt. */
+  if(alle.length>1)s+=`<div class="card" id="gwKarte">${gwKopf()}</div>`;
 
   s+=`<div class="kpis">
     <div class="kpi"><h4>Entnahmestellen</h4><b>${stellen.length}</b><span class="tiny muted">${alle.length} Proben insgesamt</span></div>
@@ -2302,16 +2833,6 @@ function vGiess(){
     </div>`;
   }
 
-  /* ── Verlauf ── */
-  if(alle.length>1){
-    const wahl=GW_PARAM.map(k=>'gw_'+k).filter(k=>alle.some(a=>a.werte[k]));
-    if(wahl.indexOf(gwParam)<0)gwParam=wahl[0];
-    s+=`<div class="card"><div class="hd"><div><h2>Verlauf</h2>
-      <p class="sub">Ein Parameter über die Zeit, eine Linie je Entnahmestelle. Mit dem Zeiger über einem Punkt erscheint Name, Datum und Wert.</p></div>
-      <select data-aend="gwParam">${wahl.map(k=>`<option value="${esc(k)}"${gwParam===k?' selected':''}>${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))}</option>`).join('')}</select></div>
-      <div id="cGw" class="scroll"></div><div class="legend" id="legGw"></div></div>`;
-  }
-
   /* ── Kreislauf ── */
   const letzt=db.messungen.filter(x=>x.ec!=null&&x.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
   const ecReihe=db.messungen.filter(x=>x.ec!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
@@ -2333,7 +2854,7 @@ function vGiess(){
       <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
       <button class="primary" data-tun="messung">Eintragen</button></div>
     <p class="tiny muted" style="margin-top:6px">Die Temperatur ist freiwillig, aber sie erklärt viel: dieselbe organische Grunddüngung liefert bei 15 °C deutlich weniger Stickstoff als bei 25 °C.</p>
-    ${messungen.length?`<div id="cKreis" class="scroll" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>`:''}
+    ${messungen.length?`<div id="cKreis" class="diagramm" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>`:''}
     <div class="note neutral" style="margin-top:12px">Notiert ihr zusätzlich den EC direkt nach dem Ansetzen, ist die Differenz zum Rücklauf die beste Verbrauchsmessung ohne Labor.${letzt?` Zuletzt am ${fmt(letzt.datum)}: ${nz(letzt.ecFrisch,2)} frisch gegen ${nz(letzt.ec,2)} zurück, also ${nz(letzt.ecFrisch-letzt.ec,2)} mS/cm aufgenommen.`:''} ${esc(trend)}
     ${alle.length?` Zum Vergleich: das Giesswasser der Stelle «${esc(gwStelle(alle[0]))}» hatte am ${fmt(alle[0].datum)} einen EC von ${alle[0].werte.gw_EC?nz(alle[0].werte.gw_EC.wert,2):'–'} mS/cm – die Differenz zum Rücklauf ist das, was Düngung und Anreicherung zusammen ausmachen.`:''}</div></div>`;
 
@@ -2385,7 +2906,23 @@ function vGiess(){
     <div class="note neutral">${esc(GW_HERKUNFT)}</div></div>`;
   return s;
 }
-AKTION.gwParam=(d,ev)=>{gwParam=ev.target.value;render()};
+AKTION.gwStoff=d=>{
+  const i=gwWahl.indexOf(d.k);
+  if(i>=0){if(gwWahl.length>1)gwWahl.splice(i,1);else return toast('Mindestens ein Parameter muss ausgewählt bleiben.')}
+  else{if(gwWahl.length>=NS_MAX)return toast(`Mehr als ${NS_MAX} Parameter werden unübersichtlich – nimm zuerst einen weg.`);gwWahl.push(d.k)}
+  diagFrisch();
+};
+AKTION.gwSatzWahl=d=>{
+  const da=k=>db.analysen.some(a=>a.typ==='giesswasser'&&a.werte[k]&&a.werte[k].wert!=null);
+  const m={ballast:['gw_Na','gw_Cl','gw_HCO3'],naehr:['gw_NO3','gw_NH4','gw_K','gw_Ca','gw_Mg','gw_S','gw_P'],
+           technik:['gw_Fe','gw_Mn','gw_Al','gw_Si'],leit:['gw_EC','gw_pH','gw_KCa']};
+  const w=(m[d.v]||[]).filter(da).slice(0,NS_MAX);
+  if(!w.length)return toast('Für diese Zusammenstellung liegen keine Messwerte vor.');
+  gwWahl=w;diagAus.clear();diagFrisch();
+};
+AKTION.gwSkala=d=>{gwSkala=d.v;diagFrisch()};
+AKTION.gwLinien=d=>{gwLinien=d.v;diagFrisch()};
+AKTION.gwLog=()=>{gwLog=!gwLog;diagFrisch()};
 AKTION.gwRicht=(d,ev)=>{
   const n=toNum(ev.target.value);
   if(n==null)return toast('Bitte eine Zahl eintragen.');
@@ -2916,8 +3453,13 @@ document.addEventListener('drop',e=>{
   if(fs.length){if(tab!=='analysen'){tab='analysen';render()}einlesen(fs.map(f=>({pfad:f.name,file:f})))}
 });
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+/* Die Diagramme rechnen mit der Breite ihres Kastens; nach einer Aenderung
+   der Fenstergroesse muessen sie neu gezeichnet werden. Wo ein Diagramm
+   registriert ist, reicht diagFrisch() – die Seite bleibt stehen. */
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
-  if(['lage','naehrstoff','wirkung','substrat','planer'].indexOf(tab)>=0&&!el('dlg').open)render()},250)});
+  if(el('dlg').open)return;
+  if(DIAG)return diagFrisch();
+  if(['lage','naehrstoff','wirkung','substrat','giess','planer'].indexOf(tab)>=0)render()},250)});
 document.addEventListener('keydown',e=>{
   if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sichern()}
 });
