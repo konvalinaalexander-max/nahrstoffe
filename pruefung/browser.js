@@ -267,14 +267,37 @@ require('fs').mkdirSync(shots,{recursive:true});
     await p.screenshot({path:shots+'/diagramm_giesswasser.png',fullPage:false});
   }else console.log('  (keine Wasserproben in den Testdaten)');
 
-  await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(300);
+  console.log('\n── Planer ──');
+  await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(350);
+  const plKopf=await p.$eval('#view > div:not(.note)',e=>e.innerText.split('\n')[0]);
+  console.log((/Geplante Proben/.test(plKopf)?'  ✓ ':'  ✗ ')+'Das Eintragen von Hand ist der Hauptweg: «'+plKopf+'»');
+  if(!/Geplante Proben/.test(plKopf))fehler.push('Planer: Handeingabe nicht zuoberst');
+  const zugeklappt=await p.$$eval('#view details',es=>es.filter(e=>!e.open).length);
+  console.log((zugeklappt>0?'  ✓ ':'  ✗ ')+'Die automatischen Vorschläge stehen zugeklappt darunter');
+  if(!zugeklappt)fehler.push('Planer: Vorschlaege nicht zugeklappt');
+  await p.fill('#view [data-f="zweck"]','Wirkung des Säurewechsels');
+  const plVor=await p.$$eval('#view table tbody tr',e=>e.length);
+  await p.click('#view button:text-is("Anlegen")');await p.waitForTimeout(400);
+  const plTxt=await p.$eval('#view',e=>e.innerText);
+  console.log((/Säurewechsels/.test(plTxt)?'  ✓ ':'  ✗ ')+'Ein Klick legt die geplante Probe an');
+  if(!/Säurewechsels/.test(plTxt))fehler.push('Planer: Anlegen ohne Wirkung');
+  console.log((/Blattsaft/.test(plTxt)?'  ✓ ':'  ✗ ')+'Mit Art der Probe');
+  const verk=await p.$$('#view select[data-aend="plAnalyse"]');
+  if(verk.length){
+    await verk[0].selectOption({index:1});await p.waitForTimeout(400);
+    const nachher=await p.$eval('#view',e=>e.innerText);
+    console.log((/erledigt/.test(nachher)?'  ✓ ':'  ✗ ')+'Verknüpfen mit einer Analyse hakt die Probe ab');
+    if(!/erledigt/.test(nachher))fehler.push('Planer: Verknuepfen ohne Wirkung');
+  }else console.log('  (keine passende Analyse zum Verknuepfen in den Testdaten)');
+  await p.click('#view summary');await p.waitForTimeout(300);
   const vor=await p.$$('#view .vorschlag');
-  console.log('  Vorschläge im Planer:',vor.length);
+  console.log('  Vorschläge nach dem Aufklappen:',vor.length);
   if(vor.length){
     await p.click('#view .vorschlag button:text-is("einplanen")');await p.waitForTimeout(350);
     const t=await p.$eval('#view',e=>e.innerText);
-    console.log('  einplanen geklickt →',/1 offen|geplant/.test(t)?'Termin angelegt':'KEINE WIRKUNG');
+    console.log(((/offen/.test(t))?'  ✓ ':'  ✗ ')+'einplanen legt weiterhin einen Termin an');
   }
+  await p.screenshot({path:shots+'/planer.png',fullPage:false});
 
   console.log('\n── Logbuch: Schnellerfassung und Zeitstrahl ──');
   await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(300);
