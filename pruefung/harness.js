@@ -42,6 +42,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'chartPunkte','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
+ 'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',
  'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',

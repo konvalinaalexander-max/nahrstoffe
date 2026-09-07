@@ -133,6 +133,44 @@ require('fs').mkdirSync(shots,{recursive:true});
   await p.click('#nsKarte button:text-is("Was daneben liegt")');await p.waitForTimeout(350);
   console.log('  ✓ Voreinstellung gewählt:',(await p.$eval('#nsKarte h2',e=>e.textContent)));
 
+  console.log('\n── Tabellenimport (CSV, ohne jede Bibliothek) ──');
+  if(process.env.TAB){
+    await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(350);
+    const msVor=await p.evaluate(()=>document.querySelectorAll('#view table').length);
+    await p.setInputFiles('#fileTab',process.env.TAB+'/phec.csv');
+    await p.waitForTimeout(1200);
+    const tt=await p.$eval('#dlgTitel',e=>e.textContent);
+    console.log((/Tabelle kontrollieren/.test(tt)?'  ✓ ':'  ✗ ')+'Kontrolldialog wie bei den PDFs: '+tt);
+    if(!/Tabelle kontrollieren/.test(tt))fehler.push('Excel-Kontrolldialog fehlt');
+    const bd=await p.$eval('#dlgBody',e=>e.innerText);
+    const bloecke=['Messungen am Tank','Vorgeschlagene Logbucheinträge'].every(x=>bd.indexOf(x)>=0);
+    console.log((bloecke?'  ✓ ':'  ✗ ')+'Getrennte Blöcke für Messungen und Logbuchvorschläge');
+    if(!bloecke)fehler.push('Import-Dialog ohne getrennte Bloecke');
+    const kaesten=await p.$$eval('#dlgBody input[type=checkbox]',e=>e.length);
+    console.log((kaesten>5?'  ✓ ':'  ✗ ')+'Jede Zeile einzeln abwählbar ('+kaesten+' Kästchen)');
+    if(kaesten<=5)fehler.push('Zeilen nicht abwaehlbar');
+    const felder=await p.$$eval('#dlgBody input[type=date]',e=>e.length);
+    console.log((felder>3?'  ✓ ':'  ✗ ')+'Und im Feld korrigierbar ('+felder+' Datumsfelder)');
+    console.log((/Rohtext/.test(bd)?'  ✓ ':'  ✗ ')+'Der Rohtext steht bei jedem Vorschlag');
+    if(!/Rohtext/.test(bd))fehler.push('Rohtext fehlt im Vorschlag');
+    console.log((/je Reservoir/.test(bd)?'  ✓ ':'  ✗ ')+'«je Reservoir» wird benannt');
+    console.log((/nur eine Bemerkung, kein Messwert/.test(bd)?'  ✓ ':'  ✗ ')+'Zeilen ohne Messwert werden erklärt');
+    await p.screenshot({path:shots+'/excelimport.png',fullPage:false});
+    /* eine Zeile abwaehlen, dann uebernehmen */
+    await p.$eval('#dlgBody input[data-k="mess"][data-i="0"]',e=>e.click());
+    await p.click('#dlgFoot button:text-is("Übernehmen")');await p.waitForTimeout(900);
+    const lbTxt=await p.$eval('#view',e=>e.innerText);
+    console.log((/aus Excel-Import/.test(lbTxt)?'  ✓ ':'  ✗ ')+'Übernommene Einträge tragen das Herkunftsetikett');
+    if(!/aus Excel-Import/.test(lbTxt))fehler.push('Herkunftsetikett fehlt');
+    const zs=await p.$$eval('#view .zs',e=>e.length);
+    console.log((zs>5?'  ✓ ':'  ✗ ')+'Die Logbucheinträge stehen im Zeitstrahl ('+zs+')');
+    if(zs<=5)fehler.push('Logbucheintraege aus dem Import fehlen');
+    await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(400);
+    const gwTxt=await p.$eval('#view',e=>e.innerText);
+    console.log((/Messungen \(/.test(gwTxt)?'  ✓ ':'  ✗ ')+'Die Tankmessungen sind im Reiter Giesswasser angekommen');
+    await p.screenshot({path:shots+'/nachimport.png',fullPage:false});
+  }else console.log('  (TAB nicht gesetzt – Tabellenimport uebersprungen)');
+
   console.log('\n── Fotos ──');
   if(process.env.BILDER){
     await p.click('#nav button:text-is("Fotos")');await p.waitForTimeout(300);

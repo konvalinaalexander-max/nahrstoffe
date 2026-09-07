@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --paper:#F3F6EF;--card:#FFF;--card2:#FAFCF7;--ink:#141D17;--muted:#697A6C;--line:#DCE3D5;--line2:#EDF1E9;
@@ -219,6 +220,7 @@ details[open]>summary:before{content:'▾ '}
 <input type="file" id="fileJson" accept=".json" hidden>
 <input type="file" id="filePdf" accept="application/pdf" multiple hidden>
 <input type="file" id="fileFoto" accept="image/*" multiple hidden>
+<input type="file" id="fileTab" accept=".xlsx,.xlsm,.xls,.csv" hidden>
 
 <script>
 "use strict";
@@ -2983,7 +2985,11 @@ function vGiess(){
       <div><label class="lab">EC frisch <span class="muted">(freiwillig)</span></label><input id="mEcF" class="mono" size="5" inputmode="decimal"></div>
       <div><label class="lab">Substrattemperatur °C <span class="muted">(freiwillig)</span></label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
       <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
-      <button class="primary" data-tun="messung">Eintragen</button></div>
+      <button class="primary" data-tun="messung">Eintragen</button>
+      <button data-tun="tabWaehlen">Excel oder CSV einlesen</button></div>
+    <p class="tiny muted" style="margin-top:6px">Der Import liest das Blatt mit den pH- und EC-Messungen samt Bemerkungsspalte.
+    Aus den Bemerkungen entstehen Vorschläge für das Logbuch – kontrolliert und bestätigt wird alles, wie bei den PDFs.
+    Ohne Internet fehlt die Excel-Bibliothek; ein als CSV gespeichertes Blatt liest die App auch dann.</p>
     <p class="tiny muted" style="margin-top:6px">Die Temperatur ist freiwillig, aber sie erklärt viel: dieselbe organische Grunddüngung liefert bei 15 °C deutlich weniger Stickstoff als bei 25 °C.</p>
     ${messungen.length?`<div id="cKreis" class="diagramm" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>`:''}
     <div class="note neutral" style="margin-top:12px">Notiert ihr zusätzlich den EC direkt nach dem Ansetzen, ist die Differenz zum Rücklauf die beste Verbrauchsmessung ohne Labor.${letzt?` Zuletzt am ${fmt(letzt.datum)}: ${nz(letzt.ecFrisch,2)} frisch gegen ${nz(letzt.ec,2)} zurück, also ${nz(letzt.ecFrisch-letzt.ec,2)} mS/cm aufgenommen.`:''} ${esc(trend)}
@@ -3060,6 +3066,423 @@ AKTION.gwRicht=(d,ev)=>{
   db.einst.gwRicht=db.einst.gwRicht||{};
   db.einst.gwRicht[d.k]=n;aend();render();
 };
+
+/* ══════════ 12b-2 · Tabellenimport (pH und EC) ══════════
+   Der Betrieb fuehrt seine Tankmessungen in einer Excel-Datei. Die Zahlen
+   gehoeren in messungen[]; der wertvollere Teil ist die Bemerkungsspalte –
+   sie enthaelt den groessten Teil der Betriebsgeschichte und wird zu
+   Logbuchvorschlaegen.
+
+   Der Parser sucht die Tabellen NICHT an festen Spalten, sondern ueber die
+   Kopfzeile. Ein verschobener Kopfblock oder eine eingefuegte Spalte macht
+   ihn damit nicht blind. Zwei nebeneinanderstehende Tabellen erkennt er
+   daran, dass in derselben Kopfzeile mehrmals «Datum» steht.            */
+
+const TAB_KOPF=[
+  ['datum',      /^datum|^tag$/i],
+  ['ecVorne',    /ec.*vorn|vorn.*ec/i],
+  ['ecHinten',   /ec.*hint|hint.*ec/i],
+  ['phVorne',    /ph.*vorn|vorn.*ph/i],
+  ['phHinten',   /ph.*hint|hint.*ph/i],
+  ['bemerkung',  /bemerk|notiz|kommentar/i],
+  ['satz',       /^satz|^charge|^kultur/i],
+  ['wurzel1',    /(ec.*1.*wurzel)|(wurzel.*1)|^ec\s*1$/i],
+  ['wurzel2',    /(ec.*2.*wurzel)|(wurzel.*2)|^ec\s*2$/i],
+  ['wurzel3',    /(ec.*3.*wurzel)|(wurzel.*3)|^ec\s*3$/i],
+  ['schnitt',    /durchschnitt|mittelwert|^mittel$|^ø/i],
+  ['ec',         /^ec$|^ec\b(?!.*(vorn|hint|\d))/i],
+  ['ph',         /^ph$|^ph\b(?!.*(vorn|hint))/i],
+  ['saeure',     /säurezugabe|säure.*ml|zugabe.*ml|^ml$/i],
+  ['temp',       /temperatur|^temp/i]];
+const zelle=v=>v==null?'':String(v).trim();
+function kopfArt(t){
+  const x=zelle(t);
+  if(!x)return null;
+  for(const [name,re] of TAB_KOPF)if(re.test(x))return name;
+  return null;
+}
+/* Datum: Excel-Seriennummer, ISO, oder deutsche Kurzform ohne Jahr.
+   Fehlt das Jahr, wird es vom zuletzt vollstaendigen Datum uebernommen;
+   springt der Monat zurueck, wird das Jahr erhoeht. */
+function tabDatum(v,letzt){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'&&isFinite(v)){
+    if(v<20||v>80000)return null;
+    const d=new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5);
+    return isNaN(+d)?null:d.toISOString().slice(0,10);
+  }
+  if(v instanceof Date&&!isNaN(+v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate())).toISOString().slice(0,10);
+  const t=zelle(v);
+  let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  m=t.match(/^(\d{1,2})\s*[.\/]\s*(\d{1,2})\s*[.\/]?\s*(\d{2,4})?\s*\.?$/);
+  if(!m)return null;
+  const tag=+m[1],mon=+m[2];
+  if(tag<1||tag>31||mon<1||mon>12)return null;
+  let jahr=m[3]?+m[3]:null;
+  if(jahr!=null&&jahr<100)jahr+=2000;
+  if(jahr==null){
+    if(!letzt)return null;
+    jahr=+letzt.slice(0,4);
+    if(mon<+letzt.slice(5,7))jahr++;          /* Jahreswechsel in der Spalte */
+  }
+  if(jahr<1990||jahr>2100)return null;
+  /* Gibt es diesen Tag ueberhaupt? «31.02.» darf nicht stillschweigend zum
+     3. Maerz werden – lieber gar kein Datum als ein erfundenes. */
+  const probe=new Date(Date.UTC(jahr,mon-1,tag));
+  if(probe.getUTCMonth()!==mon-1||probe.getUTCDate()!==tag)return null;
+  return `${jahr}-${String(mon).padStart(2,'0')}-${String(tag).padStart(2,'0')}`;
+}
+const tabZahl=v=>{
+  if(v==null||v==='')return null;
+  if(typeof v==='number')return isFinite(v)?v:null;
+  return toNum(String(v).replace(/['’](?=\d)/g,''));
+};
+
+/* ── Bemerkungen zu Logbuchvorschlaegen ────────────────────
+   Erkannt wird Menge + Einheit + Mittel. Was nicht sicher zuzuordnen ist,
+   wird als Notiz mit dem Rohtext vorgeschlagen – nichts geht verloren. */
+const MITTEL_MUSTER=[
+  {re:/bio-?v[a-zä]*[-\s]?wasser/i,typ:'Wasserzugabe',mittel:null,duenger:true,
+   warnung:'«BioV-Wasser» ist Wasser, das mit Dünger angesetzt wurde. Wieviel Dünger darin war, steht in dieser Bemerkung nicht – trag das als eigene Düngergabe ein, wenn du es weisst.'},
+  {re:/\bbiovin\b|\bbiov\b/i,typ:'Düngergabe',mittel:'biovin'},
+  {re:/\bepsotop\b/i,typ:'Düngergabe',mittel:'epsotop'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])ET(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Düngergabe',mittel:'epsotop',streng:1},
+  {re:/p-?\s?säure|phosphorsäure|p-?saeure/i,typ:'Säurezugabe',mittel:'phosphorsaeure'},
+  {re:/zitronensäure|zitronensaeure|\bcitro/i,typ:'Säurezugabe',mittel:'zitronensaeure'},
+  {re:/halades/i,typ:'Desinfektion',mittel:'halades'},
+  {re:/säurezugabe|\bsäure\b|\bsaeure\b/i,typ:'Säurezugabe',mittel:null,allgemein:1},
+  {re:/dünger|duenger/i,typ:'Düngergabe',mittel:null,allgemein:1},
+  {re:/wasser|zudosiert|zudosieren|nachgefüllt|nachgefuellt|aufgefüllt/i,typ:'Wasserzugabe',mittel:null,allgemein:1}];
+const REIN_MUSTER=[
+  /* «kalbriert» steht so in den echten Bemerkungen – der Tippfehler muss
+     mitgelesen werden, sonst geht der Eintrag verloren. */
+  {re:/kal.{0,2}br/i,typ:'Gerätekalibrierung',titel:'Gerät neu kalibriert'},
+  {re:/gepumpt|umgepumpt|umpumpen/i,typ:'Umpumpen',titel:'umgepumpt'},
+  {re:/(dünger|duenger|reservoir|tank).{0,14}leer|leer.{0,14}(dünger|duenger)/i,typ:'Notiz',titel:'leer'}];
+const MENGE_RE=/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt?r?|liter|%)(?![a-zä])/gi;
+const EINH_NORM={l:'l',lt:'l',ltr:'l',liter:'l',ml:'ml',kg:'kg',g:'g','%':'%'};
+
+/* Aus einer Bemerkung Logbuchvorschlaege lesen.
+   Grundsaetze, die aus dem ersten Durchlauf an echten Bemerkungen stammen:
+   · «Wasser OHNE Dünger» ist keine Düngergabe. Verneinungen werden geprüft.
+   · Es gewinnt das Mittel, das im Text ZUERST steht, nicht das erste in der
+     Liste. Sonst schlägt «Dünger» jedes «Wasser».
+   · Ein Mittel ohne Menge ist meist Erzählung («vor Säurezugabe»), keine
+     Zugabe – daraus wird eine Notiz.
+   · Stehen mehrere Mengen derselben Einheit im selben Satz, ist die
+     Zuordnung unsicher. Dann wird sie benannt statt geraten.               */
+function bemerkungLesen(text,datum){
+  const roh=zelle(text);
+  if(!roh)return [];
+  const t=roh.replace(/[’']/g,"'").replace(/(\d)'(\d{3})/g,'$1$2');
+  const stelleVon=x=>/vordere|vorne|vorderes/i.test(x)?'vorne':(/hintere|hinten|hinteres/i.test(x)?'hinten':null);
+  const stelleGlobal=stelleVon(t)||'beide';
+  const teile=t.split(/\s*\+\s*|\s*;\s*|\s+und\s+|-->|→|\n/).map(x=>x.trim()).filter(Boolean);
+  const out=[];
+  for(const teil of teile){
+    const stelle=stelleVon(teil)||stelleGlobal;
+    const je=/je\s+reservoir|pro\s+reservoir|je\s+tank/i.test(teil);
+    const mengen=[];MENGE_RE.lastIndex=0;
+    let mm;while((mm=MENGE_RE.exec(teil)))mengen.push({z:toNum(mm[1]),e:EINH_NORM[mm[2].toLowerCase()]||mm[2].toLowerCase(),pos:mm.index});
+    const prozent=mengen.find(x=>x.e==='%');
+    const echte=mengen.filter(x=>x.e!=='%');
+
+    /* Ereignisse ohne Menge zuerst: «kalibriert», «umgepumpt», «leer». */
+    const rein=REIN_MUSTER.find(mu=>mu.re.test(teil));
+    if(rein&&!echte.length){
+      out.push({typ:rein.typ,mittel:null,menge:null,einheit:null,jeReservoir:false,stelle,datum,roh,
+        titel:rein.titel,felder:rein.typ==='Notiz'?{text:teil.slice(0,180)}:{},warnung:null,dabei:true});
+      continue;
+    }
+
+    /* Welches Mittel ist gemeint? Ein benanntes Produkt («Epsotop») schlaegt
+       ein allgemeines Wort («Düngerzugabe»), auch wenn es spaeter im Satz
+       steht. Unter Gleichrangigen gewinnt das zuerst genannte. Verneinungen
+       zaehlen nicht: «Wasser ohne Dünger» ist keine Düngergabe. */
+    let treffer=null,bestPos=Infinity,bestRang=9;
+    for(const mu of MITTEL_MUSTER){
+      const m=teil.match(mu.re);
+      if(!m)continue;
+      const pos=m.index;
+      if(/\bohne\s*$/i.test(teil.slice(Math.max(0,pos-8),pos)))continue;
+      const rang=mu.allgemein?1:0;
+      if(rang<bestRang||(rang===bestRang&&pos<bestPos)){bestRang=rang;bestPos=pos;treffer=mu}
+    }
+
+    if(treffer&&echte.length){
+      const soll=evEinheit(treffer.typ,treffer.mittel);
+      /* die Menge, die dem Mittel im Text am naechsten steht */
+      const passend=echte.filter(x=>x.e===soll);
+      const kandidaten=passend.length?passend:echte;
+      /* Steht eine Menge kurz HINTER dem Mittel, ist sie fast immer gemeint
+         – «Dünger Biovin zudosiert (15l)». Sonst die naechstliegende. */
+      const dahinter=kandidaten.filter(x=>x.pos>bestPos&&x.pos-bestPos<=40)
+        .sort((a,b)=>a.pos-b.pos)[0];
+      let gut=dahinter||kandidaten[0];
+      if(!dahinter)for(const x of kandidaten)if(Math.abs(x.pos-bestPos)<Math.abs(gut.pos-bestPos))gut=x;
+      let menge=gut.z,einheit=gut.e;
+      if(einheit==='g'&&soll==='kg'){menge=menge/1000;einheit='kg'}
+      const mehrdeutig=kandidaten.length>1;
+      out.push({typ:treffer.typ,mittel:treffer.mittel,menge,einheit:einheit||soll||null,
+        jeReservoir:je,stelle,datum,roh,
+        felder:prozent?{dosis:String(prozent.z)}:(treffer.duenger?{mitDuenger:'ja'}:{}),
+        warnung:treffer.warnung||(mehrdeutig
+          ? `In dieser Bemerkung stehen mehrere Mengen (${kandidaten.map(x=>nz(x.z)+' '+x.e).join(', ')}). Die App hat die nächstliegende gewählt – bitte prüfen, welche gemeint ist, und die übrigen als eigene Einträge erfassen.`
+          : null),
+        dabei:true});
+      continue;
+    }
+    /* Ein Mittel ohne Menge: meist Erzaehlung, keine Zugabe. */
+    if(treffer||rein){
+      out.push({typ:'Notiz',mittel:null,menge:null,einheit:null,jeReservoir:false,stelle,datum,roh,
+        felder:{text:teil.slice(0,180)},warnung:null,dabei:true,
+        hinweis:treffer?`«${treffer.typ}» ist erwähnt, aber ohne Menge – das ist meist eine Beschreibung, keine Zugabe. Als Notiz vorgeschlagen; die Art lässt sich hier ändern.`:null});
+      continue;
+    }
+    /* Eine Menge ohne erkennbares Mittel */
+    if(echte.length){
+      out.push({typ:'Notiz',mittel:null,menge:null,einheit:null,jeReservoir:false,stelle,datum,roh,
+        felder:{text:teil.slice(0,180)},warnung:null,dabei:true,
+        hinweis:`Eine Menge (${echte.map(x=>nz(x.z)+' '+x.e).join(', ')}) ohne erkennbares Mittel – bitte Art und Mittel selbst wählen.`});
+    }
+  }
+  if(!out.length)out.push({typ:'Notiz',mittel:null,menge:null,einheit:null,jeReservoir:false,
+    stelle:stelleGlobal,datum,roh,felder:{text:roh.slice(0,180)},warnung:null,dabei:true,
+    hinweis:'Nicht zugeordnet – wird als Notiz mit dem Rohtext übernommen, damit nichts verloren geht.'});
+  return out;
+}
+
+/* ── Blattauswertung ── */
+function tabBlatt(zeilen){
+  const mess=[],wurzel=[],vorschlaege=[],hinweise=[];
+  let letztDatum=null;
+  for(let r=0;r<zeilen.length;r++){
+    const zeile=zeilen[r]||[];
+    /* Kopfzeile? mindestens ein «Datum» und ein weiterer erkannter Kopf */
+    const arten=zeile.map(kopfArt);
+    const datumSpalten=arten.map((a,i)=>a==='datum'?i:-1).filter(i=>i>=0);
+    if(!datumSpalten.length||arten.filter(Boolean).length<2)continue;
+    /* Bloecke: von einer Datumsspalte bis zur naechsten */
+    const bloecke=datumSpalten.map((start,k)=>{
+      const ende=k+1<datumSpalten.length?datumSpalten[k+1]:zeile.length;
+      const map={};
+      for(let c=start;c<ende;c++)if(arten[c]&&map[arten[c]]===undefined)map[arten[c]]=c;
+      return map;
+    });
+    letztDatum=null;
+    for(let z=r+1;z<zeilen.length;z++){
+      const w=zeilen[z]||[];
+      if(w.map(kopfArt).filter(Boolean).length>=2&&w.map(kopfArt).includes('datum')){r=z-1;break}
+      if(!w.some(x=>zelle(x)!==''))continue;
+      for(const b of bloecke){
+        const d=tabDatum(w[b.datum],letztDatum);
+        if(d)letztDatum=d;
+        const dat=d||letztDatum;
+        if(!dat)continue;
+        const bem=b.bemerkung!==undefined?zelle(w[b.bemerkung]):'';
+        /* Reservoirblock */
+        if(b.ecVorne!==undefined||b.phVorne!==undefined||b.ec!==undefined||b.ph!==undefined){
+          const paare=[['vorne',b.ecVorne,b.phVorne],['hinten',b.ecHinten,b.phHinten]];
+          if(b.ecVorne===undefined&&b.ecHinten===undefined)paare.length=0;
+          if(!paare.length&&(b.ec!==undefined||b.ph!==undefined))paare.push(['beide',b.ec,b.ph]);
+          let gesetzt=false;
+          for(const [stelle,ce,cp] of paare){
+            const ec=ce!==undefined?tabZahl(w[ce]):null;
+            const ph=cp!==undefined?tabZahl(w[cp]):null;
+            if(ec==null&&ph==null)continue;
+            gesetzt=true;
+            mess.push({id:uid(),datum:dat,stelle,ec,ph,ecFrisch:null,
+              temp:b.temp!==undefined?tabZahl(w[b.temp]):null,
+              notiz:bem||null,quelle:'excel',dabei:true,zeile:z+1});
+          }
+          if(!gesetzt&&bem)hinweise.push(`Zeile ${z+1}: nur eine Bemerkung, kein Messwert – daraus entsteht nur ein Logbuchvorschlag.`);
+        }
+        /* Wurzelblock */
+        if(b.wurzel1!==undefined||b.satz!==undefined){
+          const werte=[b.wurzel1,b.wurzel2,b.wurzel3].filter(c=>c!==undefined).map(c=>tabZahl(w[c])).filter(x=>x!=null);
+          const satz=b.satz!==undefined?zelle(w[b.satz]):'';
+          if(werte.length)wurzel.push({id:uid(),datum:dat,satz:satz||null,werte,
+            schnitt:b.schnitt!==undefined?tabZahl(w[b.schnitt]):null,dabei:true,zeile:z+1});
+        }
+        if(bem)vorschlaege.push(...bemerkungLesen(bem,dat).map(v=>Object.assign(v,{zeile:z+1})));
+      }
+    }
+    if(r>=zeilen.length-1)break;
+  }
+  return {mess,wurzel,vorschlaege,hinweise};
+}
+/* Doppelte Vorschlaege aus derselben Zeile zusammenfassen */
+function tabZusammen(teile){
+  const mess=[],wurzel=[],vorschlaege=[],hinweise=[];
+  const gesehen=new Set();
+  for(const t of teile){
+    for(const m of t.mess){
+      const k=m.datum+'|'+m.stelle+'|'+m.ec+'|'+m.ph+'|'+(m.notiz||'')+'|'+m.zeile;
+      if(gesehen.has(k))continue;gesehen.add(k);mess.push(m);
+    }
+    for(const x of t.wurzel){
+      const k='w'+x.datum+'|'+x.satz+'|'+x.werte.join(',');
+      if(gesehen.has(k))continue;gesehen.add(k);wurzel.push(x);
+    }
+    for(const v of t.vorschlaege){
+      const k='v'+v.datum+'|'+v.typ+'|'+v.mittel+'|'+v.menge+'|'+v.roh;
+      if(gesehen.has(k))continue;gesehen.add(k);vorschlaege.push(v);
+    }
+    hinweise.push(...t.hinweise);
+  }
+  return {mess,wurzel,vorschlaege,hinweise:[...new Set(hinweise)]};
+}
+
+/* ── Einlesen ── */
+let TABPRUEF=null;
+const csvZeilen=text=>{
+  const trenner=(text.split('\n')[0]||'').split(';').length>(text.split('\n')[0]||'').split(',').length?';':',';
+  const out=[];let feld='',zeile=[],inAnf=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inAnf){ if(c==='"'){ if(text[i+1]==='"'){feld+='"';i++} else inAnf=false } else feld+=c; continue }
+    if(c==='"'){inAnf=true;continue}
+    if(c===trenner){zeile.push(feld);feld='';continue}
+    if(c==='\n'){zeile.push(feld);out.push(zeile);zeile=[];feld='';continue}
+    if(c==='\r')continue;
+    feld+=c;
+  }
+  zeile.push(feld);if(zeile.some(x=>x!==''))out.push(zeile);
+  return out;
+};
+async function tabelleEinlesen(file){
+  const csv=/\.csv$/i.test(file.name);
+  let blaetter=[];
+  try{
+    if(csv){
+      blaetter=[{name:file.name,zeilen:csvZeilen(await file.text())}];
+    }else{
+      if(typeof XLSX==='undefined')
+        return dialog('Die Excel-Bibliothek fehlt',
+          `<p class="small">Zum Lesen von Excel-Dateien braucht die App die Bibliothek SheetJS aus dem Netz. Sie konnte nicht geladen werden – vermutlich besteht gerade keine Internetverbindung.</p>
+           <p class="small">Alles Übrige funktioniert weiter. Zwei Auswege: die Seite mit Verbindung neu laden, oder das Blatt in Excel als <strong>CSV</strong> speichern – CSV liest die App ohne jede Bibliothek.</p>`,
+          '<button data-tun="dlgZu">Schliessen</button>');
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+      blaetter=wb.SheetNames.map(n=>({name:n,
+        zeilen:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:null,blankrows:true})}));
+    }
+  }catch(err){
+    return dialog('Die Datei liess sich nicht lesen',
+      `<p class="small">${esc(err&&err.message||String(err))}</p>
+       <p class="small">Prüfe, ob es wirklich eine Excel- oder CSV-Datei ist. Als Ausweg lässt sich das Blatt in Excel als CSV speichern.</p>`,
+      '<button data-tun="dlgZu">Schliessen</button>');
+  }
+  const teile=blaetter.map(b=>{const r=tabBlatt(b.zeilen);r.blatt=b.name;return r});
+  const alles=tabZusammen(teile);
+  alles.blaetter=blaetter.map((b,i)=>({name:b.name,zeilen:b.zeilen.length,
+    mess:teile[i].mess.length,wurzel:teile[i].wurzel.length,vor:teile[i].vorschlaege.length}));
+  alles.datei=file.name;
+  if(!alles.mess.length&&!alles.vorschlaege.length&&!alles.wurzel.length)
+    return dialog('Nichts erkannt',
+      `<p class="small">In «${esc(file.name)}» wurde keine Tabelle mit einer Kopfzeile gefunden, die «Datum» und dazu EC oder pH enthält.</p>
+       <div class="scroll"><table><thead><tr><th>Blatt</th><th>Zeilen</th></tr></thead><tbody>
+       ${blaetter.map(b=>`<tr><td>${esc(b.name)}</td><td class="mono">${b.zeilen.length}</td></tr>`).join('')}</tbody></table></div>
+       <p class="small">Der Import sucht die Spalten über ihre Überschrift, nicht über feste Positionen. Es genügt, dass in einer Zeile «Datum» steht und daneben etwas mit «EC» oder «pH».</p>`,
+      '<button data-tun="dlgZu">Schliessen</button>');
+  TABPRUEF=alles;
+  tabDialog();
+}
+
+function tabDialog(){
+  const t=TABPRUEF;
+  const nm=t.mess.filter(x=>x.dabei).length,nw=t.wurzel.filter(x=>x.dabei).length,nv=t.vorschlaege.filter(x=>x.dabei).length;
+  const zeitraum=(()=>{const d=t.mess.concat(t.vorschlaege).map(x=>x.datum).filter(Boolean).sort();
+    return d.length?`${fmt(d[0])} bis ${fmt(d[d.length-1])}`:'–'})();
+  let h=`<p class="small">Aus <strong>${esc(t.datei)}</strong>, Zeitraum ${zeitraum}.
+    Nichts wandert ungeprüft in den Bestand – jede Zeile lässt sich einzeln abwählen und im Feld korrigieren.</p>
+    <div class="row" style="margin-bottom:10px">
+      ${t.blaetter.map(b=>`<span class="tag">${esc(b.name)}: ${b.mess} Messungen · ${b.vor} Bemerkungen</span>`).join('')}
+    </div>`;
+  if(t.hinweise.length)h+=`<div class="note">${t.hinweise.slice(0,6).map(esc).join('<br>')}${t.hinweise.length>6?`<br><span class="muted">… und ${t.hinweise.length-6} weitere</span>`:''}</div>`;
+
+  h+=`<div class="hd" style="margin:16px 0 8px"><div><h2 style="font-size:16px">Messungen am Tank (${nm} von ${t.mess.length})</h2>
+    <p class="sub">Zwei Entnahmestellen ergeben zwei Messungen je Zeile. Mehrere Zeilen mit demselben Datum bleiben erhalten – die Bemerkung unterscheidet sie.</p></div></div>`;
+  h+=t.mess.length?`<div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Stelle</th><th>EC</th><th>pH</th><th>Bemerkung</th></tr></thead><tbody>
+    ${t.mess.map((m,i)=>`<tr><td><input type="checkbox" data-aend="tabAn" data-k="mess" data-i="${i}"${m.dabei?' checked':''}></td>
+      <td class="tiny muted">${m.zeile}</td>
+      <td><input type="date" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="datum" value="${esc(m.datum)}"></td>
+      <td><select data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="stelle">${STELLEN.map(x=>`<option${m.stelle===x?' selected':''}>${esc(x)}</option>`).join('')}</select></td>
+      <td><input class="mono" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ec" value="${m.ec==null?'':m.ec}"></td>
+      <td><input class="mono" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ph" value="${m.ph==null?'':m.ph}"></td>
+      <td class="tiny muted">${esc((m.notiz||'').slice(0,60))}</td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="muted small">Keine Messwerte erkannt.</p>';
+
+  if(t.wurzel.length)h+=`<div class="hd" style="margin:16px 0 8px"><div><h2 style="font-size:16px">EC im Wurzelraum (${nw} von ${t.wurzel.length})</h2>
+    <p class="sub">Mehrere Einzelmessungen je Satz. Sie werden als eigene Messungen mit dem Satznamen in der Notiz abgelegt.</p></div></div>
+    <div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Satz</th><th>Werte</th><th>Durchschnitt</th></tr></thead><tbody>
+    ${t.wurzel.map((x,i)=>`<tr><td><input type="checkbox" data-aend="tabAn" data-k="wurzel" data-i="${i}"${x.dabei?' checked':''}></td>
+      <td class="tiny muted">${x.zeile}</td><td class="mono">${fmt(x.datum)}</td><td>${esc(x.satz||'–')}</td>
+      <td class="mono tiny">${x.werte.map(v=>nz(v,2)).join(' · ')}</td>
+      <td class="mono">${nz(x.schnitt!=null?x.schnitt:mittel(x.werte),2)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+
+  h+=`<div class="hd" style="margin:16px 0 8px"><div><h2 style="font-size:16px">Vorgeschlagene Logbucheinträge (${nv} von ${t.vorschlaege.length})</h2>
+    <p class="sub">Aus den Bemerkungen gelesen. Der Rohtext steht bei jedem Vorschlag – prüfe Menge und Mittel dagegen. «je Reservoir» wird erkannt, aber nie stillschweigend verdoppelt.</p></div></div>`;
+  h+=t.vorschlaege.length?t.vorschlaege.map((v,i)=>`<div class="vorschlag">
+    <div class="row" style="gap:8px;align-items:flex-end">
+      <div><label class="lab">&nbsp;</label><input type="checkbox" data-aend="tabAn" data-k="vorschlaege" data-i="${i}"${v.dabei?' checked':''}></div>
+      <div><label class="lab">Datum</label><input type="date" data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="datum" value="${esc(v.datum||'')}"></div>
+      <div><label class="lab">Art</label><select data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="typ">
+        ${Object.keys(EVTYPEN).map(x=>`<option${v.typ===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label class="lab">Mittel</label><select data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="mittel">
+        <option value="">–</option>${evMittelListe().map(([k,n])=>`<option value="${esc(k)}"${v.mittel===k?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
+      <div><label class="lab">Menge ${esc(v.einheit||'')}</label><input class="mono" size="7" data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="menge" value="${v.menge==null?'':v.menge}"></div>
+      <div><label class="lab">Stelle</label><select data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="stelle">
+        ${STELLEN.map(x=>`<option${v.stelle===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label class="lab">&nbsp;</label><label class="small" style="display:block;padding-top:7px">
+        <input type="checkbox" data-aend="tabFeld" data-k="vorschlaege" data-i="${i}" data-f="jeReservoir"${v.jeReservoir?' checked':''}> je Reservoir</label></div>
+    </div>
+    ${v.jeReservoir&&v.menge!=null?`<div class="tiny muted" style="margin-top:5px">Das wären ${nz(v.menge)} ${esc(v.einheit||'')} je Reservoir, zusammen ${nz(v.menge*2)} ${esc(v.einheit||'')}. Die App entscheidet das nicht für dich.</div>`:''}
+    ${v.warnung?`<div class="note warn" style="margin-top:6px">${esc(v.warnung)}</div>`:''}
+    ${v.hinweis?`<div class="tiny muted" style="margin-top:5px">${esc(v.hinweis)}</div>`:''}
+    <div class="tiny muted" style="margin-top:5px">Zeile ${v.zeile} · Rohtext: «${esc(v.roh)}»</div>
+  </div>`).join(''):'<p class="muted small">Keine Bemerkungen gefunden.</p>';
+
+  dialog(`Tabelle kontrollieren und bestätigen`,h,
+    `<button class="primary" data-tun="tabUeber">Übernehmen</button><button data-tun="dlgZu">Abbrechen</button>
+     <div style="flex:1"></div><span class="tiny muted">${nm} Messungen · ${nw} Wurzel-EC · ${nv} Logbucheinträge</span>`);
+}
+AKTION.tabAn=(d,ev)=>{const x=TABPRUEF[d.k][+d.i];if(x)x.dabei=ev.target.checked};
+AKTION.tabFeld=(d,ev)=>{
+  const x=TABPRUEF[d.k][+d.i];if(!x)return;
+  if(d.f==='jeReservoir'){x.jeReservoir=ev.target.checked;return tabDialog()}
+  if(d.f==='menge'||d.f==='ec'||d.f==='ph'){x[d.f]=ev.target.value===''?null:toNum(ev.target.value);return}
+  x[d.f]=ev.target.value;
+  if(d.f==='typ'||d.f==='mittel'){x.einheit=evEinheit(x.typ,x.mittel)||null;tabDialog()}
+};
+AKTION.tabUeber=()=>{
+  const t=TABPRUEF;if(!t)return;
+  let nm=0,nw=0,nv=0;
+  for(const m of t.mess.filter(x=>x.dabei)){
+    if(!m.datum)continue;
+    db.messungen.push({id:uid(),datum:m.datum,stelle:m.stelle,ph:m.ph,ec:m.ec,ecFrisch:null,
+      temp:m.temp==null?null:m.temp,notiz:m.notiz||null,quelle:'excel'});nm++;
+  }
+  for(const x of t.wurzel.filter(y=>y.dabei)){
+    const s=x.schnitt!=null?x.schnitt:mittel(x.werte);
+    if(s==null)continue;
+    db.messungen.push({id:uid(),datum:x.datum,stelle:'wurzelraum',ph:null,ec:s,ecFrisch:null,temp:null,
+      notiz:`EC im Wurzelraum${x.satz?' · Satz '+x.satz:''} · Einzelwerte ${x.werte.map(v=>nz(v,2)).join(' / ')}`,
+      quelle:'excel'});nw++;
+  }
+  for(const v of t.vorschlaege.filter(x=>x.dabei)){
+    if(!v.datum)continue;
+    db.ereignisse.push({id:uid(),datum:v.datum,typ:v.typ,titel:v.titel||null,mittel:v.mittel||null,
+      menge:v.menge,einheit:v.menge!=null?(v.einheit||evEinheit(v.typ,v.mittel)):null,
+      jeReservoir:!!(v.menge!=null&&v.jeReservoir),stelle:v.stelle||'beide',
+      notiz:v.roh,felder:Object.assign({},v.felder||{}),geltung:'alle',saetze:[],quelle:'excel'});nv++;
+  }
+  TABPRUEF=null;
+  aend();el('dlg').close();setTab('logbuch');
+  toast(`${nm} Messungen, ${nw} Wurzel-EC und ${nv} Logbucheinträge übernommen. Nicht vergessen zu sichern.`);
+};
+AKTION.tabWaehlen=()=>el('fileTab').click();
 
 /* ══════════ 12c · Fotos ══════════
    Ein Foto ist der schnellste Weg, eine Managementaenderung mit einer
@@ -4138,6 +4561,7 @@ async function laden(file){
 el('fileJson').onchange=e=>{const f=e.target.files[0];if(f)laden(f);e.target.value=''};
 el('filePdf').onchange=e=>{const l=[...e.target.files].map(f=>({pfad:f.name,file:f}));if(l.length)einlesen(l);e.target.value=''};
 el('fileFoto').onchange=e=>{const l=[...e.target.files];if(l.length)fotosEinlesen(l);e.target.value=''};
+el('fileTab').onchange=e=>{const f=e.target.files[0];if(f)tabelleEinlesen(f);e.target.value=''};
 /* PDFs lassen sich auf jedem Reiter ablegen, nicht nur auf «Analysen».
    Ohne preventDefault auf dragover oeffnet der Browser die Datei stattdessen. */
 const ziehtDatei=e=>!!(e.dataTransfer&&[...(e.dataTransfer.types||[])].indexOf('Files')>=0);
