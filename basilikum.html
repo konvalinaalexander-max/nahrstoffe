@@ -2966,6 +2966,9 @@ function vGiess(){
     </div>`;
   }
 
+  /* ── Soll-Ist-Bilanz ── */
+  s+=bilanzKarte(alle);
+
   /* ── Kreislauf ── */
   const letzt=db.messungen.filter(x=>x.ec!=null&&x.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
   const ecReihe=db.messungen.filter(x=>x.ec!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
@@ -3066,6 +3069,159 @@ AKTION.gwRicht=(d,ev)=>{
   db.einst.gwRicht=db.einst.gwRicht||{};
   db.einst.gwRicht[d.k]=n;aend();render();
 };
+
+/* ══════════ 12b-1 · Soll-Ist-Bilanz des Giesswassers ══════════
+   Was laut Logbuch dosiert wurde, gegen das, was im Wasser gemessen wurde.
+   Die Rechnung ist einfach – Menge mal Gehalt geteilt durch Systemvolumen –
+   und genau deshalb muss offenliegen, was sie NICHT beruecksichtigt:
+   Pflanzenaufnahme, den woechentlichen Wasserwechsel, Ausfaellungen und das,
+   was das Frischwasser selbst schon mitbringt. Die Differenz ist die Summe
+   all dessen, kein Verlust.
+   Ohne lueckenlose Logbuchfuehrung ist die Rechnung wertlos. Bei Luecken
+   verweigert die App die Aussage, statt eine falsche Zahl zu zeigen.      */
+const ATOMMASSE={N:14.007,P:30.974,K:39.098,Ca:40.078,Mg:24.305,S:32.06,
+  Fe:55.845,Mn:54.938,Zn:65.38,B:10.811,Cu:63.546,Mo:95.95,Na:22.99,Cl:35.45,Si:28.086};
+const BILANZ_EL=[
+ {el:'N', gw:['gw_NO3','gw_NH4'],quellen:['N_gesamt','N','NO3','NH4'],name:'Stickstoff',
+  hinweis:'im Wasser gemessen als Nitrat plus Ammonium – beide tragen je ein Stickstoffatom'},
+ {el:'P', gw:['gw_P'], quellen:['P'], name:'Phosphor'},
+ {el:'K', gw:['gw_K'], quellen:['K'], name:'Kalium'},
+ {el:'Ca',gw:['gw_Ca'],quellen:['Ca'],name:'Calcium',frisch:1},
+ {el:'Mg',gw:['gw_Mg'],quellen:['Mg'],name:'Magnesium',frisch:1},
+ {el:'S', gw:['gw_S'], quellen:['S'], name:'Schwefel',frisch:1},
+ {el:'Fe',gw:['gw_Fe'],quellen:['Fe'],name:'Eisen'},
+ {el:'Mn',gw:['gw_Mn'],quellen:['Mn'],name:'Mangan'},
+ {el:'Zn',gw:['gw_Zn'],quellen:['Zn'],name:'Zink'},
+ {el:'Cu',gw:['gw_Cu'],quellen:['Cu'],name:'Kupfer'},
+ {el:'B', gw:['gw_B'], quellen:['B'], name:'Bor'},
+ {el:'Mo',gw:['gw_Mo'],quellen:['Mo'],name:'Molybdän'}];
+const BILANZ_HERKUNFT='Berechnet aus den Logbucheinträgen und den Produktangaben unter «Sätze & Einstellungen». Die Gehalte stammen von den Etiketten, nicht aus einer eigenen Analyse.';
+const BILANZ_DECKUNG=0.7;   /* darunter verweigert die App die Aussage */
+const systemLiter=()=>+db.einst.systemLiter||20000;
+/* Elementmasse in Gramm, die ein Logbucheintrag ins System gebracht hat. */
+function eintragMasse(e,el){
+  const pr=db.produkte&&db.produkte[e.mittel];
+  if(!pr||!pr.gehalt)return null;
+  let anteil=null;
+  for(const q of el.quellen)if(pr.gehalt[q]!=null){anteil=pr.gehalt[q];break}
+  if(anteil==null)return null;
+  if(e.menge==null)return null;
+  const faktor=e.jeReservoir?2:1;
+  let kgProdukt;
+  if(pr.form==='fest')kgProdukt=e.menge*faktor;
+  else{
+    if(!pr.dichte)return {fehlt:'dichte'};
+    kgProdukt=e.menge*faktor*pr.dichte;
+  }
+  return {g:kgProdukt*1000*anteil/100};
+}
+/* Zeitfenster, ueber das gerechnet wird. */
+function bilanzFenster(probe,alleProben){
+  const bis=probe.datum;
+  const tank=db.ereignisse.filter(e=>e.typ==='Tank neu angesetzt'&&e.datum&&e.datum<=bis)
+    .sort((a,b)=>b.datum.localeCompare(a.datum))[0];
+  if(tank)return {von:tank.datum,bis,grund:`seit dem Neuansetzen des Tanks am ${fmt(tank.datum)}`};
+  const vorige=alleProben.filter(a=>a.datum<bis).sort((a,b)=>b.datum.localeCompare(a.datum))[0];
+  if(vorige)return {von:vorige.datum,bis,grund:`seit der vorigen Wasserprobe am ${fmt(vorige.datum)}`,schwach:1};
+  return {von:plus(bis,-28),bis,grund:'über die 28 Tage vor der Probe',schwach:1};
+}
+/* Wie lueckenlos ist das Logbuch im Fenster? Eine Woche gilt als abgedeckt,
+   wenn in ihr mindestens ein Eintrag steht. */
+function bilanzDeckung(von,bis){
+  const t=Math.max(1,tage(von,bis));
+  const wochen=Math.max(1,Math.ceil(t/7));
+  const belegt=new Set();
+  for(const e of db.ereignisse){
+    if(!e.datum||e.datum<=von||e.datum>bis)continue;
+    belegt.add(Math.floor(tage(von,e.datum)/7));
+  }
+  return {wochen,belegt:belegt.size,anteil:belegt.size/wochen};
+}
+function bilanzGiess(probe,alleProben){
+  const f=bilanzFenster(probe,alleProben);
+  const deckung=bilanzDeckung(f.von,f.bis);
+  const eintraege=db.ereignisse.filter(e=>e.datum&&e.datum>f.von&&e.datum<=f.bis&&
+    e.menge!=null&&e.mittel&&db.produkte[e.mittel]&&Object.keys(db.produkte[e.mittel].gehalt||{}).length);
+  const ohneDichte=[...new Set(eintraege.filter(e=>{
+    const pr=db.produkte[e.mittel];return pr.form!=='fest'&&!pr.dichte}).map(e=>e.mittel))];
+  const jeRes=eintraege.filter(e=>e.jeReservoir).length;
+  const nurStelle=eintraege.filter(e=>e.stelle&&e.stelle!=='beide').length;
+  const zeilen=[];
+  for(const el of BILANZ_EL){
+    let g=0,hat=false;
+    for(const e of eintraege){
+      const m=eintragMasse(e,el);
+      if(m&&m.g!=null){g+=m.g;hat=true}
+    }
+    if(!hat)continue;
+    const mgL=g/systemLiter()*1000;
+    const mikro=el.gw.every(k=>GW_MIKRO.indexOf(k.slice(3))>=0);
+    const dosiert=mikro?mgL/ATOMMASSE[el.el]*1000:mgL/ATOMMASSE[el.el];
+    let gemessen=null,unter=false;
+    for(const k of el.gw){
+      const w=probe.werte[k];
+      if(!w||w.wert==null)continue;
+      gemessen=(gemessen||0)+w.wert;
+      if(w.unter)unter=true;
+    }
+    zeilen.push({el,dosiert,gemessen,unter,einheit:mikro?'µmol/l':'mmol/l',
+      anteil:(gemessen!=null&&dosiert>0)?gemessen/dosiert:null});
+  }
+  return {fenster:f,deckung,eintraege,zeilen,ohneDichte,jeRes,nurStelle,
+    genug:deckung.anteil>=BILANZ_DECKUNG&&eintraege.length>0};
+}
+
+function bilanzKarte(alle){
+  if(!alle.length)return '';
+  const probe=alle[0];
+  const b=bilanzGiess(probe,alle);
+  let s=`<div class="card"><div class="hd"><div><h2>Was dosiert wurde und was ankam <span class="tag schaetz">Annahme</span></h2>
+    <p class="sub">Aus den Logbucheinträgen und den hinterlegten Produktangaben gerechnet und der Messung der neuesten Probe
+    («${esc(gwStelle(probe))}», ${fmt(probe.datum)}) gegenübergestellt. Gerechnet wird ${esc(b.fenster.grund)}, auf ${nz(systemLiter(),0)} Liter Systemvolumen.</p></div></div>`;
+
+  if(!b.eintraege.length){
+    s+=`<div class="note warn"><strong>Diese Rechnung ist noch nicht möglich.</strong>
+      Im Zeitraum ${fmt(b.fenster.von)} bis ${fmt(b.fenster.bis)} steht kein Logbucheintrag mit Menge und einem Produkt, dessen Gehalte hinterlegt sind.
+      Trag die Düngergaben im Logbuch ein – mit Menge – und ergänze unter «Sätze &amp; Einstellungen» die Gehalte der verwendeten Produkte.</div>`;
+    return s+'</div>';
+  }
+  s+=`<div class="row" style="margin-bottom:10px">
+      <span class="tag">${b.eintraege.length} Eintrag${b.eintraege.length>1?'e':''} im Zeitraum</span>
+      <span class="tag">${b.deckung.belegt} von ${b.deckung.wochen} Wochen mit Logbucheinträgen</span>
+      <span class="tag">${fmt(b.fenster.von)} – ${fmt(b.fenster.bis)}</span></div>`;
+
+  if(!b.genug){
+    s+=`<div class="note warn"><strong>Die Zahlen bleiben verdeckt, weil das Logbuch Lücken hat.</strong>
+      Nur ${b.deckung.belegt} von ${b.deckung.wochen} Wochen des Zeitraums tragen überhaupt einen Eintrag – ${Math.round(b.deckung.anteil*100)} %.
+      Eine Bilanz aus lückenhaften Aufzeichnungen sieht aus wie ein Ergebnis, ist aber keins: was nicht eingetragen wurde, erscheint als Verlust.
+      Ab ${Math.round(BILANZ_DECKUNG*100)} % Abdeckung zeigt die App die Rechnung.</div>
+      <p class="tiny muted">Der schnellste Weg dorthin ist der Excel-Import: er macht aus der Bemerkungsspalte Logbucheinträge.</p>`;
+    return s+'</div>';
+  }
+  s+=`<div class="scroll"><table><thead><tr><th>Element</th><th>dosiert (berechnet)</th><th>gemessen</th><th>Anteil</th><th>Einheit</th></tr></thead><tbody>
+    ${b.zeilen.map(z=>`<tr><td><strong>${esc(z.el.name)}</strong>${z.el.frisch?' <span class="tag">auch im Frischwasser</span>':''}
+        ${z.el.hinweis?`<div class="tiny muted">${esc(z.el.hinweis)}</div>`:''}</td>
+      <td class="mono">${nz(z.dosiert,z.einheit==='µmol/l'?1:3)}</td>
+      <td class="mono">${z.gemessen==null?'<span class="muted">nicht gemessen</span>':(z.unter?'&lt;':'')+nz(z.gemessen,z.einheit==='µmol/l'?1:3)}</td>
+      <td>${z.anteil==null?'<span class="muted">–</span>':
+        `<span class="pill ${z.anteil>=0.6?'ok':z.anteil>=0.2?'na':'off'}">${nz(z.anteil*100,0)} %</span>`}</td>
+      <td class="tiny muted">${esc(z.einheit)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+
+  s+=`<div class="note neutral"><strong>Was diese Rechnung nicht ist.</strong>
+    Sie gilt für eine <em>frisch angesetzte</em> Lösung: Menge mal Gehalt geteilt durch Systemvolumen.
+    Der Rücklauf enthält zusätzlich, was die Pflanzen aufgenommen haben, was der wöchentliche Wasserwechsel verdünnt hat und was ausgefallen ist.
+    <strong>Die Differenz ist deshalb kein Verlust, sondern die Summe dieser Vorgänge.</strong>
+    Um sie zu trennen, bräuchte es eine Messung direkt nach dem Ansetzen und eine im Rücklauf – dieselbe Woche, dasselbe Labor.</div>`;
+  if(b.zeilen.some(z=>z.el.frisch))s+=`<p class="tiny muted">Calcium, Magnesium und Schwefel bringt das Frischwasser selbst mit; sie sind in der Spalte «dosiert» nicht enthalten.
+    Ein Anteil über 100 % ist dort normal und kein Fehler.</p>`;
+  if(b.jeRes)s+=`<p class="tiny muted">Bei ${b.jeRes} Eintrag${b.jeRes>1?'en':''} steht «je Reservoir». Für die Bilanz – sie bezieht sich auf das ganze System – ist dort die doppelte Menge gerechnet. Im Logbuch bleibt die eingetragene Zahl unverändert stehen.</p>`;
+  if(b.nurStelle)s+=`<p class="tiny muted">${b.nurStelle} Eintrag${b.nurStelle>1?'e betreffen':' betrifft'} nur ein Reservoir. Gerechnet wird trotzdem auf das ganze Systemvolumen, weil beide Reservoirs verbunden sind – bei getrennt gefahrenen Tanks wäre das falsch.</p>`;
+  if(b.ohneDichte.length)s+=`<div class="note">Für ${b.ohneDichte.map(m=>esc(evMittelName(m))).join(', ')} fehlt die Dichte. Flüssige Produkte lassen sich ohne sie nicht von Litern in Kilogramm umrechnen – diese Gaben fehlen in der Rechnung. Unter «Sätze &amp; Einstellungen» nachtragen.</div>`;
+  s+=`<div class="note neutral">${esc(BILANZ_HERKUNFT)}</div>`;
+  s+=`<p class="tiny muted">Die App sagt bewusst nicht, wieviel zuzugeben wäre. Diese Auswertung beschreibt, was war.</p>`;
+  return s+'</div>';
+}
 
 /* ══════════ 12b-2 · Tabellenimport (pH und EC) ══════════
    Der Betrieb fuehrt seine Tankmessungen in einer Excel-Datei. Die Zahlen
@@ -4471,14 +4627,69 @@ function vSaetze(){
         <td class="tiny muted">${esc(einheit(k))}</td></tr>`}).join('')}
     </tbody></table></div></div>
 
+  <div class="card"><div class="hd"><div><h2>Produkte und Systemvolumen</h2>
+    <p class="sub">Grundlage der Soll-Ist-Bilanz im Reiter Giesswasser. Die Gehalte stammen von den Etiketten der Hersteller – das ist eine Angabe, keine eigene Analyse.
+    Ohne Gehalt taucht ein Produkt in der Bilanz nicht auf; das ist Absicht, denn eine geratene Konzentration wäre schlimmer als gar keine.</p></div></div>
+    <div class="row" style="margin-bottom:12px">
+      <div><label class="lab">Systemvolumen (Liter)</label><input class="mono" size="9" value="${esc(S.systemLiter)}" data-aend="einst" data-k="systemLiter">
+        <div class="tiny muted" style="max-width:230px;margin-top:3px">Beide Reservoirs zusammen. Die Bilanz teilt die dosierte Menge durch diese Zahl.</div></div>
+    </div>
+    ${Object.keys(db.produkte).map(k=>{const pr=db.produkte[k];
+      const gk=Object.keys(pr.gehalt||{});
+      return `<div style="border:1px solid var(--line);border-radius:var(--rs);padding:12px;margin-bottom:10px;background:var(--card2)">
+      <div class="row">
+        <div style="flex:1;min-width:180px"><label class="lab">Name</label><input value="${esc(pr.name)}" data-aend="prodFeld" data-k="${esc(k)}" data-f="name" style="width:100%"></div>
+        <div><label class="lab">Form</label><select data-aend="prodFeld" data-k="${esc(k)}" data-f="form">
+          <option value="fluessig"${pr.form!=='fest'?' selected':''}>flüssig</option>
+          <option value="fest"${pr.form==='fest'?' selected':''}>fest</option></select></div>
+        <div><label class="lab">Dichte kg/l</label><input class="mono" size="6" value="${pr.dichte==null?'':esc(pr.dichte)}" data-aend="prodFeld" data-k="${esc(k)}" data-f="dichte"
+          ${pr.form==='fest'?'disabled title="Feste Produkte werden in Kilogramm dosiert – eine Dichte braucht es nicht."':''}></div>
+        <div style="flex:1;min-width:150px"><label class="lab">Herkunft der Angaben</label><input value="${esc(pr.quelle||'')}" data-aend="prodFeld" data-k="${esc(k)}" data-f="quelle" style="width:100%"></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="lab" style="min-width:70px">Gehalte %</span>
+        ${gk.length?gk.map(e=>`<div><label class="lab">${esc(NAME[e]||e)}</label>
+          <input class="mono" size="6" value="${esc(pr.gehalt[e])}" data-aend="prodGehalt" data-k="${esc(k)}" data-e="${esc(e)}"></div>`).join('')
+          :'<span class="small muted">keine Gehalte hinterlegt – dieses Produkt erscheint nicht in der Bilanz</span>'}
+        <div><label class="lab">ergänzen</label><select data-aend="prodDazu" data-k="${esc(k)}">
+          <option value="">Element wählen …</option>
+          ${BILANZ_EL.filter(x=>!gk.includes(x.quellen[0])).map(x=>`<option value="${esc(x.quellen[0])}">${esc(x.name)}</option>`).join('')}</select></div>
+      </div></div>`}).join('')}
+    <div class="note neutral">Ein Gehalt von 9 % Stickstoff heisst: 100 kg Produkt enthalten 9 kg Stickstoff. Bei flüssigen Produkten rechnet die App über die Dichte von Litern in Kilogramm um – fehlt sie, bleibt das Produkt aus der Bilanz draussen und sagt das.</div></div>
+
   <div class="card"><h2>Datenstand</h2>
-    <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Einträge im Logbuch · ${db.messungen.length} Messungen · ${db.rundgaenge.length} Rundgänge · ${alleSaetze().length} Sätze · Schema ${db.schema}</p>
+    <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Einträge im Logbuch · ${db.messungen.length} Messungen · ${db.fotos.length} Fotos · ${db.rundgaenge.length} Rundgänge · ${alleSaetze().length} Sätze · Schema ${db.schema}</p>
+    <p class="small">Sicherungsdatei rund ${mb(dbBytes())}.</p>
     <p class="small muted" style="max-width:70ch">Alle Angaben liegen in der Sicherungsdatei; die Original-PDFs werden nicht mehr gebraucht. Beim Sichern entsteht jedes Mal eine neue Datei mit Datum und Uhrzeit, ältere Stände bleiben erhalten. Es gibt bewusst keine automatische Speicherung – der Speicherschritt ist eure Kontrolle darüber, was in den gemeinsamen Ordner wandert.</p>
     <div class="row"><button class="primary" data-tun="sichern">Jetzt sichern</button><button data-tun="dateiOeffnen">Datei öffnen</button>
       <button data-tun="zuruecksetzen">Alles zurücksetzen</button></div>
     ${dirty?'<div class="note">Es gibt ungesicherte Änderungen.</div>':''}</div>`;
 }
 AKTION.einst=(d,ev)=>{const n=toNum(ev.target.value);if(n!=null){db.einst[d.k]=n;aend();render()}else toast('Bitte eine Zahl eintragen.')};
+AKTION.prodFeld=(d,ev)=>{
+  const pr=db.produkte[d.k];if(!pr)return;
+  if(d.f==='dichte'){
+    const t=String(ev.target.value).trim();
+    if(t===''){pr.dichte=null}
+    else{const n=toNum(t);if(n==null||n<=0)return toast('Die Dichte muss eine Zahl grösser als null sein.');pr.dichte=n}
+  }else pr[d.f]=ev.target.value;
+  aend();render();
+};
+AKTION.prodGehalt=(d,ev)=>{
+  const pr=db.produkte[d.k];if(!pr)return;
+  const t=String(ev.target.value).trim();
+  if(t===''){delete pr.gehalt[d.e];aend();render();return}
+  const n=toNum(t);
+  if(n==null||n<0||n>100)return toast('Ein Gehalt ist ein Anteil in Prozent – zwischen 0 und 100.');
+  pr.gehalt[d.e]=n;aend();render();
+};
+AKTION.prodDazu=(d,ev)=>{
+  const pr=db.produkte[d.k],e=ev.target.value;
+  if(!pr||!e)return;
+  pr.gehalt=pr.gehalt||{};
+  if(pr.gehalt[e]==null)pr.gehalt[e]=0;
+  aend();render();toast('Element ergänzt – jetzt den Gehalt vom Etikett eintragen.');
+};
 AKTION.optimum=(d,ev)=>{
   const k=d.k,i=+d.i,n=toNum(ev.target.value);
   const cur=db.eigeneOptima[k]?db.eigeneOptima[k].slice():[null,null];
