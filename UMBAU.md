@@ -276,6 +276,56 @@ einzigen Analyse gerendert.
 
 ---
 
+## 7.6 · Nachtrag: Giesswasser
+
+Nachdem drei echte Wasserberichte vorlagen, ist aus dem blossen Listeneintrag
+ein eigener Reiter geworden.
+
+**Der Parser arbeitet über Koordinaten.** Der Wasserbericht von
+NovaCropControl ist eine um 90 Grad gedrehte Tabelle. Die zeilenweise
+Rekonstruktion über die y-Koordinate, die für Blattsaft und Substrat trägt,
+verliert dort Werte — bei Kalium fehlte einer. Deshalb liest der
+Giesswasser-Parser direkt die Textkoordinaten: die y-Position bestimmt den
+Parameter, die x-Position die Spalte. Gegen alle drei Berichte geprüft:
+21 Parameter, null Abweichungen.
+
+**Berichte mit Historie werden zerlegt.** Ein Bericht enthält eine Spalte
+«Analyse» und beliebig viele «Historie». Die erste Historiespalte ist dieselbe
+Probe wie die Analyse — erkennbar an derselben Probennummer — und wird
+zusammengefasst. Jede übrige Spalte wird eine eigene Probe mit eigenem Datum
+und eigener Probennummer.
+
+**Die Entnahmestelle kommt aus der Kopfzeile.** «Analysebericht:Giesswasser;
+Eichhof 8B/Reservoir Vorne» ergibt Lage und Stelle. Damit sind zwei Proben vom
+selben Tag auseinanderzuhalten: «Hinter, Ohne H2O2» und «Vorne, mitt H2O2»
+vom 06.08.2026 bekommen je eine eigene Farbe, stehen in der Vergleichstabelle
+nebeneinander und tragen ihren Namen in jedem Tooltip — in den Tabellen wie im
+Diagramm.
+
+**Die Einheiten sind korrigiert.** Vor dem ersten echten Bericht waren die
+Wasserfelder als mg/l angelegt — eine Annahme. Das Labor liefert
+Makronährstoffe in **mmol/l** und Spurenelemente in **µmol/l**. Die App zeigt
+beides und rechnet zur Einordnung zusätzlich in mg/l um. Deshalb geht das
+Schema von 4 auf 5: von Hand erfasste Wasserwerte aus der Zeit davor werden
+markiert und im Reiter angemahnt; eingelesene Berichte sind nicht betroffen.
+
+**Was der Reiter zeigt:** je Entnahmestelle die neueste Probe mit den
+Leitwerten, eine Einordnung gegen Richtwerte (gesetzte Annahmen, mit
+Herkunftsangabe und im Reiter änderbar), was das Wasser vor jeder Düngung
+schon an Nährstoffen mitbringt, alle Proben nebeneinander, den Verlauf je
+Parameter mit einer Linie pro Entnahmestelle — und den Kreislauf selbst, der
+aus dem Substratreiter hierher gewandert ist, weil Quelle und Tank
+zusammengehören.
+
+Eine Dosierungsrechnung — etwa der Säurebedarf zur Absenkung des
+Hydrogencarbonats — ist **nicht** gebaut. Sie bleibt zurückgestellt, wie in
+der Übergabe festgelegt. Der Reiter sagt das an der Stelle, an der man sie
+erwarten würde.
+
+Der Reiter «Substrat & Wasser» heisst jetzt «Substrat». Zehn Reiter statt neun.
+
+---
+
 ## 8 · Was ich bewusst nicht gebaut habe
 
 Unverändert zurückgestellt, wie in der Übergabe festgelegt: die

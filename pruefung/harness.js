@@ -34,11 +34,11 @@ if(cut<0)throw new Error('Selbstaufruf nicht gefunden');
 src=src.slice(0,cut).replace(/^"use strict";/,'');
 
 const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseIns','parseAuto',
- 'leer','migriere','ausKW','montagKW','bezugFuer','aussaatVon','kulturdauer','alter',
+ 'parseGiess','pdfPunkte','GW_PARAM','GW_MAKRO','GW_MIKRO','inMgL','leer','migriere','ausKW','montagKW','bezugFuer','aussaatVon','kulturdauer','alter',
  'optVon','optQuelle','status','istOk','istRand','lage','abstand','ausmass','schwereVon',
  'erhebungen','massgebliche','bewerte','indexVon','bilanz','verh','substratZu','befunde','wiederkehrend',
  'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
- 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vLogbuch','vRund','vPlaner','vSaetze',
+ 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze',
  'chartLinien','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
  'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
 

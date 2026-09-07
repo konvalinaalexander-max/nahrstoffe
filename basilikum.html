@@ -203,20 +203,46 @@ const NAME={Zucker:'Zucker',pH:'pH (Saft)',EC:'EC (Saft)',K:'Kalium',Ca:'Calcium
  res_P2O5:'P₂O₅ Reserve',res_K2O:'K₂O Reserve',res_Mg:'Mg Reserve',res_Ca:'Ca Reserve',
  sof_P2O5:'P₂O₅ sofort verfügbar',sof_K2O:'K₂O sofort verfügbar',sof_Mg:'Mg sofort verfügbar',sof_Ca:'Ca sofort verfügbar',
  sub_Mn:'Mangan (Substrat)',sub_Cu:'Kupfer (Substrat)',sub_Zn:'Zink (Substrat)',sub_Fe:'Eisen (Substrat)',sub_B:'Bor (Substrat)',
- /* Giesswasser */
- gw_pH:'pH (Giesswasser)',gw_EC:'EC (Giesswasser)',gw_Na:'Natrium (Giesswasser)',gw_Cl:'Chlorid (Giesswasser)',
- gw_Ca:'Calcium (Giesswasser)',gw_Mg:'Magnesium (Giesswasser)',gw_NO3:'Nitrat (Giesswasser)',
- gw_HCO3:'Hydrogencarbonat',gw_SO4:'Sulfat',gw_K:'Kalium (Giesswasser)'};
+ /* Giesswasser – NovaCropControl liefert Makronährstoffe in mmol/l und
+    Spurenelemente in µmol/l, nicht in mg/l. */
+ gw_EC:'EC (Giesswasser)',gw_pH:'pH (Giesswasser)',gw_KCa:'K/Ca (Giesswasser)',
+ gw_NH4:'Ammonium (Wasser)',gw_K:'Kalium (Wasser)',gw_Na:'Natrium (Wasser)',gw_Ca:'Calcium (Wasser)',
+ gw_Mg:'Magnesium (Wasser)',gw_Si:'Silizium (Wasser)',gw_NO3:'Nitrat (Wasser)',gw_Cl:'Chlorid (Wasser)',
+ gw_S:'Schwefel (Wasser)',gw_HCO3:'Hydrogencarbonat (Wasser)',gw_P:'Phosphor (Wasser)',
+ gw_Fe:'Eisen (Wasser)',gw_Mn:'Mangan (Wasser)',gw_Zn:'Zink (Wasser)',gw_B:'Bor (Wasser)',
+ gw_Cu:'Kupfer (Wasser)',gw_Mo:'Molybdän (Wasser)',gw_Al:'Aluminium (Wasser)'};
 const KURZ={N_gesamt:'N ges',N_aus_NO3:'N-NO₃',Zucker:'Zuck'};
 const kurz=k=>KURZ[k]||k;
-const EINH={Zucker:'%',EC:'mS/cm',pH:'','K/Ca':'',sub_pH:'',gw_pH:'',gw_EC:'mS/cm'};
+const EINH={Zucker:'%',EC:'mS/cm',pH:'','K/Ca':'',sub_pH:'',gw_pH:'',gw_EC:'mS/cm',gw_KCa:''};
+/* Giesswasser: Makronährstoffe kommen vom Labor in mmol/l, Spurenelemente in
+   µmol/l. Die Zuordnung folgt der Chemie und dem Berichtslayout von
+   NovaCropControl; sie ist an den drei vorliegenden Berichten geprüft. */
+const GW_MAKRO=['NH4','K','Na','Ca','Mg','Si','NO3','Cl','S','HCO3','P'];
+const GW_MIKRO=['Fe','Mn','Zn','B','Cu','Mo','Al'];
+const GW_PARAM=['EC','pH','KCa'].concat(GW_MAKRO,GW_MIKRO);
 function einheit(k){
   if(EINH[k]!==undefined)return EINH[k];
   if(/^(res_|sof_)/.test(k)||k==='sub_Nmin')return 'mg/l';
   if(k==='sub_Salz')return 'g/l';
   if(/^sub_/.test(k))return 'mg/l';
-  if(/^gw_/.test(k))return 'mg/l';
+  if(/^gw_/.test(k)){
+    const b=k.slice(3);
+    if(GW_MAKRO.indexOf(b)>=0)return 'mmol/l';
+    if(GW_MIKRO.indexOf(b)>=0)return 'µmol/l';
+    return '';
+  }
   return 'ppm';
+}
+/* Molmassen, um mmol/l für den Vergleich mit anderen Quellen in mg/l zu zeigen */
+const MOLMASSE={NH4:18.04,K:39.1,Na:22.99,Ca:40.08,Mg:24.31,Si:28.09,NO3:62.0,Cl:35.45,S:32.06,HCO3:61.02,P:30.97,
+  Fe:55.85,Mn:54.94,Zn:65.38,B:10.81,Cu:63.55,Mo:95.95,Al:26.98};
+function inMgL(k,v){
+  if(v==null)return null;
+  const b=k.slice(3),m=MOLMASSE[b];
+  if(!m)return null;
+  if(GW_MAKRO.indexOf(b)>=0)return v*m;          /* mmol/l → mg/l */
+  if(GW_MIKRO.indexOf(b)>=0)return v*m/1000;     /* µmol/l → mg/l */
+  return null;
 }
 const istBlattsaft=k=>!/^(sub_|res_|sof_|gw_)/.test(k);
 
@@ -419,12 +445,97 @@ function parseIns(seiten){
   else r.hinweise.push('Substratproben tragen keine Optimum-Bereiche vom Labor. Die Bewertung erfolgt über den Vergleich mit dem Blattsaft im Reiter «Substrat & Wasser».');
   return r;
 }
-function parseAuto(seiten){
+/* ── Giesswasser (NovaCropControl) ────────────────────────
+   Der Wasserbericht ist eine um 90 Grad gedrehte Tabelle. Die Rekonstruktion
+   über Zeilen verliert dort Werte, weil Zellen je nach Rundung in dieselbe
+   oder in verschiedene Zeilen fallen. Deshalb wird hier direkt mit den
+   Koordinaten gearbeitet: die y-Position bestimmt den Parameter, die
+   x-Position die Spalte.
+
+   Ein Bericht enthält eine Spalte «Analyse» und beliebig viele Spalten
+   «Historie». Die erste Historiespalte ist dieselbe Probe wie die Analyse –
+   erkennbar an derselben Probennummer – und wird zusammengefasst. Jede
+   übrige Spalte ist eine eigene, ältere Probe mit eigenem Datum.
+
+   Der Name der Entnahmestelle steht in der Kopfzeile
+   «Analysebericht:Giesswasser; <Lage>/<Stelle>» und gilt für alle Spalten
+   des Berichts – die Historie ist die Historie derselben Stelle. */
+const GW_NAMEN=[['EC','gw_EC'],['pH','gw_pH'],['K/Ca','gw_KCa'],['NH4','gw_NH4'],['K','gw_K'],['Na','gw_Na'],
+ ['Ca','gw_Ca'],['Mg','gw_Mg'],['Si','gw_Si'],['NO3','gw_NO3'],['Cl','gw_Cl'],['S','gw_S'],['HCO3','gw_HCO3'],
+ ['P','gw_P'],['Fe','gw_Fe'],['Mn','gw_Mn'],['Zn','gw_Zn'],['B','gw_B'],['Cu','gw_Cu'],['Mo','gw_Mo'],['Al','gw_Al']];
+function parseGiess(seiten,punkte){
+  const text=[].concat(...seiten).join('\n');
+  const r={labor:'NovaCropControl',typ:'giesswasser',proben:[],hinweise:[],rohtext:text};
+  if(!punkte||!punkte.length){
+    r.hinweise.push('Die Koordinaten des Dokuments liessen sich nicht lesen – bitte von Hand erfassen.');
+    return r;
+  }
+  /* Der Laborbericht kommt aus Deutschland und schreibt «Gießwasser» mit ß.
+     Die Oberfläche bleibt in Schweizer Rechtschreibung – hier muss der
+     Ausdruck aber den fremden Text treffen, deshalb beide Formen. */
+  const kopf=(text.match(/Analysebericht:\s*Gie[ßs]wasser;\s*([^\n]*?)\s*(?:Name:|Adresse:|$)/)||[])[1]||'';
+  const teil=kopf.split('/');
+  const lage=(teil[0]||'').trim();
+  let stelle=(teil.slice(1).join('/')||'').trim();
+  if(!stelle){
+    const an=(text.match(/Anbau:?\s*([^\n]*)/)||[])[1]||'';
+    stelle=an.replace(/\bErnte:?.*/,'').replace(/\bSonstiges\b/,'').trim();
+  }
+  for(const seite of punkte){
+    /* y je Parameter aus der Namensspalte */
+    const yVon=new Map();
+    for(const [roh,key] of GW_NAMEN){
+      const t=seite.filter(i=>i.s===roh);
+      if(t.length)yVon.set(key,t[0].y);
+    }
+    if(yVon.size<10)continue;
+    /* Kopfzeile der Spalten: Probendatum ganz unten, Probennummer darüber */
+    const daten=seite.filter(i=>i.y<40&&/^\d{1,2}-\d{1,2}-\d{4}$/.test(i.s));
+    if(!daten.length)continue;
+    const nummern=seite.filter(i=>i.y>60&&i.y<110&&/^\d{10,14}$/.test(i.s));
+    const spalten=daten.map(d=>({x:d.x,
+      datum:(()=>{const m=d.s.split('-');return `${m[2]}-${m[1].padStart(2,'0')}-${m[0].padStart(2,'0')}`})(),
+      nummer:(nummern.find(n=>Math.abs(n.x-d.x)<8)||{}).s||null})).sort((a,b)=>a.x-b.x);
+    const gesehen=new Set();
+    for(const sp of spalten){
+      if(sp.nummer&&gesehen.has(sp.nummer))continue;   /* Analyse und erste Historie sind dieselbe Probe */
+      if(sp.nummer)gesehen.add(sp.nummer);
+      const werte={};
+      for(const [key,y] of yVon){
+        const t=seite.find(i=>Math.abs(i.x-sp.x)<8&&Math.abs(i.y-y)<12&&NUM.test(i.s));
+        if(t)werte[key]={wert:toNum(t.s),unter:isLim(t.s)};
+      }
+      if(!Object.keys(werte).length)continue;
+      r.proben.push({laborId:sp.nummer,datum:sp.datum,satz:null,blattalter:null,zustand:null,
+        stelle:stelle||null,kultur:lage||null,werte,optima:{},optArt:{}});
+    }
+  }
+  if(!r.proben.length){r.hinweise.push('Keine Wasserproben erkannt – bitte von Hand erfassen.');return r}
+  /* Plausibilitaet: Spurenelemente stehen in µmol/l und sind klein */
+  const gross=r.proben.some(p=>GW_MIKRO.some(b=>p.werte['gw_'+b]&&p.werte['gw_'+b].wert>200));
+  if(gross)r.hinweise.push('Ein Spurenelement liegt ungewöhnlich hoch für µmol/l – bitte die Einheiten im Bericht kontrollieren.');
+  if(r.proben.length>1)r.hinweise.push(`Der Bericht enthält ${r.proben.length} Proben: die aktuelle Analyse und ${r.proben.length-1} aus der Historie derselben Entnahmestelle.`);
+  if(!stelle)r.hinweise.push('Der Name der Entnahmestelle wurde nicht gefunden – bitte eintragen, sonst lassen sich Proben vom selben Tag nicht unterscheiden.');
+  return r;
+}
+function parseAuto(seiten,punkte){
   const t=[].concat(...seiten).join('\n');
+  if(/Gie[ßs]wasser/i.test(t)&&/NovaCropControl/i.test(t))return parseGiess(seiten,punkte);
   if(/NovaCropControl|Pflanzensaft-Probe/i.test(t))return parseNCC(seiten);
   if(/Labor Ins AG|LABOR INS/i.test(t)&&/Bericht Substrate|Kulturgruppe\s+Substrate/i.test(t))return parseIns(seiten);
   return {labor:null,typ:null,proben:[{datum:null,satz:null,blattalter:'',zustand:null,werte:{},optima:{},optArt:{}}],
     hinweise:['Unbekanntes Layout – Werte bitte von Hand erfassen. Der Quelltext wird gespeichert, damit nichts verloren geht.'],rohtext:t};
+}
+/* Wie pdfSeiten, aber mit den Koordinaten je Textstueck. Der Wasserbericht
+   braucht sie, weil seine Tabelle gedreht ist. */
+async function pdfPunkte(buf){
+  const doc=await pdfjsLib.getDocument({data:buf}).promise,out=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const c=await(await doc.getPage(p)).getTextContent();
+    out.push(c.items.filter(i=>i.str&&i.str.trim()).map(i=>({
+      x:Math.round(i.transform[4]*10)/10,y:Math.round(i.transform[5]*10)/10,s:i.str.trim()})));
+  }
+  return out;
 }
 async function pdfSeiten(buf){
   const doc=await pdfjsLib.getDocument({data:buf}).promise,out=[];
@@ -442,7 +553,7 @@ async function pdfSeiten(buf){
 }
 
 /* ══════════ 4 · Datenmodell ══════════ */
-const leer=()=>({schema:4,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+const leer=()=>({schema:5,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4,6],begleitet:[],geplant:[]},
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
@@ -478,7 +589,22 @@ function migriere(roh){
     if(!roh.einst||!roh.einst.kern){d.einst.kern=KERN_VORGABE.slice();
       notizen.push('Die Kennzahl «im Optimum» rechnet neu mit elf steuerbaren Nährstoffen: ohne die Stickstoff-Dublette, ohne Natrium und Chlorid und ohne Silizium. Unter «Sätze & Einstellungen» änderbar.')}
   }
-  d.schema=4;
+  if(von<5){
+    /* Bis Schema 4 waren die Giesswasserfelder als mg/l beschriftet – eine
+       Annahme, bevor ein echter Wasserbericht vorlag. Das Labor liefert
+       Makronährstoffe in mmol/l und Spurenelemente in µmol/l. Eingelesene
+       Berichte tragen eine Probennummer und sind unbedenklich; von Hand
+       erfasste Werte werden markiert. */
+    let gwAlt=0;
+    for(const a of d.analysen){
+      if(a.typ!=='giesswasser')continue;
+      if(a.laborId)continue;
+      if(Object.keys(a.werte||{}).some(k=>/^gw_/.test(k))){a.einheitAlt=true;gwAlt++}
+    }
+    if(gwAlt)notizen.push(`${gwAlt} von Hand erfasste Giesswasseranalyse${gwAlt>1?'n sind':' ist'} markiert: damals waren die Felder als mg/l beschriftet. Das Labor liefert mmol/l und µmol/l – bitte diese Werte kontrollieren. Eingelesene Berichte sind davon nicht betroffen.`);
+    if(!roh.einst||!roh.einst.gwRicht)notizen.push('Für das Giesswasser gibt es jetzt einen eigenen Reiter mit Richtwerten. Sie sind gesetzte Annahmen und im Reiter änderbar.');
+  }
+  d.schema=5;
   return {db:d,notizen,von};
 }
 
@@ -964,7 +1090,7 @@ const svgAuf=(w,h,t)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" r
 const leerBox=(box,t)=>{box.innerHTML=`<p class="muted small" style="padding:18px 0">${esc(t)}</p>`};
 
 function chartLinien(box,o){
-  const {serien=[],band,bands3,xTyp='datum',xLabel='',ereignisse=[],hoehe=290}=o;
+  const {serien=[],band,bands3,xTyp='datum',xLabel='',ereignisse=[],hoehe=290,bandLabel='Optimum'}=o;
   const W=Math.max(box.clientWidth||820,540),H=hoehe,ml=bands3?96:64,mr=20,mt=24,mb=42;
   const pts=serien.flatMap(s=>s.punkte);
   if(!pts.length)return leerBox(box,'Keine Werte für diese Auswahl.');
@@ -994,7 +1120,7 @@ function chartLinien(box,o){
   }else{
     if(band){
       const b1=Y(band[1]!=null?band[1]:y1),b0=Y(band[0]!=null?band[0]:y0);
-      s+=`<rect x="${ml}" y="${b1}" width="${W-ml-mr}" height="${Math.max(1,b0-b1)}" fill="#E3F0E1"/><text x="${W-mr-4}" y="${b1+13}" text-anchor="end" font-size="10.5" fill="#2C7A4B">Optimum</text>`;
+      s+=`<rect x="${ml}" y="${b1}" width="${W-ml-mr}" height="${Math.max(1,b0-b1)}" fill="#E3F0E1"/><text x="${W-mr-4}" y="${b1+13}" text-anchor="end" font-size="10.5" fill="#2C7A4B">${esc(bandLabel)}</text>`;
     }
     for(let i=0;i<=4;i++){const v=y0+(y1-y0)*i/4,y=Y(v);
       s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/><text x="${ml-8}" y="${y+4}" text-anchor="end" font-size="10.5" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v)}</text>`}
@@ -1140,9 +1266,9 @@ document.addEventListener('change',ev=>{
 });
 
 const TABS=[['lage','Überblick'],['analysen','Analysen'],['naehrstoff','Nährstoffe'],['wirkung','Wirkung'],
- ['substrat','Substrat & Wasser'],['logbuch','Logbuch'],['rundgang','Rundgang'],['planer','Planer'],['saetze','Sätze & Einstellungen']];
+ ['substrat','Substrat'],['giess','Giesswasser'],['logbuch','Logbuch'],['rundgang','Rundgang'],['planer','Planer'],['saetze','Sätze & Einstellungen']];
 const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),naehrstoff:()=>vNaehr(),wirkung:()=>vWirkung(),
- substrat:()=>vSubstrat(),logbuch:()=>vLogbuch(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
+ substrat:()=>vSubstrat(),giess:()=>vGiess(),logbuch:()=>vLogbuch(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
 function render(){
   el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
   el('stand').textContent=dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
@@ -1431,7 +1557,7 @@ const TYPNAME={blattsaft:'Blattsaft',substrat:'Substrat',giesswasser:'Giesswasse
 const PARAM_JE_TYP={
   blattsaft:NCC.map(p=>p[1]),
   substrat:['sub_pH','sub_Salz','sub_Nmin','res_P2O5','res_K2O','res_Mg','res_Ca','sof_P2O5','sof_K2O','sof_Mg','sof_Ca','sub_Mn','sub_Cu','sub_Zn','sub_Fe','sub_B'],
-  giesswasser:['gw_pH','gw_EC','gw_Na','gw_Cl','gw_Ca','gw_Mg','gw_K','gw_NO3','gw_SO4','gw_HCO3']};
+  giesswasser:GW_PARAM.map(k=>'gw_'+k)};
 function vAnalysen(){
   const a=[...db.analysen].sort((x,y)=>(y.datum||'').localeCompare(x.datum||''));
   const zahl=t=>db.analysen.filter(x=>x.typ===t).length;
@@ -1454,7 +1580,7 @@ function vAnalysen(){
     <div class="scroll"><table><thead><tr><th>Datum</th><th>Typ</th><th>Satz</th><th>Probe</th><th>Alter</th><th>Werte</th><th>Labor</th><th></th></tr></thead><tbody>
     ${a.map(x=>{const al=x.typ==='blattsaft'?alter(x):null;return `<tr class="klick" data-tun="detail" data-id="${esc(x.id)}">
       <td class="mono">${fmt(x.datum)}</td><td>${esc(TYPNAME[x.typ]||x.typ||'?')}</td><td class="mono">${esc(x.satz||'–')}</td>
-      <td>${x.blattalter?`<span class="tag ${esc(x.blattalter)}">${esc(x.blattalter)}</span> `:''}${zustandTag(x.zustand)}${x.tiefe?` <span class="tag">${esc(x.tiefe)} cm</span>`:''}</td>
+      <td>${x.blattalter?`<span class="tag ${esc(x.blattalter)}">${esc(x.blattalter)}</span> `:''}${x.stelle?`<span class="tag misch">${esc(x.stelle)}</span> `:''}${zustandTag(x.zustand)}${x.tiefe?` <span class="tag">${esc(x.tiefe)} cm</span>`:''}</td>
       <td class="tiny">${!al||al.woche==null?'–':`<span title="${esc(al.text)}" class="${al.plausibel?'':'val-off'}">${al.sicher?'':'~'}${nz(al.woche,1)} W</span>`}</td>
       <td class="mono tiny">${Object.keys(x.werte||{}).length}</td><td class="tiny muted">${esc(x.labor||'manuell')}</td>
       <td><button class="ghost" data-tun="loeschAnalyse" data-id="${esc(x.id)}">entfernen</button></td></tr>`}).join('')}
@@ -1468,9 +1594,10 @@ function detail(id){
   const a=db.analysen.find(x=>x.id===id);if(!a)return;
   const al=a.typ==='blattsaft'?alter(a):null;
   const keys=Object.keys(a.werte||{});
-  dialog(`${TYPNAME[a.typ]||a.typ||'Analyse'} · ${a.satz||''} · ${fmt(a.datum)}`,
+  dialog([TYPNAME[a.typ]||a.typ||'Analyse',a.stelle||a.satz||null,fmt(a.datum)].filter(Boolean).join(' · '),
     `<div class="row" style="margin-bottom:10px">
       ${a.blattalter?`<span class="tag ${esc(a.blattalter)}">${esc(a.blattalter)}</span>`:''}
+      ${a.stelle?`<span class="tag misch">${esc(a.stelle)}</span>`:''}
       ${zustandTag(a.zustand)}${a.tiefe?`<span class="tag">Entnahme ${esc(a.tiefe)} cm</span>`:''}
       <span class="tag">${esc(a.labor||'manuell')}</span>${a.laborId?`<span class="tag">Probe ${esc(a.laborId)}</span>`:''}
       ${a.quelle&&a.quelle.datei?`<span class="tag">${esc(a.quelle.datei)}</span>`:''}</div>
@@ -1495,7 +1622,7 @@ function detail(id){
 AKTION.bearbeiten=d=>{const a=db.analysen.find(x=>x.id===d.id);if(a)pruefdialog([JSON.parse(JSON.stringify(a))],true)};
 function manuellNeu(typ){
   pruefdialog([{id:uid(),typ:typ||'blattsaft',labor:null,datum:heute(),satz:'',blattalter:typ==='blattsaft'?'':null,
-    zustand:null,tiefe:null,werte:{},optima:{},hinweise:[]}],false,true);
+    zustand:null,tiefe:null,stelle:typ==='giesswasser'?'':null,werte:{},optima:{},hinweise:[]}],false,true);
 }
 async function einlesen(liste){
   if(typeof pdfjsLib==='undefined'||!pdfBereit){
@@ -1509,7 +1636,8 @@ async function einlesen(liste){
   const v=[];
   for(const f of liste){
     try{
-      const r=parseAuto(await pdfSeiten(await f.file.arrayBuffer()));
+      const roh=await f.file.arrayBuffer();
+      const r=parseAuto(await pdfSeiten(roh.slice(0)),await pdfPunkte(roh.slice(0)));
       r.proben.forEach(p=>v.push(Object.assign({id:uid(),typ:r.typ||'blattsaft',labor:r.labor,
         quelle:{datei:f.pfad,text:(r.rohtext||'').slice(0,20000)},hinweise:(r.hinweise||[]).slice()},p)));
     }catch(e){toast('Fehler bei '+f.pfad+': '+e.message)}
@@ -1533,11 +1661,14 @@ function pruefdialog(v,bearb,manuell){
         <div><label class="lab">Typ</label><select data-aend="pruefFeld" data-i="${i}" data-f="typ">
           ${['blattsaft','substrat','giesswasser'].map(t=>`<option value="${t}"${p.typ===t?' selected':''}>${TYPNAME[t]}</option>`).join('')}</select></div>
         <div><label class="lab">Probendatum</label><input type="date" value="${esc(p.datum||'')}" data-aend="pruefFeld" data-i="${i}" data-f="datum"></div>
-        <div><label class="lab">Satz</label><input value="${esc(p.satz||'')}" placeholder="28-478" size="9" data-aend="pruefFeld" data-i="${i}" data-f="satz"></div>
+        ${p.typ==='giesswasser'
+          ? `<div style="min-width:190px"><label class="lab">Entnahmestelle</label><input value="${esc(p.stelle||'')}" placeholder="z.B. Reservoir Vorne" style="width:100%" data-aend="pruefFeld" data-i="${i}" data-f="stelle">
+              <div class="tiny muted" style="margin-top:3px">Der Name unterscheidet Proben, die am selben Tag an verschiedenen Stellen gezogen wurden.</div></div>`
+          : `<div><label class="lab">Satz</label><input value="${esc(p.satz||'')}" placeholder="28-478" size="9" data-aend="pruefFeld" data-i="${i}" data-f="satz"></div>`}
         ${p.typ==='blattsaft'?`<div><label class="lab">Blattalter</label><select data-aend="pruefFeld" data-i="${i}" data-f="blattalter">
           ${[['','– wählen –'],['jung','jung'],['alt','alt'],['misch','Mischprobe']].map(([w,t])=>`<option value="${w}"${(p.blattalter||'')===w?' selected':''}>${t}</option>`).join('')}</select></div>`:''}
-        <div><label class="lab">Kulturbild</label><select data-aend="pruefFeld" data-i="${i}" data-f="zustand">
-          ${[['','keine Angabe'],['grün','grün'],['gelb','gelb']].map(([w,t])=>`<option value="${w}"${(p.zustand||'')===w?' selected':''}>${t}</option>`).join('')}</select></div>
+        ${p.typ==='giesswasser'?'':`<div><label class="lab">Kulturbild</label><select data-aend="pruefFeld" data-i="${i}" data-f="zustand">
+          ${[['','keine Angabe'],['grün','grün'],['gelb','gelb']].map(([w,t])=>`<option value="${w}"${(p.zustand||'')===w?' selected':''}>${t}</option>`).join('')}</select></div>`}
         ${p.typ==='substrat'?`<div><label class="lab">Entnahmetiefe (cm)</label><input class="mono" size="5" value="${esc(p.tiefe??'')}" data-aend="pruefFeld" data-i="${i}" data-f="tiefe" placeholder="z.B. 5">
           <div class="tiny muted" style="margin-top:3px;max-width:230px">Bei Ebbe und Flut wandern Salze nach oben, die Wurzelspitzen sitzen unten. Zwei Tiefen sind zwei Welten – die Angabe macht Proben erst vergleichbar.</div></div>`:''}
         ${bearb?'':`<div><label class="lab">&nbsp;</label><label style="display:flex;gap:6px;align-items:center;font-size:13px">
@@ -1630,7 +1761,12 @@ function pruefPruefen(){
     if(p.__ok!==false){
       if(!p.datum)w.push('Probendatum fehlt.');
       if(p.typ==='blattsaft'&&!p.blattalter)w.push('Blattalter ist nicht zugeordnet. Ohne diese Angabe lassen sich Verlagerung und Verhältnisse nicht auswerten.');
-      if(!p.satz)w.push('Ohne Satznummer lässt sich die Probe keiner Kultur und keinem Alter zuordnen.');
+      if(p.typ==='giesswasser'){
+        if(!p.stelle)w.push('Ohne Namen der Entnahmestelle lassen sich Proben vom selben Tag nicht auseinanderhalten.');
+        if(p.stelle&&p.datum&&db.analysen.some(x=>x.id!==p.id&&x.typ==='giesswasser'&&x.datum===p.datum&&(x.stelle||'')===p.stelle))
+          w.push('Für diese Entnahmestelle und dieses Datum existiert bereits eine Probe.');
+      }
+      else if(!p.satz)w.push('Ohne Satznummer lässt sich die Probe keiner Kultur und keinem Alter zuordnen.');
       if(p.typ==='blattsaft'&&p.satz&&p.datum&&p.blattalter&&db.analysen.some(x=>x.id!==p.id&&x.typ==='blattsaft'&&x.satz===p.satz&&x.datum===p.datum&&x.blattalter===p.blattalter&&(x.zustand||'')===(p.zustand||'')))
         w.push('Für diesen Satz, dieses Datum und dieses Blattalter existiert bereits eine Probe.');
       if(p.typ==='blattsaft'&&p.blattalter&&v.some((q,j)=>j!==i&&q.__ok!==false&&q.typ==='blattsaft'&&q.satz===p.satz&&q.datum===p.datum&&q.blattalter===p.blattalter&&(q.zustand||'')===(p.zustand||'')))
@@ -1913,14 +2049,19 @@ AKTION.wkNach=(d,ev)=>{wkNach=ev.target.value;render()};
    änderbar. Sie entscheiden nur über die Einordnung «Angebot knapp / reicht»,
    nie über eine Zahl, die als Messwert erscheint. */
 const RICHT_VORGABE={sub_Nmin:[50,150],sof_K2O:[80,250],sof_Mg:[30,120],sof_Ca:[100,400],sub_pH:[5.5,6.5],sub_Salz:[0.8,2.0]};
+/* Woher die Zahlen stammen – damit nachvollziehbar bleibt, worauf sie beruhen. */
+const RICHT_HERKUNFT={
+  sub_Nmin:'Orientierungswert für Topfkultur im H2O-Auszug. Nicht vom Labor vorgegeben.',
+  sof_K2O:'Orientierungswert für Topfkultur im H2O-Auszug. Nicht vom Labor vorgegeben.',
+  sof_Mg:'Orientierungswert für Topfkultur im H2O-Auszug. Nicht vom Labor vorgegeben.',
+  sof_Ca:'Orientierungswert für Topfkultur im H2O-Auszug. Nicht vom Labor vorgegeben.',
+  sub_pH:'Bereich, in dem Mangan, Eisen und Phosphor gleichzeitig verfügbar bleiben. Lehrbuchwissen, kein Laborwert.',
+  sub_Salz:'Orientierungswert für Topfkultur. Nicht vom Labor vorgegeben.'};
 const richtVon=k=>((db.einst.richt&&db.einst.richt[k])||RICHT_VORGABE[k]||null);
 
 function vSubstrat(){
   const subs=db.analysen.filter(a=>a.typ==='substrat'&&a.datum).sort((a,b)=>b.datum.localeCompare(a.datum));
-  const gw=db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum).sort((a,b)=>b.datum.localeCompare(a.datum));
   const erh=erhebungen();
-  const m=[...db.messungen].sort((a,b)=>b.datum.localeCompare(a.datum));
-  const rel=db.ereignisse.filter(e=>EVTYPEN[e.typ]&&EVTYPEN[e.typ].kreis).sort((a,b)=>b.datum.localeCompare(a.datum));
 
   /* Paare bilden: Substratprobe und Blattsafterhebung desselben Satzes */
   const paare=[];
@@ -1946,17 +2087,6 @@ function vSubstrat(){
   }
   paare.sort((a,b)=>b.e.datum.localeCompare(a.e.datum));
   const jung=erh.length?erh[erh.length-1]:null;
-
-  nachRender=()=>{
-    const serien=[
-      {name:'pH Rücklauf',farbe:FARBEN[0],punkte:db.messungen.filter(x=>x.ph!=null).map(x=>({x:+new Date(x.datum),y:x.ph,xtext:fmtK(x.datum),titel:'pH '+nz(x.ph,2)+' am '+fmt(x.datum)}))},
-      {name:'EC Rücklauf',farbe:FARBEN[1],punkte:db.messungen.filter(x=>x.ec!=null).map(x=>({x:+new Date(x.datum),y:x.ec,xtext:fmtK(x.datum),titel:'EC '+nz(x.ec,2)+' am '+fmt(x.datum)}))},
-      {name:'EC frisch angesetzt',farbe:FARBEN[2],strich:'5 4',punkte:db.messungen.filter(x=>x.ecFrisch!=null).map(x=>({x:+new Date(x.datum),y:x.ecFrisch,xtext:fmtK(x.datum),titel:'EC frisch '+nz(x.ecFrisch,2)}))}
-    ].filter(s=>s.punkte.length);
-    chartLinien(el('cKreis'),{serien,xTyp:'datum',xLabel:'Datum',
-      ereignisse:rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ}))});
-    el('legKreis').innerHTML=serien.map(s=>`<span><i style="background:${s.farbe}"></i>${esc(s.name)}</span>`).join('');
-  };
 
   let s='';
   /* ── Angebot gegen Aufnahme ── */
@@ -2007,51 +2137,6 @@ function vSubstrat(){
   if(paare.length)s+=`<div class="note neutral">Die Richtwerte für das Substrat sind gesetzte Annahmen für Topfkultur, keine Laborvorgaben – Labor Ins liefert zu Substratproben keine Optimum-Bereiche. Sie entscheiden nur über die Einordnung «knapp» oder «ausreichend»; die Messwerte selbst bleiben unberührt. Unter «Sätze &amp; Einstellungen» änderbar.</div>`;
   s+='</div>';
 
-  /* ── Kreislauf ── */
-  const letzt=db.messungen.filter(x=>x.ec!=null&&x.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
-  const ecReihe=db.messungen.filter(x=>x.ec!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
-  let trend='';
-  if(ecReihe.length>=4){
-    const h=ecReihe.slice(-3),v=ecReihe.slice(0,3);
-    const d=mittel(h.map(x=>x.ec))-mittel(v.map(x=>x.ec));
-    if(d>0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gestiegen. Steigt er bei gleicher Düngung, ist das Ballast und kein Nährstoff – dann hilft Ablassen, nicht weniger düngen.`;
-    else if(d<-0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gefallen. Das spricht für stärkere Aufnahme oder eine geringere Zufuhr.`;
-  }
-  s+=`<div class="card"><div class="hd"><div><h2>Kreislauf: pH und EC im Rücklauf</h2>
-    <p class="sub">Gemessen im Tank vor der neuen Düngergabe, wöchentlich. Alle Tische hängen am selben Kreislauf – was hier steht, gilt für das ganze Haus.</p></div></div>
-    <div class="row">
-      <div><label class="lab">Datum</label><input type="date" id="mDatum" value="${heute()}"></div>
-      <div><label class="lab">pH</label><input id="mPh" class="mono" size="5" inputmode="decimal"></div>
-      <div><label class="lab">EC Rücklauf</label><input id="mEc" class="mono" size="5" inputmode="decimal"></div>
-      <div><label class="lab">EC frisch <span class="muted">(freiwillig)</span></label><input id="mEcF" class="mono" size="5" inputmode="decimal"></div>
-      <div><label class="lab">Substrattemperatur °C <span class="muted">(freiwillig)</span></label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
-      <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
-      <button class="primary" data-tun="messung">Eintragen</button></div>
-    <p class="tiny muted" style="margin-top:6px">Die Temperatur ist freiwillig, aber sie erklärt viel: dieselbe organische Grunddüngung liefert bei 15 °C deutlich weniger Stickstoff als bei 25 °C. Ohne sie sind Winter- und Sommeranalysen nur bedingt vergleichbar.</p>
-    <div id="cKreis" class="scroll" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>
-    <div class="note neutral" style="margin-top:12px">Notiert ihr zusätzlich den EC direkt nach dem Ansetzen, ist die Differenz zum Rücklauf die beste Verbrauchsmessung ohne Labor.${letzt?` Zuletzt am ${fmt(letzt.datum)}: ${nz(letzt.ecFrisch,2)} frisch gegen ${nz(letzt.ec,2)} zurück, also ${nz(letzt.ecFrisch-letzt.ec,2)} mS/cm aufgenommen.`:''} ${esc(trend)}</div></div>`;
-
-  /* ── Giesswasser ── */
-  s+=`<div class="card"><div class="hd"><div><h2>Giesswasser</h2>
-    <p class="sub">Die Quelle des Kreislaufs. Natrium und Chlorid im Giesswasser sind der Ausgangspunkt jeder Aufsalzung – ohne diese Analyse lässt sich nicht sagen, ob Ballast hereinkommt oder im Umlauf entsteht.</p></div>
-    <button data-tun="manuellNeu" data-typ="giesswasser">Analyse erfassen</button></div>`;
-  if(gw.length){
-    const g=gw[0];
-    const zeig=['gw_pH','gw_EC','gw_Na','gw_Cl','gw_Ca','gw_Mg','gw_K','gw_NO3','gw_SO4','gw_HCO3'].filter(k=>g.werte[k]);
-    s+=`<p class="small">Neueste Analyse vom ${fmt(g.datum)}:</p>
-      <div class="row" style="gap:18px">${zeig.map(k=>`<div><div class="tiny muted">${esc(NAME[k])}</div><div class="mono">${zeigeWert(g.werte[k])} <span class="tiny muted">${esc(einheit(k))}</span></div></div>`).join('')}</div>`;
-    const na=g.werte.gw_Na&&g.werte.gw_Na.wert,cl=g.werte.gw_Cl&&g.werte.gw_Cl.wert;
-    if(na!=null||cl!=null)s+=`<div class="note ${((na||0)>50||(cl||0)>80)?'':'neutral'}">${((na||0)>50||(cl||0)>80)
-      ? 'Natrium oder Chlorid sind im Giesswasser bereits deutlich vorhanden. In einem Kreislauf ohne Austausch reichern sie sich mit jeder Gabe weiter an – hier hilft nur regelmässiges Ablassen oder eine andere Wasserquelle.'
-      : 'Natrium und Chlorid im Giesswasser sind unauffällig. Steigen sie im Blattsaft trotzdem, entsteht die Anreicherung im Umlauf selbst.'}</div>`;
-    if(gw.length>1)s+=`<div class="scroll" style="margin-top:12px"><table><thead><tr><th>Datum</th><th>Werte</th><th></th></tr></thead><tbody>
-      ${gw.map(a=>`<tr class="klick" data-tun="detail" data-id="${esc(a.id)}"><td class="mono">${fmt(a.datum)}</td>
-        <td class="small">${Object.keys(a.werte).slice(0,8).map(k=>`${esc(NAME[k]||k)} ${zeigeWert(a.werte[k])}`).join(' · ')}</td>
-        <td class="tiny muted">ansehen</td></tr>`).join('')}</tbody></table></div>`;
-  }else s+=`<div class="leer"><h3>Noch keine Giesswasseranalyse erfasst</h3>
-    <p class="muted" style="max-width:56ch;margin:0 auto">Für Giesswasser gibt es keinen Parser – erfasse die Werte von Hand. Schon eine einzige Analyse beantwortet, ob Natrium und Chlorid von aussen kommen oder im Kreislauf entstehen.</p></div>`;
-  s+='</div>';
-
   /* ── Substratanalysen ── */
   s+=`<div class="card"><div class="hd"><div><h2>Substratanalysen (${subs.length})</h2>
     <p class="sub">Reserven im AAE10-Auszug, sofort Verfügbares im H2O-Auszug, dazu Spurenelemente, Salz, Nmin und pH.</p></div>
@@ -2067,22 +2152,6 @@ function vSubstrat(){
     ${subs.some(a=>!a.tiefe)?`<div class="note">${subs.filter(a=>!a.tiefe).length} Substratprobe(n) ohne Entnahmetiefe. Bei Ebbe und Flut steigt Wasser von unten und verdunstet oben – Salze wandern nach oben, die Wurzelspitzen sitzen unten. Eine Probe aus 2 cm und eine aus 8 cm sind zwei verschiedene Welten. Ohne die Angabe sind Substratproben untereinander nur eingeschränkt vergleichbar.</div>`:''}`
     :'<p class="muted small">Noch keine Substratanalyse erfasst.</p>'}</div>`;
 
-  /* ── Eingriffe ── */
-  s+=`<div class="card"><div class="hd"><div><h2>Eingriffe am Kreislauf</h2>
-    <p class="sub">Dieselben Einträge wie im Logbuch, gefiltert auf das, was pH und EC bewegt.</p></div>
-    <button class="primary" data-tun="evNeu" data-vor="pH-Korrektur">Eingriff erfassen</button></div>
-    ${rel.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Angaben</th><th></th></tr></thead><tbody>
-    ${rel.map(e=>`<tr><td class="mono">${fmt(e.datum)}</td><td>${esc(e.typ)}</td><td class="small">${esc(felderText(e))}</td>
-      <td><button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button></td></tr>`).join('')}
-    </tbody></table></div>`:'<p class="muted small">Noch keine Eingriffe erfasst.</p>'}</div>
-  <div class="card"><h2>Messungen (${m.length})</h2>
-    <div class="scroll"><table><thead><tr><th>Datum</th><th>pH</th><th>EC Rücklauf</th><th>EC frisch</th><th>Aufnahme</th><th>Temp</th><th>Notiz</th><th></th></tr></thead><tbody>
-    ${m.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
-      <td class="mono">${nz(x.ecFrisch,2)}</td><td class="mono">${x.ec!=null&&x.ecFrisch!=null?nz(x.ecFrisch-x.ec,2):'–'}</td>
-      <td class="mono">${x.temp!=null?nz(x.temp,1)+' °C':'–'}</td>
-      <td class="small muted">${esc(x.notiz||'')}</td>
-      <td><button class="ghost" data-tun="messungWeg" data-id="${esc(x.id)}">entfernen</button></td></tr>`).join('')}
-    </tbody></table></div>${m.length?'':'<p class="muted small">Noch keine Messung erfasst.</p>'}</div>`;
   return s;
 }
 AKTION.messung=()=>{
@@ -2093,6 +2162,236 @@ AKTION.messung=()=>{
   aend();render();toast('Messung eingetragen.');
 };
 AKTION.messungWeg=d=>{db.messungen=db.messungen.filter(y=>y.id!==d.id);aend();render()};
+
+/* ══════════ 12b · Giesswasser ══════════
+   Das Wasser ist die Quelle des Kreislaufs. Was hier hereinkommt, reichert
+   sich an, weil in einem Ebbe-Flut-System nichts abfliesst.
+   Die Richtwerte sind gesetzte Annahmen mit offengelegter Herkunft. */
+const GW_RICHT_VORGABE={
+  gw_EC:  {bis:0.5, text:'Ab hier bringt das Wasser selbst nennenswert Salz mit, das bei jeder Gabe im Kreislauf bleibt.'},
+  gw_Na:  {bis:1.5, text:'Natrium wird von der Pflanze kaum aufgenommen und reichert sich im Umlauf an.'},
+  gw_Cl:  {bis:1.5, text:'Chlorid verhält sich wie Natrium: es bleibt im Kreislauf zurück.'},
+  gw_HCO3:{bis:4.0, text:'Hydrogencarbonat puffert den pH nach oben und verbraucht Säure. Über diesem Wert ist eine pH-Korrektur üblich.'},
+  gw_Fe:  {bis:20,  text:'Höhere Eisengehalte können in Tropfern und Düsen ausfallen.'},
+  gw_Mn:  {bis:20,  text:'Wie Eisen – Ausfällungsgefahr in der Technik.'}};
+const GW_HERKUNFT='Orientierungswert für Giesswasser im geschlossenen Kreislauf. Nicht vom Labor vorgegeben und nicht aus der Literatur belegt – eine gesetzte Annahme wie die Schwellen im Regelwerk.';
+const gwRichtVon=k=>{
+  const eig=db.einst.gwRicht&&db.einst.gwRicht[k];
+  const vor=GW_RICHT_VORGABE[k];
+  if(!vor)return null;
+  return {bis:(eig!=null?eig:vor.bis),text:vor.text};
+};
+const gwProben=()=>db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum)
+  .slice().sort((a,b)=>b.datum.localeCompare(a.datum)||String(a.stelle||'').localeCompare(String(b.stelle||'')));
+const gwStelle=a=>a.stelle||'ohne Namen';
+/* Farbe je Entnahmestelle, damit Proben vom selben Tag unterscheidbar bleiben */
+function gwFarben(){
+  const st=[...new Set(gwProben().map(gwStelle))].sort();
+  const m={};st.forEach((x,i)=>m[x]=FARBEN[i%FARBEN.length]);
+  return m;
+}
+let gwParam='gw_HCO3';
+function vGiess(){
+  const alle=gwProben();
+  const farbe=gwFarben();
+  const stellen=[...new Set(alle.map(gwStelle))].sort();
+  const messungen=[...db.messungen].sort((a,b)=>b.datum.localeCompare(a.datum));
+  const rel=db.ereignisse.filter(e=>EVTYPEN[e.typ]&&EVTYPEN[e.typ].kreis).sort((a,b)=>b.datum.localeCompare(a.datum));
+  const altFormat=alle.filter(a=>a.einheitAlt);
+
+  if(!alle.length&&!messungen.length)return leerHinweis('Noch kein Giesswasser erfasst',
+    'Das Giesswasser ist die Quelle des Kreislaufs. In einem Ebbe-Flut-System fliesst nichts ab – was im Wasser hereinkommt, bleibt drin und reichert sich an. Ohne diese Analyse lässt sich nicht sagen, ob Natrium und Chlorid von aussen kommen oder erst im Umlauf entstehen.<br><br>Die Wasserberichte von NovaCropControl werden automatisch gelesen, auch die mit Historie.',
+    '<button class="primary" data-tun="pdfWaehlen">Wasserbericht einlesen</button> <button data-tun="manuellNeu" data-typ="giesswasser">Von Hand erfassen</button>');
+
+  nachRender=()=>{
+    /* Verlauf: eine Serie je Entnahmestelle, der Name steht im Tooltip */
+    const serien=stellen.map(st=>({name:st,farbe:farbe[st],
+      punkte:alle.filter(a=>gwStelle(a)===st&&a.werte[gwParam]&&a.werte[gwParam].wert!=null)
+        .map(a=>({x:+new Date(a.datum),y:a.werte[gwParam].wert,xtext:fmtK(a.datum),
+          titel:`${fmt(a.datum)}: ${a.werte[gwParam].unter?'unter der Nachweisgrenze, ':''}${nz(a.werte[gwParam].wert)} ${einheit(gwParam)}`}))}))
+      .filter(x=>x.punkte.length);
+    const r=gwRichtVon(gwParam);
+    chartLinien(el('cGw'),{serien,band:r?[null,r.bis]:null,bandLabel:'Richtwert (Annahme)',xTyp:'datum',xLabel:'Probendatum',hoehe:280});
+    el('legGw').innerHTML=serien.map(x=>`<span><i style="background:${x.farbe}"></i>${esc(x.name)}</span>`).join('')
+      +`<span class="muted">${esc(einheit(gwParam))}</span>`+(r?`<span class="muted">grünes Band: bis ${nz(r.bis)} <span class="tag schaetz">Annahme</span></span>`:'');
+    if(messungen.length){
+      const ms=[
+        {name:'pH Rücklauf',farbe:FARBEN[0],punkte:db.messungen.filter(x=>x.ph!=null).map(x=>({x:+new Date(x.datum),y:x.ph,xtext:fmtK(x.datum),titel:'pH '+nz(x.ph,2)+' am '+fmt(x.datum)}))},
+        {name:'EC Rücklauf',farbe:FARBEN[1],punkte:db.messungen.filter(x=>x.ec!=null).map(x=>({x:+new Date(x.datum),y:x.ec,xtext:fmtK(x.datum),titel:'EC '+nz(x.ec,2)+' am '+fmt(x.datum)}))},
+        {name:'EC frisch angesetzt',farbe:FARBEN[2],strich:'5 4',punkte:db.messungen.filter(x=>x.ecFrisch!=null).map(x=>({x:+new Date(x.datum),y:x.ecFrisch,xtext:fmtK(x.datum),titel:'EC frisch '+nz(x.ecFrisch,2)}))}
+      ].filter(x=>x.punkte.length);
+      chartLinien(el('cKreis'),{serien:ms,xTyp:'datum',xLabel:'Datum',
+        ereignisse:rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ}))});
+      el('legKreis').innerHTML=ms.map(x=>`<span><i style="background:${x.farbe}"></i>${esc(x.name)}</span>`).join('');
+    }
+  };
+
+  let s='';
+  if(altFormat.length)s+=`<div class="note warn">${altFormat.length} Wasseranalyse${altFormat.length>1?'n wurden':' wurde'} vor der Umstellung von Hand erfasst.
+    Damals waren die Felder als mg/l beschriftet, das Labor liefert aber mmol/l und µmol/l. Bitte diese Werte kontrollieren.</div>`;
+
+  s+=`<div class="kpis">
+    <div class="kpi"><h4>Entnahmestellen</h4><b>${stellen.length}</b><span class="tiny muted">${alle.length} Proben insgesamt</span></div>
+    <div class="kpi"><h4>Neueste Probe</h4><b>${alle.length?fmtK(alle[0].datum):'–'}</b><span class="tiny muted">${alle.length?esc(gwStelle(alle[0])):'noch keine'}</span></div>
+    <div class="kpi"><h4>Messungen am Tank</h4><b>${messungen.length}</b><span class="tiny muted">pH und EC im Rücklauf</span></div>
+  </div>`;
+
+  /* ── Karten je Entnahmestelle ── */
+  if(stellen.length){
+    s+=`<div class="hd" style="margin:20px 0 12px"><div><h2>Neueste Probe je Entnahmestelle</h2>
+      <p class="sub">Jede Entnahmestelle ist eine eigene Reihe. Proben vom selben Tag aus verschiedenen Stellen stehen nebeneinander und tragen jeweils ihren Namen.</p></div></div>`;
+    for(const st of stellen){
+      const p=alle.find(a=>gwStelle(a)===st);
+      const leit=['gw_EC','gw_pH','gw_HCO3','gw_Na','gw_Cl','gw_NO3','gw_NH4'].filter(k=>p.werte[k]);
+      const hin=[];
+      for(const k of Object.keys(GW_RICHT_VORGABE)){
+        const w=p.werte[k],r=gwRichtVon(k);
+        if(!w||w.wert==null||w.unter||!r)continue;
+        if(w.wert>r.bis)hin.push({k,w,r});
+      }
+      /* Was schon im Wasser mitkommt */
+      const naehr=['gw_NO3','gw_NH4','gw_K','gw_Ca','gw_Mg','gw_S','gw_P']
+        .filter(k=>p.werte[k]&&p.werte[k].wert!=null&&!p.werte[k].unter&&p.werte[k].wert>0);
+      s+=`<div class="card"><div class="hd">
+        <div><h2 style="display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:50%;background:${farbe[st]};flex:none"></span>${esc(st)}</h2>
+          <p class="sub">${fmt(p.datum)}${p.kultur?' · '+esc(p.kultur):''}${p.laborId?' · Probe '+esc(p.laborId):''}
+          ${alle.filter(a=>gwStelle(a)===st).length>1?` · ${alle.filter(a=>gwStelle(a)===st).length} Proben insgesamt`:''}</p></div>
+        <button data-tun="detail" data-id="${esc(p.id)}">Alle Werte ansehen</button></div>
+        <div class="row" style="gap:20px">
+          ${leit.map(k=>`<div><div class="tiny muted">${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))}</div>
+            <div class="mono" style="font-size:16px">${zeigeWert(p.werte[k])} <span class="tiny muted">${esc(einheit(k))}</span></div>
+            ${einheit(k)==='mmol/l'&&inMgL(k,p.werte[k].wert)!=null?`<div class="tiny muted">${nz(inMgL(k,p.werte[k].wert),1)} mg/l</div>`:''}</div>`).join('')}
+        </div>
+        ${hin.length?hin.map(x=>`<div class="deutung angebot" style="margin-top:8px">
+          <strong>${esc(NAME[x.k].replace(' (Wasser)','').replace(' (Giesswasser)',''))} über dem Richtwert:</strong>
+          ${nz(x.w.wert)} ${esc(einheit(x.k))} gegen ${nz(x.r.bis)} <span class="tag schaetz">Annahme</span><br>${esc(x.r.text)}</div>`).join('')
+          :'<div class="deutung ok" style="margin-top:8px">Alle hinterlegten Richtwerte eingehalten. Das Wasser bringt weder auffällig viel Ballast noch viel Puffer mit.</div>'}
+        ${naehr.length?`<details style="margin-top:8px"><summary>Was mit dem Wasser schon an Nährstoffen hereinkommt</summary>
+          <div class="scroll" style="margin-top:8px"><table><thead><tr><th>Nährstoff</th><th>im Wasser</th><th>entspricht</th></tr></thead><tbody>
+          ${naehr.map(k=>`<tr><td>${esc(NAME[k].replace(' (Wasser)',''))}</td>
+            <td class="mono">${nz(p.werte[k].wert)} ${esc(einheit(k))}</td>
+            <td class="mono tiny">${inMgL(k,p.werte[k].wert)!=null?nz(inMgL(k,p.werte[k].wert),1)+' mg/l':'–'}</td></tr>`).join('')}
+          </tbody></table></div>
+          <p class="tiny muted" style="margin-top:6px">Diese Mengen sind vor jeder Düngung schon im Wasser. Eine Dosierungsrechnung baut die App bewusst nicht – sie zeigt nur, was da ist.</p></details>`:''}
+      </div>`;
+    }
+  }
+
+  /* ── Vergleichstabelle ── */
+  if(alle.length>1){
+    const spalten=alle.slice(0,6);
+    const params=GW_PARAM.map(k=>'gw_'+k).filter(k=>spalten.some(a=>a.werte[k]));
+    s+=`<div class="card"><div class="hd"><div><h2>Alle Proben nebeneinander</h2>
+      <p class="sub">${spalten.length} Proben, neueste zuerst. Die Farbe kennzeichnet die Entnahmestelle – so bleiben Proben vom selben Tag unterscheidbar.</p></div></div>
+      <div class="scroll"><table><thead><tr><th>Parameter</th>
+        ${spalten.map(a=>`<th title="${esc(gwStelle(a))} · ${fmt(a.datum)}${a.laborId?' · Probe '+esc(a.laborId):''}">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${farbe[gwStelle(a)]};margin-right:5px"></span>
+          ${fmtK(a.datum)}<div style="font-weight:400;text-transform:none;letter-spacing:0">${esc(gwStelle(a).slice(0,18))}</div></th>`).join('')}
+        <th>Einheit</th></tr></thead><tbody>
+      ${params.map(k=>{
+        const r=gwRichtVon(k);
+        return `<tr><td><strong>${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))}</strong>
+          ${r?`<div class="tiny muted">Richtwert bis ${nz(r.bis)}</div>`:''}</td>
+        ${spalten.map(a=>{const w=a.werte[k];
+          const ueber=w&&w.wert!=null&&!w.unter&&r&&w.wert>r.bis;
+          return `<td class="mono${ueber?' val-off':''}" title="${esc(gwStelle(a))} · ${fmt(a.datum)}">${w?zeigeWert(w):'–'}</td>`}).join('')}
+        <td class="tiny muted">${esc(einheit(k))}</td></tr>`}).join('')}
+      </tbody></table></div>
+      ${alle.length>6?`<p class="tiny muted">${alle.length-6} ältere Proben nicht angezeigt – sie stehen im Verlauf unten.</p>`:''}
+      <p class="tiny muted">Werte über dem hinterlegten Richtwert sind farbig. Die Richtwerte sind gesetzte Annahmen, siehe unten.</p>
+    </div>`;
+  }
+
+  /* ── Verlauf ── */
+  if(alle.length>1){
+    const wahl=GW_PARAM.map(k=>'gw_'+k).filter(k=>alle.some(a=>a.werte[k]));
+    if(wahl.indexOf(gwParam)<0)gwParam=wahl[0];
+    s+=`<div class="card"><div class="hd"><div><h2>Verlauf</h2>
+      <p class="sub">Ein Parameter über die Zeit, eine Linie je Entnahmestelle. Mit dem Zeiger über einem Punkt erscheint Name, Datum und Wert.</p></div>
+      <select data-aend="gwParam">${wahl.map(k=>`<option value="${esc(k)}"${gwParam===k?' selected':''}>${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))}</option>`).join('')}</select></div>
+      <div id="cGw" class="scroll"></div><div class="legend" id="legGw"></div></div>`;
+  }
+
+  /* ── Kreislauf ── */
+  const letzt=db.messungen.filter(x=>x.ec!=null&&x.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
+  const ecReihe=db.messungen.filter(x=>x.ec!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+  let trend='';
+  if(ecReihe.length>=4){
+    const h=ecReihe.slice(-3),v=ecReihe.slice(0,3);
+    const d=mittel(h.map(x=>x.ec))-mittel(v.map(x=>x.ec));
+    if(d>0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gestiegen. Steigt er bei gleicher Düngung, ist das Ballast und kein Nährstoff – dann hilft Ablassen, nicht weniger düngen.`;
+    else if(d<-0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gefallen. Das spricht für stärkere Aufnahme oder eine geringere Zufuhr.`;
+  }
+  s+=`<div class="card"><div class="hd"><div><h2>Der Kreislauf selbst</h2>
+    <p class="sub">pH und EC im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.</p></div></div>
+    <div class="row">
+      <div><label class="lab">Datum</label><input type="date" id="mDatum" value="${heute()}"></div>
+      <div><label class="lab">pH</label><input id="mPh" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">EC Rücklauf</label><input id="mEc" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">EC frisch <span class="muted">(freiwillig)</span></label><input id="mEcF" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">Substrattemperatur °C <span class="muted">(freiwillig)</span></label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
+      <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
+      <button class="primary" data-tun="messung">Eintragen</button></div>
+    <p class="tiny muted" style="margin-top:6px">Die Temperatur ist freiwillig, aber sie erklärt viel: dieselbe organische Grunddüngung liefert bei 15 °C deutlich weniger Stickstoff als bei 25 °C.</p>
+    ${messungen.length?`<div id="cKreis" class="scroll" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>`:''}
+    <div class="note neutral" style="margin-top:12px">Notiert ihr zusätzlich den EC direkt nach dem Ansetzen, ist die Differenz zum Rücklauf die beste Verbrauchsmessung ohne Labor.${letzt?` Zuletzt am ${fmt(letzt.datum)}: ${nz(letzt.ecFrisch,2)} frisch gegen ${nz(letzt.ec,2)} zurück, also ${nz(letzt.ecFrisch-letzt.ec,2)} mS/cm aufgenommen.`:''} ${esc(trend)}
+    ${alle.length?` Zum Vergleich: das Giesswasser der Stelle «${esc(gwStelle(alle[0]))}» hatte am ${fmt(alle[0].datum)} einen EC von ${alle[0].werte.gw_EC?nz(alle[0].werte.gw_EC.wert,2):'–'} mS/cm – die Differenz zum Rücklauf ist das, was Düngung und Anreicherung zusammen ausmachen.`:''}</div></div>`;
+
+  /* ── Eingriffe und Messungen ── */
+  s+=`<div class="card"><div class="hd"><div><h2>Eingriffe am Kreislauf</h2>
+    <p class="sub">Dieselben Einträge wie im Logbuch, gefiltert auf das, was pH und EC bewegt.</p></div>
+    <button class="primary" data-tun="evNeu" data-vor="pH-Korrektur">Eingriff erfassen</button></div>
+    ${rel.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Angaben</th><th></th></tr></thead><tbody>
+    ${rel.map(e=>`<tr><td class="mono">${fmt(e.datum)}</td><td>${esc(e.typ)}</td><td class="small">${esc(felderText(e))}</td>
+      <td><button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button></td></tr>`).join('')}
+    </tbody></table></div>`:'<p class="muted small">Noch keine Eingriffe erfasst.</p>'}</div>`;
+
+  if(messungen.length)s+=`<div class="card"><h2>Messungen (${messungen.length})</h2>
+    <div class="scroll"><table><thead><tr><th>Datum</th><th>pH</th><th>EC Rücklauf</th><th>EC frisch</th><th>Aufnahme</th><th>Temp</th><th>Notiz</th><th></th></tr></thead><tbody>
+    ${messungen.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
+      <td class="mono">${nz(x.ecFrisch,2)}</td><td class="mono">${x.ec!=null&&x.ecFrisch!=null?nz(x.ecFrisch-x.ec,2):'–'}</td>
+      <td class="mono">${x.temp!=null?nz(x.temp,1)+' °C':'–'}</td>
+      <td class="small muted">${esc(x.notiz||'')}</td>
+      <td><button class="ghost" data-tun="messungWeg" data-id="${esc(x.id)}">entfernen</button></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+
+  /* ── Alle Proben ── */
+  if(alle.length)s+=`<div class="card"><div class="hd"><div><h2>Alle Wasserproben (${alle.length})</h2>
+    <p class="sub">Berichte mit Historie werden beim Einlesen in einzelne Proben zerlegt – jede mit eigenem Datum und eigener Probennummer.</p></div>
+    <button data-tun="manuellNeu" data-typ="giesswasser">Von Hand erfassen</button></div>
+    <div class="scroll"><table><thead><tr><th>Datum</th><th>Entnahmestelle</th><th>EC</th><th>pH</th><th>HCO₃</th><th>Na</th><th>Cl</th><th>Werte</th><th></th></tr></thead><tbody>
+    ${alle.map(a=>`<tr class="klick" data-tun="detail" data-id="${esc(a.id)}" title="${esc(gwStelle(a))} · ${fmt(a.datum)}${a.laborId?' · Probe '+esc(a.laborId):''}">
+      <td class="mono">${fmt(a.datum)}</td>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${farbe[gwStelle(a)]};margin-right:6px"></span>${esc(gwStelle(a))}</td>
+      <td class="mono">${a.werte.gw_EC?zeigeWert(a.werte.gw_EC,2):'–'}</td>
+      <td class="mono">${a.werte.gw_pH?zeigeWert(a.werte.gw_pH,1):'–'}</td>
+      <td class="mono">${a.werte.gw_HCO3?zeigeWert(a.werte.gw_HCO3,2):'–'}</td>
+      <td class="mono">${a.werte.gw_Na?zeigeWert(a.werte.gw_Na,2):'–'}</td>
+      <td class="mono">${a.werte.gw_Cl?zeigeWert(a.werte.gw_Cl,2):'–'}</td>
+      <td class="mono tiny">${Object.keys(a.werte).length}</td>
+      <td><button class="ghost" data-tun="loeschAnalyse" data-id="${esc(a.id)}">entfernen</button></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+
+  /* ── Richtwerte ── */
+  s+=`<div class="card"><div class="hd"><div><h2>Richtwerte für das Giesswasser</h2>
+    <p class="sub">Das Labor gibt zu Wasserproben keine Sollbereiche vor. Diese Zahlen sind gesetzte Annahmen – sie entscheiden nur darüber, wann ein Wert farbig markiert wird, nie über einen Messwert.</p></div></div>
+    <div class="scroll"><table><thead><tr><th>Parameter</th><th>bis</th><th>Einheit</th><th>Warum</th></tr></thead><tbody>
+    ${Object.keys(GW_RICHT_VORGABE).map(k=>{const r=gwRichtVon(k);
+      return `<tr><td>${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))} <span class="tag schaetz">Annahme</span></td>
+        <td><input class="mono" size="7" value="${r.bis}" data-aend="gwRicht" data-k="${esc(k)}"></td>
+        <td class="tiny muted">${esc(einheit(k))}</td>
+        <td class="small">${esc(r.text)}</td></tr>`}).join('')}
+    </tbody></table></div>
+    <div class="note neutral">${esc(GW_HERKUNFT)}</div></div>`;
+  return s;
+}
+AKTION.gwParam=(d,ev)=>{gwParam=ev.target.value;render()};
+AKTION.gwRicht=(d,ev)=>{
+  const n=toNum(ev.target.value);
+  if(n==null)return toast('Bitte eine Zahl eintragen.');
+  db.einst.gwRicht=db.einst.gwRicht||{};
+  db.einst.gwRicht[d.k]=n;aend();render();
+};
 
 /* ══════════ 13 · Logbuch ══════════ */
 function felderText(e){
