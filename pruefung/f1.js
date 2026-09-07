@@ -80,7 +80,7 @@ console.log('\n════ Escaping von Titel und Notiz ════');
   A.setDb(d);
   const h=A.vFotos();
   ok(h.indexOf('<Zeichen>')<0,'Der Titel schleust kein Markup ein');
-  ok(h.indexOf('onerror=alert')<0,'Die Notiz ebenso wenig');
+  ok(h.indexOf('<img src=x')<0,'Die Notiz erzeugt kein <img>-Element');
   ok(/Test mit &#39; Apostroph &amp; &lt;Zeichen&gt;/.test(h),'Und erscheint maskiert als Text');
   const gr=A.fotoGruppen();
   ok(gr[0].tipp.indexOf('<Zeichen>')<0,'Auch im Infokaestchen des Diagramms');

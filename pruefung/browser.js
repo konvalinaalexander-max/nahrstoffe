@@ -238,13 +238,54 @@ require('fs').mkdirSync(shots,{recursive:true});
     console.log('  einplanen geklickt →',/1 offen|geplant/.test(t)?'Termin angelegt':'KEINE WIRKUNG');
   }
 
-  await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(250);
-  await p.click('#view button:text-is("Änderung erfassen")');await p.waitForTimeout(350);
-  console.log('  Logbuchdialog:',await p.$eval('#dlgTitel',e=>e.textContent));
-  await p.fill('#eTitel',"Test mit ' Apostroph & <Zeichen>");
-  await p.click('#dlgFoot button:text-is("Speichern")');await p.waitForTimeout(400);
+  console.log('\n── Logbuch: Schnellerfassung und Zeitstrahl ──');
+  await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(300);
+  const lbVorher=await p.$$eval('#view .zs',e=>e.length);
+  /* Schnellknopf «Biovin» stellt Art und Mittel ein */
+  await p.click('#view button:text-is("Biovin")');await p.waitForTimeout(300);
+  const lbArt=await p.$eval('#lbForm [data-f="typ"]',e=>e.value);
+  const lbMit=await p.$eval('#lbForm [data-f="mittel"]',e=>e.value);
+  const lbEinh=await p.$eval('#lbForm [data-f="menge"]',e=>e.closest('div').querySelector('.lab').textContent.trim());
+  console.log('  Schnellknopf Biovin →',lbArt,'·',lbMit,'· Einheit:',lbEinh);
+  console.log(((lbArt==='Düngergabe'&&lbMit==='biovin')?'  ✓ ':'  ✗ ')+'Häufiges stellt Art und Mittel in einem Klick ein');
+  if(lbArt!=='Düngergabe'||lbMit!=='biovin')fehler.push('Schnellknopf stellt nichts ein');
+  console.log((/\bl\b/.test(lbEinh)?'  ✓ ':'  ✗ ')+'Die Einheit steht fest und folgt der Form des Produkts (flüssig → l)');
+  await p.fill('#lbForm [data-f="menge"]','15');
+  await p.fill('#lbForm [data-f="notiz"]',"Test mit ' Apostroph & <Zeichen>");
+  await p.click('#lbForm .chip:text-is("je Reservoir")');await p.waitForTimeout(250);
+  await p.click('#lbForm button:text-is("Eintragen")');await p.waitForTimeout(450);
+  const lbNachher=await p.$$eval('#view .zs',e=>e.length);
   const lb=await p.$eval('#view',e=>e.innerText);
-  console.log('  Eintrag mit Apostroph gespeichert:',/Apostroph/.test(lb)?'ja':'NEIN');
+  console.log(((lbNachher===lbVorher+1)?'  ✓ ':'  ✗ ')+'Ein Klick legt den Eintrag an ('+lbVorher+' → '+lbNachher+' im Zeitstrahl)');
+  if(lbNachher!==lbVorher+1)fehler.push('Schnellerfassung legt keinen Eintrag an');
+  console.log((/Apostroph/.test(lb)?'  ✓ ':'  ✗ ')+'Eintrag mit Apostroph gespeichert');
+  console.log((/je Reservoir \(zusammen 30 l\)/.test(lb)?'  ✓ ':'  ✗ ')+'«je Reservoir» wird angezeigt, nicht stillschweigend umgerechnet');
+  if(!/je Reservoir \(zusammen 30 l\)/.test(lb))fehler.push('je-Reservoir-Vorbehalt fehlt');
+  /* Wiederkehrendes duplizieren */
+  await p.click('#view .zs button:text-is("wieder so") >> nth=0');await p.waitForTimeout(400);
+  const lbHeute=new Date().toISOString().slice(0,10);
+  const dup=await p.$eval('#lbForm [data-f="datum"]',e=>e.value);
+  const dupM=await p.$eval('#lbForm [data-f="menge"]',e=>e.value);
+  console.log(((dup===lbHeute&&dupM==='15')?'  ✓ ':'  ✗ ')+'«wieder so» übernimmt die Werte mit heutigem Datum ('+dup+', '+dupM+')');
+  if(dup!==lbHeute||dupM!=='15')fehler.push('Duplizieren übernimmt nicht');
+  /* Filter nach Art */
+  const lbAlle=await p.$$eval('#view .zs',e=>e.length);
+  const chips=await p.$$('#view .chip[data-tun="lbFilter"]');
+  if(chips.length>1){
+    const art2=await chips[0].getAttribute('data-t');
+    await chips[0].click();await p.waitForTimeout(350);
+    const gefiltert=await p.$$eval('#view .zs',e=>e.length);
+    console.log(((gefiltert<lbAlle&&gefiltert>0)?'  ✓ ':'  ✗ ')+'Zeitstrahl nach Art filterbar: nur «'+art2+'» ('+lbAlle+' → '+gefiltert+')');
+    if(!(gefiltert>0&&gefiltert<lbAlle))fehler.push('Logbuchfilter greift nicht');
+    await p.click('#view button:text-is("Filter aufheben")');await p.waitForTimeout(300);
+    const zurueck=await p.$$eval('#view .zs',e=>e.length);
+    console.log(((zurueck===lbAlle)?'  ✓ ':'  ✗ ')+'Filter aufheben zeigt wieder alle');
+    if(zurueck!==lbAlle)fehler.push('Filter laesst sich nicht aufheben');
+  }else console.log('  (nur eine Art im Bestand – Filter nicht pruefbar)');
+  const rohLb=await p.$eval('#view',e=>e.innerHTML);
+  console.log((rohLb.indexOf('<Zeichen>')<0?'  ✓ ':'  ✗ ')+'Kein injiziertes Markup aus der Notiz');
+  if(rohLb.indexOf('<Zeichen>')>=0)fehler.push('XSS über die Logbuchnotiz');
+  await p.screenshot({path:shots+'/logbuch.png',fullPage:false});
   await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(350);
   const btn=await p.$('#view .vorschlag button:text-is("einplanen")');
   if(btn){await btn.click();await p.waitForTimeout(300);console.log('  Planer-Knopf nach Apostroph-Eintrag: funktioniert')}

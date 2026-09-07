@@ -167,6 +167,15 @@ details[open]>summary:before{content:'▾ '}
 .fotoreihe{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:var(--rs);padding:11px;margin-bottom:10px;background:var(--card2)}
 .fotoreihe img{width:120px;height:90px;object-fit:cover;border-radius:6px;flex:none;background:var(--line2)}
 .herkunft{font-size:10.5px;color:var(--muted);font-style:italic}
+
+/* ── Zeitstrahl im Logbuch ── */
+.zeitstrahl{position:relative;padding-left:26px;margin-top:4px}
+.zeitstrahl:before{content:'';position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.zs{position:relative;padding:9px 0;border-bottom:1px solid var(--line2)}
+.zs:last-child{border-bottom:0}
+.zs .pkt{position:absolute;left:-22px;top:13px;width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.zs-monat{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 2px;font-weight:600}
+.zs-monat:first-child{margin-top:2px}
 .vorschlag{border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;margin-bottom:9px;background:var(--card2)}
 .vorschlag.dringend{border-color:var(--alarm-line);background:var(--alarm-soft)}
 .vorschlag .wann{font-family:'JetBrains Mono',monospace;font-weight:500}
@@ -364,17 +373,49 @@ const schaden=id=>SCHAEDEN.find(s=>s.id===id)||{id,name:id,art:'',hinweis:''};
 const STUFEN=['kein Befund','einzelne Pflanzen','Herde','flächig'];
 const KULTURBILD=['','kräftig und dunkel','normal','blass','ungleichmässig','schwacher Wuchs'];
 
+/* Ereignistypen des Logbuchs.
+   Zentral ist das Feld «m»: Menge mit FESTER Einheit je Typ. Ein Freitextfeld
+   fuer alles waere bequemer zu bauen, aber damit laesst sich spaeter nichts
+   rechnen – und die Soll-Ist-Bilanz im Reiter Giesswasser braucht Zahlen.
+   «mittel» blendet die Auswahl aus den Produktstammdaten ein; bei «auto»
+   folgt die Einheit der Form des Produkts (fluessig → l, fest → kg).
+   «kreis» heisst: bewegt pH oder EC und erscheint im Reiter Giesswasser.  */
 const EVTYPEN={
- 'Düngerwechsel':{f:[['alt','Bisheriger Dünger','t'],['neu','Neuer Dünger','t'],['dosis','Dosierung %','z']],kreis:1},
- 'Dosierung geändert':{f:[['duenger','Dünger','t'],['dosisAlt','vorher %','z'],['dosisNeu','neu %','z']],kreis:1},
- 'Zusatzdünger / Spurenelemente':{f:[['mittel','Mittel','t'],['dosis','Dosierung %','z'],['ziel','Wogegen','t']],kreis:1},
- 'Biologisches Präparat':{f:[['mittel','Präparat','t'],['menge','Menge','t'],['ziel','Ziel','t']]},
- 'pH-Korrektur':{f:[['saeure','Säure / Mittel','t'],['menge','Menge','t'],['zielPh','Ziel-pH','z']],kreis:1},
- 'Tank neu angesetzt':{f:[['menge','Füllmenge (Liter)','z']],kreis:1},
- 'Wasser nachgefüllt':{f:[['menge','Menge','z'],['einheit','Einheit','w:Liter|Prozent der Füllung']],kreis:1},
- 'Neues Substrat / Grunddüngung':{f:[['substrat','Substrat','t'],['grund','Grunddüngung','t']],satz:1},
- 'Pflanzenschutz / Nützlinge':{f:[['mittel','Mittel / Nützling','t'],['menge','Menge','t'],['ziel','Gegen was','ws']]},
- 'Sonstiges':{f:[['text','Was wurde geändert','t']]}};
+ 'Düngergabe':{m:{l:'Menge',e:'auto'},mittel:1,kreis:1,
+   f:[['dosis','Dosierung %','z']],
+   hinweis:'Die regelmässige Gabe. Für den Wechsel des Produkts gibt es «Düngerwechsel».'},
+ 'Säurezugabe':{m:{l:'Menge',e:'l'},mittel:1,kreis:1,
+   f:[['zielPh','Ziel-pH','z'],['phVorher','pH vorher','z'],['phNachher','pH nachher','z']]},
+ 'Wasserzugabe':{m:{l:'Menge',e:'l'},kreis:1,
+   f:[['mitDuenger','mit Dünger angesetzt','w:nein|ja']],
+   hinweis:'Auch «BioV-Wasser»: dann zusätzlich eine Düngergabe erfassen.'},
+ 'Desinfektion':{m:{l:'Menge',e:'ml'},mittel:1,kreis:1,f:[['ziel','Wogegen','t']]},
+ 'Tank neu angesetzt':{m:{l:'Füllmenge',e:'l'},kreis:1,f:[]},
+ 'Umpumpen':{m:{l:'Menge',e:'l'},kreis:1,f:[['von','von','t'],['nach','nach','t']]},
+ 'Düngerwechsel':{mittel:1,kreis:1,f:[['alt','Bisheriger Dünger','t'],['dosis','Dosierung %','z']],
+   hinweis:'Das Mittel ist der NEUE Dünger.'},
+ 'Dosierung geändert':{mittel:1,kreis:1,f:[['dosisAlt','vorher %','z'],['dosisNeu','neu %','z']]},
+ 'Zusatzdünger / Spurenelemente':{m:{l:'Menge',e:'auto'},mittel:1,kreis:1,f:[['ziel','Wogegen','t']]},
+ 'Biologisches Präparat':{m:{l:'Menge',e:'l'},mittel:1,f:[['ziel','Ziel','t']]},
+ 'Gerätekalibrierung':{f:[['geraet','Gerät','w:pH|EC|pH und EC'],['befund','Abweichung vorher','t']],
+   hinweis:'Wichtig: alle Messwerte davor sind mit Vorbehalt zu lesen.'},
+ 'Neues Substrat / Grunddüngung':{satz:1,f:[['substrat','Substrat','t'],['grund','Grunddüngung','t']]},
+ 'Pflanzenschutz / Nützlinge':{m:{l:'Menge',e:'ml'},mittel:1,f:[['ziel','Gegen was','ws']]},
+ 'Notiz':{f:[['text','Was ist passiert','t']],
+   hinweis:'Für alles, was in kein Schema passt – lieber unstrukturiert erfasst als gar nicht.'}};
+/* Umbenannte Typen aus frueheren Fassungen. Nichts geht verloren. */
+const EVTYP_ALT={'pH-Korrektur':'Säurezugabe','Wasser nachgefüllt':'Wasserzugabe','Sonstiges':'Notiz'};
+const evTypDef=t=>EVTYPEN[t]||{f:[]};
+/* Feste Einheit eines Eintrags: bei «auto» entscheidet die Form des Produkts. */
+function evEinheit(typ,mittel){
+  const d=evTypDef(typ);
+  if(!d.m)return '';
+  if(d.m.e!=='auto')return d.m.e;
+  const pr=mittel&&db.produkte?db.produkte[mittel]:null;
+  return (pr&&pr.form==='fest')?'kg':'l';
+}
+const STELLEN=['beide','vorne','hinten'];
+const evMittelName=k=>(db.produkte&&db.produkte[k]&&db.produkte[k].name)||k||'';
 
 /* ══════════ 3 · Parser ══════════ */
 const NCC=[['Zucker','Zucker'],['pH','pH'],['EC','EC'],['K - Kalium','K'],['Ca - Kalzium','Ca'],['K / Ca','K/Ca'],
@@ -618,7 +659,15 @@ const PRODUKTE_VORGABE={
   biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig',dichte:1.25,
     gehalt:{N_gesamt:9,Fe:0.22,Mn:0.10,Zn:0.19,Cu:0.13},quelle:'Etikett'},
   epsotop:{name:'Epsotop (Bittersalz)',form:'fest',dichte:null,
-    gehalt:{Mg:9.86,S:13.0},quelle:'Etikett'}};
+    gehalt:{Mg:9.86,S:13.0},quelle:'Etikett'},
+  /* Die folgenden Mittel sind nur benannt, damit sie sich im Logbuch erfassen
+     lassen. Ihre Gehalte sind bewusst LEER: eine geratene Konzentration wäre
+     erfundene Sicherheit. Phosphorsäure bringt Phosphor ins System – wer die
+     Bilanz darauf rechnen will, trägt den Gehalt des gelieferten Produkts
+     unter «Sätze & Einstellungen» selbst ein. */
+  phosphorsaeure:{name:'Phosphorsäure',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
+  zitronensaeure:{name:'Zitronensäure',form:'fest',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
+  halades:{name:'Halades PE',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'}};
 
 const leer=()=>({schema:6,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
@@ -684,9 +733,28 @@ function migriere(roh){
     let mz=0;
     for(const m of d.messungen||[]){if(m.quelle===undefined){m.quelle='hand';mz++}}
     if(mz)notizen.push(`${mz} Tankmessung${mz>1?'en tragen':' trägt'} jetzt ein Herkunftsfeld – von Hand erfasst oder aus dem Excel-Import.`);
-    let ez=0;
-    for(const e of d.ereignisse||[]){if(e.quelle===undefined){e.quelle='hand';ez++}}
-    if(ez)notizen.push(`${ez} Logbucheintrag${ez>1?'e tragen':' trägt'} jetzt ein Herkunftsfeld.`);
+    /* Das Logbuch fuehrt Mengen jetzt strukturiert mit fester Einheit statt
+       als Freitext – nur so laesst sich die Soll-Ist-Bilanz rechnen. Die alten
+       Freitextfelder bleiben unangetastet erhalten; wo eine Menge eindeutig
+       herauszulesen war, wird sie zusaetzlich gesetzt. */
+    let ez=0,eu=0,em=0;
+    const zahlAus=t=>{const m=String(t==null?'':t).replace(',','.').match(/(\d+(?:\.\d+)?)/);return m?+m[1]:null};
+    for(const e of d.ereignisse||[]){
+      if(e.quelle===undefined){e.quelle='hand';ez++}
+      if(e.stelle===undefined)e.stelle='beide';
+      if(EVTYP_ALT[e.typ]){e.typ=EVTYP_ALT[e.typ];eu++}
+      const f=e.felder||{};
+      if(e.mittel===undefined)e.mittel=f.mittel||f.saeure||f.neu||f.duenger||null;
+      if(e.menge===undefined){
+        const z=zahlAus(f.menge);
+        if(z!=null){e.menge=z;em++}else e.menge=null;
+      }
+      if(e.einheit===undefined)e.einheit=e.menge!=null?evEinheit(e.typ,e.mittel):null;
+      if(e.jeReservoir===undefined)e.jeReservoir=false;
+    }
+    if(ez)notizen.push(`${ez} Logbucheintrag${ez>1?'e tragen':' trägt'} jetzt ein Herkunftsfeld, eine Entnahmestelle und ein Mengenfeld mit fester Einheit.`);
+    if(eu)notizen.push(`${eu} Eintrag${eu>1?'e wurden':' wurde'} auf die neuen Bezeichnungen umgestellt: «pH-Korrektur» heisst jetzt «Säurezugabe», «Wasser nachgefüllt» heisst «Wasserzugabe», «Sonstiges» heisst «Notiz». Die Angaben selbst sind unverändert.`);
+    if(em)notizen.push(`Bei ${em} Eintrag${em>1?'en':''} liess sich aus dem alten Freitextfeld eine Zahl herauslesen. Bitte Menge und Einheit dort kontrollieren – der ursprüngliche Text bleibt erhalten.`);
     if(!roh.einst||roh.einst.systemLiter==null)notizen.push('Das Systemvolumen ist mit 20 000 Litern vorbelegt (zwei Reservoirs à 10 000). Unter «Sätze & Einstellungen» änderbar – die Soll-Ist-Bilanz rechnet damit.');
   }
   d.schema=6;
@@ -2924,7 +2992,7 @@ function vGiess(){
   /* ── Eingriffe und Messungen ── */
   s+=`<div class="card"><div class="hd"><div><h2>Eingriffe am Kreislauf</h2>
     <p class="sub">Dieselben Einträge wie im Logbuch, gefiltert auf das, was pH und EC bewegt.</p></div>
-    <button class="primary" data-tun="evNeu" data-vor="pH-Korrektur">Eingriff erfassen</button></div>
+    <button class="primary" data-tun="evNeu" data-vor="Säurezugabe">Eingriff erfassen</button></div>
     ${rel.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Angaben</th><th></th></tr></thead><tbody>
     ${rel.map(e=>`<tr><td class="mono">${fmt(e.datum)}</td><td>${esc(e.typ)}</td><td class="small">${esc(felderText(e))}</td>
       <td><button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button></td></tr>`).join('')}
@@ -3333,55 +3401,261 @@ const fotoChip=()=>db.fotos.length
   ? `<span class="chip ${fotoSpur?'on':''}" data-tun="fotoSpur" style="margin-left:8px">Fotos (${db.fotos.length})</span>`
   : '';
 
-/* ══════════ 13 · Logbuch ══════════ */
+/* ══════════ 13 · Logbuch ══════════
+   Das Logbuch ist die Grundlage des Reiters Wirkung und damit der Leitfrage
+   des Betriebs. Es muss so bequem sein, dass es tatsaechlich gepflegt wird:
+   Schnellerfassung oben in einer Zeile, Zeitstrahl darunter, Duplizieren
+   mit einem Klick.                                                          */
+const EVFARBE=(()=>{const m={};Object.keys(EVTYPEN).forEach((t,i)=>m[t]=FARBSTOFF[i%FARBSTOFF.length]);return m})();
+const evFarbe=t=>EVFARBE[t]||'#8C9A88';
+/* Menge eines Eintrags als Text, mit dem «je Reservoir»-Vorbehalt. */
+function evMenge(e){
+  if(e.menge==null)return '';
+  const t=nz(e.menge)+' '+(e.einheit||'');
+  return e.jeReservoir?`${t} je Reservoir (zusammen ${nz(e.menge*2)} ${e.einheit||''})`:t;
+}
 function felderText(e){
-  const d=EVTYPEN[e.typ];if(!d)return e.notiz||'';
-  const t=d.f.map(([k,l])=>(e.felder&&e.felder[k])?`${l}: ${e.felder[k]}`:null).filter(Boolean);
+  const d=evTypDef(e.typ),t=[];
+  if(e.mittel)t.push(evMittelName(e.mittel));
+  if(e.menge!=null)t.push(evMenge(e));
+  for(const [k,label] of (d.f||[]))if(e.felder&&e.felder[k])t.push(`${label}: ${e.felder[k]}`);
   if(e.notiz)t.push(e.notiz);
   return t.join(' · ');
 }
-function vLogbuch(){
-  const e=[...db.ereignisse].sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
-  const mitVergleich=e.filter(x=>x.geltung==='saetze'&&x.saetze&&x.saetze.length).length;
-  return `<div class="card"><div class="hd"><div><h2>Logbuch</h2>
-    <p class="sub">Jede Managemententscheidung. Sie erscheint als senkrechte Linie in allen Zeitgrafiken und lässt sich im Reiter Wirkung auswerten. Das hier ist die wichtigste Eingabe der ganzen App – ohne Logbuch bleibt die Leitfrage unbeantwortbar.</p></div>
-    <button class="primary" data-tun="evNeu">Änderung erfassen</button></div>
-    ${e.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Kurztitel</th><th>Angaben</th><th>Gilt für</th><th></th></tr></thead><tbody>
-    ${e.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td>${esc(x.typ)}</td><td>${esc(x.titel||'')}</td>
-      <td class="small muted">${esc(felderText(x))}</td>
-      <td class="small">${x.geltung==='saetze'?`<span class="pill ok">${esc((x.saetze||[]).join(', '))}</span>`:'<span class="pill na">ganzes Haus</span>'}</td>
-      <td><button class="ghost" data-tun="evNeu" data-id="${esc(x.id)}">bearbeiten</button><button class="ghost" data-tun="evWeg" data-id="${esc(x.id)}">entfernen</button></td></tr>`).join('')}
-    </tbody></table></div>`:'<div class="leer"><h3>Noch keine Einträge</h3><p class="muted" style="max-width:56ch;margin:0 auto">Fang mit der letzten Änderung an, die euch einfällt – ein Düngerwechsel, eine neue Dosierung, ein anderes Substrat. Rückwirkend eintragen ist ausdrücklich sinnvoll.</p></div>'}
-    <div class="note ${mitVergleich?'gut':'neutral'}">${mitVergleich
-      ? `${mitVergleich} Eintrag${mitVergleich>1?'e betreffen':' betrifft'} nur einen Teil der Sätze. Genau dort entsteht im Reiter Wirkung eine echte Vergleichsgruppe – der einzige Modus, der Management von Kulturalter und Jahreszeit trennt.`
-      : 'Wenn eine Änderung nur einen Teil der Sätze betrifft, trag das unter «Gilt für» ein. Dann dienen die übrigen Sätze als Vergleichsgruppe – das ist der einzige Weg, im laufenden Betrieb eine belastbare Aussage zu bekommen.'}</div></div>`;
+/* Auswahl der Mittel: Produktstammdaten zuerst, dann alles je Verwendetes. */
+function evMittelListe(){
+  const aus=Object.keys(db.produkte||{}).map(k=>[k,db.produkte[k].name]);
+  const frei=[...new Set(db.ereignisse.map(e=>e.mittel).filter(m=>m&&!db.produkte[m]))];
+  return aus.concat(frei.map(m=>[m,m]));
 }
-AKTION.evWeg=d=>{if(!confirm('Eintrag entfernen?'))return;db.ereignisse=db.ereignisse.filter(x=>x.id!==d.id);aend();render()};
+
+let lbNeu=null,lbFilter=new Set();
+const lbFrisch=()=>({datum:heute(),typ:'Düngergabe',mittel:'biovin',menge:'',stelle:'beide',
+  jeReservoir:false,notiz:'',titel:'',felder:{},geltung:'alle',saetze:[]});
+const SCHNELL=[
+ ['Biovin',        {typ:'Düngergabe',mittel:'biovin'}],
+ ['Epsotop',       {typ:'Düngergabe',mittel:'epsotop'}],
+ ['Säure',         {typ:'Säurezugabe',mittel:'zitronensaeure'}],
+ ['Wasser',        {typ:'Wasserzugabe',mittel:null}],
+ ['Desinfektion',  {typ:'Desinfektion',mittel:null}],
+ ['Kalibrierung',  {typ:'Gerätekalibrierung',mittel:null}],
+ ['Notiz',         {typ:'Notiz',mittel:null}]];
+
+function vLogbuch(){
+  if(!lbNeu)lbNeu=lbFrisch();
+  const alle=[...db.ereignisse].sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  const typen=[...new Set(alle.map(e=>e.typ))].sort();
+  const sicht=lbFilter.size?alle.filter(e=>lbFilter.has(e.typ)):alle;
+  const mitVergleich=alle.filter(x=>x.geltung==='saetze'&&x.saetze&&x.saetze.length).length;
+  const ausExcel=alle.filter(x=>x.quelle==='excel').length;
+
+  let s=`<div class="card"><div class="hd"><div><h2>Schnellerfassung</h2>
+    <p class="sub">Eine Zeile, ein Klick. Die Einheit steht je Art fest – nur so lässt sich später rechnen.
+    Rückwirkend eintragen ist ausdrücklich sinnvoll.</p></div></div>
+    <div class="wz" style="margin-bottom:10px"><span class="lab">Häufiges</span>
+      ${SCHNELL.map(([l,v])=>`<button class="ghost" data-tun="lbSchnell" data-t="${esc(v.typ)}" data-m="${esc(v.mittel||'')}">${esc(l)}</button>`).join('')}
+    </div>
+    <div id="lbForm">${lbFormular()}</div></div>`;
+
+  s+=`<div class="card"><div class="hd"><div><h2>Zeitstrahl (${alle.length})</h2>
+    <p class="sub">Chronologisch, neueste zuerst. Jeder Eintrag erscheint als senkrechte Linie in allen Zeitdiagrammen.
+    Ein Klick auf «wieder so» legt denselben Eintrag mit heutigem Datum an.</p></div></div>`;
+  if(typen.length>1)s+=`<div class="wz" style="margin-bottom:12px"><span class="lab">Nur diese Arten</span>
+    ${typen.map(t=>`<span class="chip ${lbFilter.has(t)?'on':''}" data-tun="lbFilter" data-t="${esc(t)}">
+      <span class="dot" style="background:${lbFilter.has(t)?evFarbe(t):'#C3CDBF'}"></span>${esc(t)} <span class="muted">${alle.filter(e=>e.typ===t).length}</span></span>`).join('')}
+    ${lbFilter.size?'<button class="ghost" data-tun="lbFilterWeg">Filter aufheben</button>':''}</div>`;
+
+  if(!sicht.length){
+    s+=alle.length
+      ? '<p class="muted small">Keine Einträge dieser Art.</p>'
+      : `<div class="leer"><h3>Noch keine Einträge</h3><p class="muted" style="max-width:56ch;margin:0 auto">
+         Fang mit der letzten Änderung an, die euch einfällt – eine Düngergabe, eine Säurezugabe, ein Wasserwechsel.
+         Ohne Logbuch bleibt die Leitfrage «was hat unsere Entscheidung bewirkt» unbeantwortbar.</p></div>`;
+  }else{
+    let monat='';
+    s+='<div class="zeitstrahl">';
+    for(const e of sicht){
+      const m=(e.datum||'').slice(0,7);
+      if(m!==monat){monat=m;s+=`<div class="zs-monat">${esc(monatName(m))}</div>`}
+      const fo=db.fotos.filter(f=>f.datum===e.datum);
+      s+=`<div class="zs"><span class="pkt" style="background:${evFarbe(e.typ)}"></span>
+        <div class="row" style="gap:10px;align-items:baseline">
+          <span class="mono" style="min-width:82px">${fmt(e.datum)}</span>
+          <strong>${esc(e.typ)}</strong>
+          ${e.titel?`<span class="tag">${esc(e.titel)}</span>`:''}
+          ${e.stelle&&e.stelle!=='beide'?`<span class="pill na">${esc(e.stelle)}</span>`:''}
+          ${e.geltung==='saetze'?`<span class="pill ok">${esc((e.saetze||[]).join(', '))}</span>`:''}
+          ${e.quelle==='excel'?'<span class="tag schaetz">aus Excel-Import</span>':''}
+          <div style="flex:1"></div>
+          ${fo.length?`<span class="chip" data-tun="fotoTag" data-datum="${esc(e.datum)}">${fo.length} Foto${fo.length>1?'s':''}</span>`:''}
+          <button class="ghost" data-tun="lbWieder" data-id="${esc(e.id)}">wieder so</button>
+          <button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button>
+          <button class="ghost" data-tun="evWeg" data-id="${esc(e.id)}">entfernen</button>
+        </div>
+        <div class="small muted" style="margin-top:2px">${esc(felderText(e))||'<span class="muted">ohne weitere Angaben</span>'}</div>
+      </div>`;
+    }
+    s+='</div>';
+  }
+  s+=`<div class="note ${mitVergleich?'gut':'neutral'}">${mitVergleich
+      ? `${mitVergleich} Eintrag${mitVergleich>1?'e betreffen':' betrifft'} nur einen Teil der Sätze. Genau dort entsteht im Reiter Wirkung eine echte Vergleichsgruppe – der einzige Modus, der Management von Kulturalter und Jahreszeit trennt.`
+      : 'Wenn eine Änderung nur einen Teil der Sätze betrifft, trag das unter «Gilt für» ein. Dann dienen die übrigen Sätze als Vergleichsgruppe – das ist der einzige Weg, im laufenden Betrieb eine belastbare Aussage zu bekommen.'}</div>`;
+  if(ausExcel)s+=`<p class="tiny muted">${ausExcel} Eintrag${ausExcel>1?'e stammen':' stammt'} aus dem Excel-Import und ${ausExcel>1?'sind':'ist'} als solche gekennzeichnet.</p>`;
+  s+='</div>';
+  return s;
+}
+const monatName=m=>{
+  if(!m||m.length<7)return 'ohne Datum';
+  const N=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  return N[+m.slice(5,7)-1]+' '+m.slice(0,4);
+};
+
+/* ── Schnellerfassung ── */
+function lbFormular(){
+  const d=evTypDef(lbNeu.typ);
+  const einh=evEinheit(lbNeu.typ,lbNeu.mittel);
+  const mittel=evMittelListe();
+  let h=`<div class="wz">
+    <div><label class="lab">Datum</label><input type="date" data-aend="lbFeld" data-f="datum" value="${esc(lbNeu.datum)}"></div>
+    <div><label class="lab">Art</label><select data-aend="lbFeld" data-f="typ">
+      ${Object.keys(EVTYPEN).map(t=>`<option${t===lbNeu.typ?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
+    ${d.mittel?`<div><label class="lab">Mittel</label><select data-aend="lbFeld" data-f="mittel">
+      <option value="">–</option>
+      ${mittel.map(([k,n])=>`<option value="${esc(k)}"${lbNeu.mittel===k?' selected':''}>${esc(n)}</option>`).join('')}
+      <option value="__neu"${lbNeu.mittel==='__neu'?' selected':''}>anderes …</option></select></div>`:''}
+    ${lbNeu.mittel==='__neu'?`<div><label class="lab">Welches Mittel</label><input data-aend="lbFeld" data-f="mittelFrei" value="${esc(lbNeu.mittelFrei||'')}" size="14"></div>`:''}
+    ${d.m?`<div><label class="lab">${esc(d.m.l)} <span class="muted">${esc(einh)}</span></label>
+      <input class="mono" size="7" inputmode="decimal" data-aend="lbFeld" data-f="menge" value="${esc(lbNeu.menge)}"></div>
+      <div><label class="lab">&nbsp;</label><span class="chip ${lbNeu.jeReservoir?'on':''}" data-tun="lbJe">je Reservoir</span></div>`:''}
+    <div><label class="lab">Stelle</label><select data-aend="lbFeld" data-f="stelle">
+      ${STELLEN.map(x=>`<option${lbNeu.stelle===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>
+    <div style="flex:1;min-width:170px"><label class="lab">Notiz</label>
+      <input data-aend="lbFeld" data-f="notiz" value="${esc(lbNeu.notiz)}" style="width:100%"></div>
+    <div><label class="lab">&nbsp;</label><button class="primary" data-tun="lbSpeichern">Eintragen</button></div>
+  </div>`;
+  if((d.f||[]).length||d.satz)h+=`<div class="wz">
+    <span class="lab">Weitere Angaben</span>
+    ${(d.f||[]).map(([k,label,art])=>{
+      const v=(lbNeu.felder&&lbNeu.felder[k])||'';
+      if(art==='z')return `<div><label class="lab">${esc(label)}</label><input class="mono" size="7" inputmode="decimal" data-aend="lbEf" data-f="${esc(k)}" value="${esc(v)}"></div>`;
+      if(art&&art.indexOf('w:')===0)return `<div><label class="lab">${esc(label)}</label><select data-aend="lbEf" data-f="${esc(k)}">${art.slice(2).split('|').map(o=>`<option${v===o?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+      if(art==='ws')return `<div><label class="lab">${esc(label)}</label><select data-aend="lbEf" data-f="${esc(k)}"><option value="">–</option>${SCHAEDEN.map(x=>`<option${v===x.name?' selected':''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+      return `<div><label class="lab">${esc(label)}</label><input data-aend="lbEf" data-f="${esc(k)}" value="${esc(v)}" size="14"></div>`;
+    }).join('')}
+    <div><label class="lab">Kurztitel für die Grafik</label><input data-aend="lbFeld" data-f="titel" value="${esc(lbNeu.titel)}" size="16"></div>
+    <div><label class="lab">Gilt für</label><select data-aend="lbFeld" data-f="geltung">
+      <option value="alle"${lbNeu.geltung!=='saetze'?' selected':''}>ganzes Gewächshaus</option>
+      <option value="saetze"${lbNeu.geltung==='saetze'?' selected':''}>nur bestimmte Sätze</option></select></div>
+    ${lbNeu.geltung==='saetze'?`<div><label class="lab">Sätze <span class="muted">(mehrere mit Strg)</span></label>
+      <select multiple size="3" data-aend="lbSaetze">${alleSaetze().map(x=>`<option${(lbNeu.saetze||[]).indexOf(x)>=0?' selected':''}>${esc(x)}</option>`).join('')}</select></div>`:''}
+  </div>`;
+  if(d.hinweis)h+=`<p class="tiny muted" style="margin-top:8px">${esc(d.hinweis)}</p>`;
+  if(lbNeu.jeReservoir)h+=`<p class="tiny muted">«je Reservoir» heisst: die eingetragene Menge ging in <em>jedes</em> der beiden Reservoirs.
+    Die App rechnet das nicht stillschweigend um, sondern zeigt beide Zahlen an.</p>`;
+  return h;
+}
+function lbFrischZeichnen(){const b=el('lbForm');if(b)b.innerHTML=lbFormular();else render()}
+AKTION.lbFeld=(d,ev)=>{
+  const w=ev.target.value;
+  lbNeu[d.f]=w;
+  if(d.f==='typ'){
+    const def=evTypDef(w);
+    if(!def.mittel)lbNeu.mittel=null;
+    lbNeu.felder={};
+  }
+  if(['typ','mittel','geltung'].indexOf(d.f)>=0)lbFrischZeichnen();
+};
+AKTION.lbEf=(d,ev)=>{lbNeu.felder=lbNeu.felder||{};lbNeu.felder[d.f]=ev.target.value};
+AKTION.lbSaetze=(d,ev)=>{lbNeu.saetze=[...ev.target.selectedOptions].map(o=>o.value)};
+AKTION.lbJe=()=>{lbNeu.jeReservoir=!lbNeu.jeReservoir;lbFrischZeichnen()};
+AKTION.lbSchnell=d=>{
+  const alt=lbNeu||lbFrisch();
+  lbNeu=lbFrisch();
+  lbNeu.datum=alt.datum;lbNeu.stelle=alt.stelle;
+  lbNeu.typ=d.t;lbNeu.mittel=d.m||null;
+  if(!evTypDef(d.t).mittel)lbNeu.mittel=null;
+  lbFrischZeichnen();
+};
+AKTION.lbFilter=d=>{lbFilter.has(d.t)?lbFilter.delete(d.t):lbFilter.add(d.t);render()};
+AKTION.lbFilterWeg=()=>{lbFilter.clear();render()};
+AKTION.lbSpeichern=()=>{
+  const n=lbNeu,d=evTypDef(n.typ);
+  if(!n.datum)return toast('Datum fehlt.');
+  let mittel=n.mittel==='__neu'?(n.mittelFrei||'').trim():n.mittel;
+  if(n.mittel==='__neu'&&!mittel)return toast('Bitte das Mittel benennen – oder die Auswahl ändern.');
+  let menge=null;
+  if(d.m&&String(n.menge).trim()!==''){
+    menge=toNum(n.menge);
+    if(menge==null)return toast('Die Menge ist keine Zahl.');
+    if(menge<0)return toast('Eine negative Menge ergibt keinen Sinn.');
+  }
+  if(n.geltung==='saetze'&&!(n.saetze||[]).length)return toast('Bitte mindestens einen Satz wählen – oder «ganzes Gewächshaus».');
+  db.ereignisse.push({id:uid(),datum:n.datum,typ:n.typ,titel:(n.titel||'').trim()||null,
+    mittel:mittel||null,menge,einheit:menge!=null?evEinheit(n.typ,mittel):null,
+    jeReservoir:!!(menge!=null&&n.jeReservoir),stelle:n.stelle||'beide',
+    notiz:(n.notiz||'').trim()||null,felder:Object.assign({},n.felder||{}),
+    geltung:n.geltung||'alle',saetze:n.geltung==='saetze'?(n.saetze||[]):[],quelle:'hand'});
+  const merk={datum:n.datum,typ:n.typ,mittel:n.mittel,stelle:n.stelle};
+  lbNeu=Object.assign(lbFrisch(),merk);
+  aend();render();toast('Eingetragen.');
+};
+/* Wiederkehrendes: derselbe Eintrag mit heutigem Datum. */
+AKTION.lbWieder=d=>{
+  const e=db.ereignisse.find(x=>x.id===d.id);if(!e)return;
+  lbNeu=Object.assign(lbFrisch(),{
+    datum:heute(),typ:e.typ,mittel:e.mittel,menge:e.menge==null?'':String(e.menge),
+    stelle:e.stelle||'beide',jeReservoir:!!e.jeReservoir,notiz:e.notiz||'',titel:e.titel||'',
+    felder:Object.assign({},e.felder||{}),geltung:e.geltung||'alle',saetze:(e.saetze||[]).slice()});
+  render();
+  window.scrollTo({top:0});
+  toast('In die Schnellerfassung übernommen – Datum auf heute. Noch nicht gespeichert.');
+};
+AKTION.evWeg=d=>{
+  const e=db.ereignisse.find(x=>x.id===d.id);if(!e)return;
+  if(!confirm(`Eintrag «${e.typ}${e.titel?' · '+e.titel:''}» vom ${fmt(e.datum)} entfernen?`))return;
+  db.ereignisse=db.ereignisse.filter(x=>x.id!==d.id);aend();render();toast('Entfernt.');
+};
+
+/* ── Bearbeiten im Dialog ── */
 let EV=null;
-AKTION.evNeu=d=>evDialog(d.id,d.vor);
+AKTION.evNeu=d=>evDialog(d&&d.id,d&&d.vor);
 function evDialog(id,vor){
   const e=id?db.ereignisse.find(x=>x.id===id):null;
-  const typ=e?e.typ:(vor||Object.keys(EVTYPEN)[0]);
-  EV=e?JSON.parse(JSON.stringify(e)):{id:uid(),datum:heute(),typ,felder:{},geltung:'alle',saetze:[]};
-  dialog(e?'Änderung bearbeiten':'Änderung erfassen',
+  const typ=e?e.typ:(vor&&EVTYPEN[vor]?vor:'Düngergabe');
+  EV=e?JSON.parse(JSON.stringify(e)):{id:uid(),datum:heute(),typ,felder:{},geltung:'alle',saetze:[],
+    stelle:'beide',menge:null,einheit:null,mittel:null,jeReservoir:false,quelle:'hand'};
+  dialog(e?'Eintrag bearbeiten':'Änderung erfassen',
     `<div class="row">
       <div><label class="lab">Datum</label><input type="date" id="eDatum" value="${esc(EV.datum)}"></div>
       <div><label class="lab">Art der Änderung</label><select id="eTyp" data-aend="evTyp">
-        ${Object.keys(EVTYPEN).map(t=>`<option${t===typ?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
+        ${Object.keys(EVTYPEN).map(t=>`<option${t===typ?' selected':''}>${esc(t)}</option>`).join('')}
+        ${EVTYPEN[typ]?'':`<option selected>${esc(typ)}</option>`}</select></div>
       <div style="flex:1;min-width:180px"><label class="lab">Kurztitel für die Grafik</label>
         <input id="eTitel" value="${esc(EV.titel||'')}" placeholder="z.B. Dosis auf 0,15 %" style="width:100%"></div></div>
     <div id="eFelder" style="margin-top:14px"></div>
-    <div style="margin-top:14px"><label class="lab">Notiz</label><textarea id="eNotiz" rows="2" style="width:100%">${esc(EV.notiz||'')}</textarea></div>`,
+    <div style="margin-top:14px"><label class="lab">Notiz</label><textarea id="eNotiz" rows="2" style="width:100%">${esc(EV.notiz||'')}</textarea></div>
+    ${EV.quelle==='excel'?'<p class="tiny muted" style="margin-top:8px">Dieser Eintrag stammt aus dem Excel-Import. Änderst du ihn, bleibt die Herkunft vermerkt.</p>':''}`,
     `<button class="primary" data-tun="evSpeichern">Speichern</button><button data-tun="dlgZu">Abbrechen</button>`);
   evFelder(typ);
 }
-AKTION.evTyp=(d,ev)=>evFelder(ev.target.value);
+AKTION.evTyp=(d,ev)=>{EV.felder={};evFelder(ev.target.value)};
 function evFelder(typ){
-  const def=EVTYPEN[typ];if(!def)return;
+  const def=evTypDef(typ);
   EV.typ=typ;
+  const einh=evEinheit(typ,EV.mittel);
   const s=alleSaetze();
   let h='<div class="row">';
-  for(const [k,label,art] of def.f){
+  if(def.mittel)h+=`<div><label class="lab">Mittel</label><select data-em="mittel"><option value="">–</option>
+    ${evMittelListe().map(([k,n])=>`<option value="${esc(k)}"${EV.mittel===k?' selected':''}>${esc(n)}</option>`).join('')}
+    ${(EV.mittel&&!evMittelListe().some(x=>x[0]===EV.mittel))?`<option value="${esc(EV.mittel)}" selected>${esc(EV.mittel)}</option>`:''}
+    </select></div>`;
+  if(def.m)h+=`<div><label class="lab">${esc(def.m.l)} <span class="muted">${esc(einh)}</span></label>
+      <input class="mono" size="8" inputmode="decimal" data-em="menge" value="${EV.menge==null?'':esc(EV.menge)}"></div>
+    <div><label class="lab">&nbsp;</label><label class="small" style="display:block;padding-top:7px">
+      <input type="checkbox" data-em="jeReservoir"${EV.jeReservoir?' checked':''}> je Reservoir</label></div>`;
+  h+=`<div><label class="lab">Stelle</label><select data-em="stelle">
+      ${STELLEN.map(x=>`<option${(EV.stelle||'beide')===x?' selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+  for(const [k,label,art] of (def.f||[])){
     const v=(EV.felder&&EV.felder[k])||'';
     if(art==='z')h+=`<div><label class="lab">${esc(label)}</label><input class="mono" size="8" inputmode="decimal" data-ef="${esc(k)}" value="${esc(v)}"></div>`;
     else if(art&&art.indexOf('w:')===0)h+=`<div><label class="lab">${esc(label)}</label><select data-ef="${esc(k)}">${art.slice(2).split('|').map(o=>`<option${v===o?' selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
@@ -3395,18 +3669,36 @@ function evFelder(typ){
       <select multiple size="${Math.min(5,Math.max(2,s.length))}" id="eSatzListe">
       ${s.map(x=>`<option${(EV.saetze||[]).indexOf(x)>=0?' selected':''}>${esc(x)}</option>`).join('')}</select></div></div>`;
   if(def.satz)h+='<p class="tiny muted" style="margin-top:8px">Dieser Typ betrifft in der Regel einzelne Sätze. Trag sie unter «Gilt für» ein – daraus entsteht im Reiter Wirkung eine Vergleichsgruppe.</p>';
+  if(def.hinweis)h+=`<p class="tiny muted" style="margin-top:8px">${esc(def.hinweis)}</p>`;
   el('eFelder').innerHTML=h;
 }
 AKTION.evGeltung=(d,ev)=>{const b=el('eSaetze');if(b)b.hidden=ev.target.value!=='saetze'};
 AKTION.evSpeichern=()=>{
-  const ev=EV;
-  ev.datum=el('eDatum').value;ev.typ=el('eTyp').value;ev.titel=el('eTitel').value||null;ev.notiz=el('eNotiz').value||null;
-  ev.felder={};el('eFelder').querySelectorAll('[data-ef]').forEach(i=>{if(i.value)ev.felder[i.dataset.ef]=i.value});
+  const ev=EV,box=el('eFelder');
+  ev.datum=el('eDatum').value;ev.typ=el('eTyp').value;
+  ev.titel=el('eTitel').value||null;ev.notiz=el('eNotiz').value||null;
+  ev.felder={};box.querySelectorAll('[data-ef]').forEach(i=>{if(i.value)ev.felder[i.dataset.ef]=i.value});
+  const g=n=>box.querySelector(`[data-em="${n}"]`);
+  ev.mittel=g('mittel')?(g('mittel').value||null):null;
+  ev.stelle=g('stelle')?g('stelle').value:'beide';
+  ev.jeReservoir=g('jeReservoir')?!!g('jeReservoir').checked:false;
+  if(g('menge')){
+    const t=String(g('menge').value).trim();
+    if(t===''){ev.menge=null;ev.einheit=null}
+    else{
+      const z=toNum(t);
+      if(z==null)return toast('Die Menge ist keine Zahl.');
+      if(z<0)return toast('Eine negative Menge ergibt keinen Sinn.');
+      ev.menge=z;ev.einheit=evEinheit(ev.typ,ev.mittel);
+    }
+  }else{ev.menge=null;ev.einheit=null}
+  if(ev.menge==null)ev.jeReservoir=false;
   ev.geltung=el('eGeltung').value;
   const ls=el('eSatzListe');
   ev.saetze=ev.geltung==='saetze'&&ls?[...ls.selectedOptions].map(o=>o.value):[];
   if(!ev.datum)return toast('Datum fehlt.');
   if(ev.geltung==='saetze'&&!ev.saetze.length)return toast('Bitte mindestens einen Satz wählen – oder «ganzes Gewächshaus».');
+  if(!ev.quelle)ev.quelle='hand';
   const i=db.ereignisse.findIndex(x=>x.id===ev.id);
   if(i>=0)db.ereignisse[i]=ev;else db.ereignisse.push(ev);
   aend();el('dlg').close();render();toast('Gespeichert.');

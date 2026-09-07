@@ -41,9 +41,10 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
  'chartPunkte','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
+ 'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
-  ', setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
 module.exports=fn(module,{},require,global.document,global.window,global);
