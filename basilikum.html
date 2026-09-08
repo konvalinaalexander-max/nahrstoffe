@@ -270,7 +270,7 @@ const NAME={Zucker:'Zucker',pH:'pH (Saft)',EC:'EC (Saft)',K:'Kalium',Ca:'Calcium
  sub_Mn:'Mangan (Substrat)',sub_Cu:'Kupfer (Substrat)',sub_Zn:'Zink (Substrat)',sub_Fe:'Eisen (Substrat)',sub_B:'Bor (Substrat)',
  /* Giesswasser – NovaCropControl liefert Makronährstoffe in mmol/l und
     Spurenelemente in µmol/l, nicht in mg/l. */
- gw_EC:'EC (Giesswasser)',gw_pH:'pH (Giesswasser)',gw_KCa:'K/Ca (Giesswasser)',
+ gw_EC:'EC (Giesswasser)',gw_pH:'pH (Giesswasser)',gw_KCa:'K/Ca (Giesswasser)',gw_NO2:'Nitrit (Wasser)',
  gw_NH4:'Ammonium (Wasser)',gw_K:'Kalium (Wasser)',gw_Na:'Natrium (Wasser)',gw_Ca:'Calcium (Wasser)',
  gw_Mg:'Magnesium (Wasser)',gw_Si:'Silizium (Wasser)',gw_NO3:'Nitrat (Wasser)',gw_Cl:'Chlorid (Wasser)',
  gw_S:'Schwefel (Wasser)',gw_HCO3:'Hydrogencarbonat (Wasser)',gw_P:'Phosphor (Wasser)',
@@ -282,7 +282,7 @@ const EINH={Zucker:'%',EC:'mS/cm',pH:'','K/Ca':'',sub_pH:'',gw_pH:'',gw_EC:'mS/c
 /* Giesswasser: Makronährstoffe kommen vom Labor in mmol/l, Spurenelemente in
    µmol/l. Die Zuordnung folgt der Chemie und dem Berichtslayout von
    NovaCropControl; sie ist an den drei vorliegenden Berichten geprüft. */
-const GW_MAKRO=['NH4','K','Na','Ca','Mg','Si','NO3','Cl','S','HCO3','P'];
+const GW_MAKRO=['NH4','K','Na','Ca','Mg','Si','NO3','NO2','Cl','S','HCO3','P'];
 const GW_MIKRO=['Fe','Mn','Zn','B','Cu','Mo','Al'];
 const GW_PARAM=['EC','pH','KCa'].concat(GW_MAKRO,GW_MIKRO);
 function einheit(k){
@@ -299,7 +299,7 @@ function einheit(k){
   return 'ppm';
 }
 /* Molmassen, um mmol/l für den Vergleich mit anderen Quellen in mg/l zu zeigen */
-const MOLMASSE={NH4:18.04,K:39.1,Na:22.99,Ca:40.08,Mg:24.31,Si:28.09,NO3:62.0,Cl:35.45,S:32.06,HCO3:61.02,P:30.97,
+const MOLMASSE={NH4:18.04,K:39.1,Na:22.99,Ca:40.08,Mg:24.31,Si:28.09,NO3:62.0,NO2:46.01,Cl:35.45,S:32.06,HCO3:61.02,P:30.97,
   Fe:55.85,Mn:54.94,Zn:65.38,B:10.81,Cu:63.55,Mo:95.95,Al:26.98};
 function inMgL(k,v){
   if(v==null)return null;
@@ -671,11 +671,11 @@ const PRODUKTE_VORGABE={
   zitronensaeure:{name:'Zitronensäure',form:'fest',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
   halades:{name:'Halades PE',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'}};
 
-const leer=()=>({schema:6,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+const leer=()=>({schema:7,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4,6],begleitet:[],geplant:[]},
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
-    systemLiter:20000,
+    systemLiter:19200,
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
 let db=leer(),tab='lage',dirty=false,nachRender=null;
 /* Registrierung des aktiven Diagramms: erlaubt es, nur das Diagramm samt
@@ -765,7 +765,24 @@ function migriere(roh){
     }
     if(pz)notizen.push(`${pz} geplante Probe${pz>1?'n gelten':' gilt'} jetzt ausdrücklich als Blattsaft – im Planer lässt sich das auf Substrat oder Giesswasser ändern, und eine erledigte Probe mit ihrer Analyse verknüpfen.`);
   }
-  d.schema=6;
+  if(von<7){
+    /* Felder, die es bisher nicht gab und ohne die sich Luecken im Datensatz
+       nicht einmal aufzeichnen liessen. Alles auf «unbekannt» – geraten wird
+       nichts. */
+    let ah=0;
+    for(const a of d.analysen){
+      if(a.herkunft===undefined){a.herkunft='unbekannt';ah++}
+      if(a.symptom===undefined)a.symptom='unbekannt';
+      if(a.gewaschen===undefined)a.gewaschen=null;
+    }
+    if(ah)notizen.push(`${ah} Analyse${ah>1?'n haben':' hat'} drei neue Felder: Herkunft (Rücklauf, frisch angesetzt oder Rohwasser), ob die Probe symptomatisch oder gesund war, und ob das Blatt vor der Analyse gewaschen wurde. Alle stehen auf «unbekannt» – bitte bei den nächsten Proben ausfüllen, denn genau diese drei Angaben fehlen dem Datensatz heute am meisten.`);
+    notizen.push('Nitrit ist neu als Wasserparameter vorgesehen. Es ist das Zwischenprodukt der Nitrifikation und zeigt, wo sie stockt – bisher wurde es nie gemessen.');
+    if(roh.einst&&roh.einst.systemLiter===20000){
+      d.einst.systemLiter=19200;
+      notizen.push('Das Systemvolumen ist von 20 000 auf 19 200 Liter berichtigt (zwei Reservoirs à 9 600). Die Soll-Ist-Bilanz rechnet ab jetzt damit.');
+    }
+  }
+  d.schema=7;
   return {db:d,notizen,von};
 }
 
@@ -1245,6 +1262,119 @@ function wiederkehrend(){
   return [...m.values()].filter(x=>x.n>1).sort((a,b)=>b.n-a.n);
 }
 
+/* ══════════ 5b · Drei Auswertungen, die die Leitfragen beantworten ══════
+   Sie sind bewusst klein und rechnen nur mit dem, was da ist.             */
+
+/* ── Eingangsbilanz: welches Element hat überhaupt eine Quelle? ──────────
+   Die Frage klingt banal und ist es nicht. Ein Element, das kein Produkt
+   liefert, kann im Blatt nicht auftauchen – dann braucht sein Mangel keine
+   weitere Erklärung. */
+function eingangsbilanz(){
+  const gw=db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum)
+    .sort((a,b)=>b.datum.localeCompare(a.datum));
+  return BILANZ_EL.map(el=>{
+    const quellen=[];
+    for(const k of Object.keys(db.produkte||{})){
+      const pr=db.produkte[k];
+      let anteil=null;
+      for(const q of el.quellen)if(pr.gehalt&&pr.gehalt[q]!=null){anteil=pr.gehalt[q];break}
+      if(anteil==null||anteil<=0)continue;
+      const gaben=db.ereignisse.filter(e=>e.mittel===k&&e.menge!=null&&e.datum)
+        .sort((a,b)=>b.datum.localeCompare(a.datum));
+      quellen.push({produkt:k,name:pr.name,anteil,gaben:gaben.length,zuletzt:gaben.length?gaben[0].datum:null});
+    }
+    /* Was im Wasser gemessen wurde – Rücklauf, nicht Rohwasser */
+    let imWasser=null,wasserDatum=null,wasserUnter=false;
+    for(const a of gw){
+      let sum=null;
+      for(const k of el.gw){const w=a.werte[k];if(w&&w.wert!=null){sum=(sum||0)+w.wert;if(w.unter)wasserUnter=true}}
+      if(sum!=null){imWasser=sum;wasserDatum=a.datum;break}
+    }
+    return {el,quellen,imWasser,wasserDatum,wasserUnter,
+      ohneQuelle:quellen.length===0,
+      nieGegeben:quellen.length>0&&quellen.every(q=>q.gaben===0)};
+  });
+}
+
+/* ── Rangliste der Mängel über alle Erhebungen ───────────────────────────
+   Über ALLE Parameter, nicht nur die der Kennzahl – die Frage lautet «woran
+   fehlt es wirklich», und die Antwort darf nicht von einer Auswahl abhängen,
+   die jemand vor Monaten getroffen hat.
+   Sortiert nach Anteil ausserhalb mal mittlerem Abstand: ein Nährstoff, der
+   immer knapp danebenliegt, steht unter einem, der immer weit danebenliegt. */
+function rangliste(){
+  const erh=erhebungen();
+  const params=[...new Set(erh.flatMap(e=>alleProben(e).flatMap(p=>Object.keys(p.werte))))]
+    .filter(k=>NAME[k]&&k!=='K/Ca');
+  const out=[];
+  for(const k of params){
+    const punkte=[];
+    for(const e of erh){
+      const m=massgebliche(e,k);
+      if(!m)continue;
+      const pr=m.ps[0],w=pr.werte[k];
+      if(!w||w.wert==null||w.unter)continue;
+      const o=optVon(pr,k);
+      const st=status(w.wert,o,w.unter);
+      if(st==null)continue;
+      punkte.push({datum:e.datum,satz:e.satz,wert:w.wert,st,
+        abstand:ausmass(w.wert,o),lage:lage(w.wert,o),blatt:m.art});
+    }
+    if(punkte.length<2)continue;
+    punkte.sort((a,b)=>a.datum.localeCompare(b.datum));
+    const daneben=punkte.filter(p=>!istOk(p.st));
+    const tief=daneben.filter(p=>p.st==='tief').length;
+    const hoch=daneben.filter(p=>p.st==='hoch').length;
+    const anteil=daneben.length/punkte.length;
+    const schnitt=mittel(daneben.map(p=>p.abstand))||0;
+    /* Trend: erstes gegen letztes Drittel, auf der Lage-Skala */
+    const n=punkte.length,d=Math.max(1,Math.floor(n/3));
+    const frueh=mittel(punkte.slice(0,d).map(p=>p.lage).filter(x=>x!=null));
+    const spaet=mittel(punkte.slice(-d).map(p=>p.lage).filter(x=>x!=null));
+    const delta=(frueh!=null&&spaet!=null)?spaet-frueh:null;
+    out.push({k,n:punkte.length,daneben:daneben.length,anteil,tief,hoch,
+      richtung:tief&&hoch?'gemischt':tief?'Mangel':hoch?'Überschuss':'im Rahmen',
+      schwere:anteil*Math.min(3,schnitt),schnitt,
+      letzter:punkte[punkte.length-1],delta,frueh,spaet,
+      blatt:punkte[punkte.length-1].blatt,punkte});
+  }
+  return out.sort((a,b)=>b.schwere-a.schwere);
+}
+
+/* ── Jung gegen Alt ───────────────────────────────────────────────────────
+   Das Verhältnis der Blattetagen verrät, ob ein Nährstoff umverteilt wird.
+   Bei mobilen Nährstoffen heisst ein hohes Verhältnis: die Pflanze räumt das
+   Altblatt aus. Bei immobilen ist ein hohes Verhältnis normal – sie kommen
+   im Altblatt nie an. Genau darum entscheidet die Blattetage eines Symptoms
+   zwischen Magnesium und Eisen oder Zink. */
+function jungAlt(){
+  const erh=erhebungen().filter(e=>e.proben.jung&&e.proben.alt);
+  const params=[...new Set(erh.flatMap(e=>[...Object.keys(e.proben.jung.werte),...Object.keys(e.proben.alt.werte)]))]
+    .filter(k=>NAME[k]&&k!=='K/Ca'&&k!=='pH');
+  return params.map(k=>{
+    const paare=[];
+    for(const e of erh){
+      const j=e.proben.jung.werte[k],a=e.proben.alt.werte[k];
+      if(!j||!a||j.wert==null||a.wert==null||j.unter||a.unter||!a.wert)continue;
+      paare.push({datum:e.datum,satz:e.satz,jung:j.wert,alt:a.wert,v:j.wert/a.wert});
+    }
+    if(!paare.length)return null;
+    const m=mittel(paare.map(p=>p.v));
+    const mob=MOBIL[k]||'unbekannt';
+    return {k,mob,n:paare.length,mittel:m,paare,
+      /* Erwartung aus der Mobilität, nicht aus den Daten */
+      erwartet:mob==='mobil'?'um 1 oder darunter':mob==='immobil'?'über 1':'um 1',
+      auffaellig:(mob==='mobil'&&m>db.einst.verlagerung)||(mob==='immobil'&&m<0.9)};
+  }).filter(Boolean).sort((a,b)=>b.mittel-a.mittel);
+}
+const pfeil=d=>d==null?'':(d>0.15?'↗':d<-0.15?'↘':'→');
+const pfeilText=(d,richtung)=>{
+  if(d==null)return 'kein Verlauf erkennbar';
+  if(Math.abs(d)<=0.15)return 'unverändert';
+  const besser=(richtung==='Mangel'&&d>0)||(richtung==='Überschuss'&&d<0);
+  return (d>0?'steigend':'fallend')+(besser?' – Richtung Sollbereich':' – weiter weg vom Sollbereich');
+};
+
 /* ══════════ 6 · Diagramme ══════════ */
 const FARBEN=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A7118','#556B2F'];
 const svgAuf=(w,h,t)=>`<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" role="img" aria-label="${esc(t)}" style="display:block">`;
@@ -1448,6 +1578,214 @@ function chartPunkte(box,o){
   }
   box.innerHTML=s+'</svg>';
 }
+/* ── Gestapeltes Diagramm mit gemeinsamer Zeitachse ──────────────────────
+   Mehrere Spuren untereinander, eine einzige x-Achse. Jede Spur hat ihre
+   eigene y-Achse – Blattsaft in ppm und Wasser in mmol/l messen verschiedene
+   Dinge, und zwischen ihnen steht die Wurzel. Sie ineinander umzurechnen
+   würde eine Massenbilanz suggerieren, die es nicht gibt.
+   o = {spuren:[{titel,serien,yTyp,band,bandLabel,yLabel,hoehe,leerText}],
+        von,bis, ereignisse, fotos, aufKlick}                              */
+function chartStapel(box,o){
+  const spuren=o.spuren||[];
+  if(!spuren.length)return leerBox(box,'Nichts ausgewählt.');
+  const W=Math.max(box.clientWidth||900,560),ml=104,mr=44;
+  const evH=(o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0;
+  const achseH=34;
+  const hoehen=spuren.map(sp=>sp.hoehe||190);
+  const H=hoehen.reduce((a,b)=>a+b,0)+evH+achseH+10;
+  let x0=o.von,x1=o.bis;
+  if(x0==null||x1==null||!(x1>x0)){
+    const alle=spuren.flatMap(sp=>(sp.serien||[]).flatMap(se=>se.punkte.map(p=>p.x)));
+    if(!alle.length)return leerBox(box,'Keine Werte im gewählten Zeitraum.');
+    x0=Math.min(...alle);x1=Math.max(...alle);
+    if(x0===x1){x0-=6048e5;x1+=6048e5}
+    const sp=(x1-x0)*0.05;x0-=sp;x1+=sp;
+  }
+  const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
+  let s=svgAuf(W,H,'Blattsaft und Giesswasser auf gemeinsamer Zeitachse');
+  let oben=6;
+  const treffer=[];
+
+  spuren.forEach((sp,si)=>{
+    const h=hoehen[si],mt=oben+20,unten=oben+h-8;
+    const serien=(sp.serien||[]).filter(se=>se.punkte&&se.punkte.length&&!diagAus.has(se.id));
+    const sicht=serien.flatMap(se=>se.punkte.filter(p=>p.x>=x0&&p.x<=x1));
+    const lageSkala=sp.yTyp==='lage';
+    let y0,y1;
+    if(lageSkala){y0=0;y1=3}
+    else{
+      const ys=sicht.map(p=>p.y);
+      if(!ys.length){y0=0;y1=1}
+      else{
+        /* Die Achse folgt den MESSWERTEN. Ein Richtwert, der weit über allem
+           liegt – etwa 20 µmol/l Eisen gegen gemessene 3 –, würde sonst die
+           Auflösung dorthin ziehen, wo nichts steht. Das Band wird dann
+           einfach auf die sichtbare Fläche beschnitten. */
+        y0=Math.min(...ys);y1=Math.max(...ys);
+        if(sp.band){
+          const spanne=(y1-y0)||Math.abs(y1)||1;
+          if(sp.band[0]!=null&&sp.band[0]>y0-2*spanne&&sp.band[0]<y1+2*spanne)y0=Math.min(y0,sp.band[0]);
+          if(sp.band[1]!=null&&sp.band[1]<y1+2*spanne&&sp.band[1]>y0-2*spanne)y1=Math.max(y1,sp.band[1]);
+        }
+        const pad=((y1-y0)||Math.abs(y1)||1)*0.16;y0-=pad;y1+=pad;
+        /* Eine negative Konzentration gibt es nicht */
+        if(y0<0&&Math.min(...ys)>=0)y0=0;
+        else if(y0>0&&y0<pad*3)y0=0;
+      }
+    }
+    const Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(unten-mt);
+    /* Hintergrund der Spur */
+    s+=`<rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${unten-mt}" fill="${si%2?'#FCFDFB':'#fff'}"/>`;
+    if(lageSkala){
+      s+=`<rect x="${ml}" y="${Y(3)}" width="${W-ml-mr}" height="${Y(2)-Y(3)}" fill="#FBEEDC"/>`;
+      s+=`<rect x="${ml}" y="${Y(2)}" width="${W-ml-mr}" height="${Y(1)-Y(2)}" fill="#E3F0E1"/>`;
+      s+=`<rect x="${ml}" y="${Y(1)}" width="${W-ml-mr}" height="${Y(0)-Y(1)}" fill="#FBEEDC"/>`;
+      s+=`<text x="${ml-8}" y="${(Y(2)+Y(1))/2+4}" text-anchor="end" font-size="10.5" fill="#2C7A4B">Sollbereich</text>`;
+      s+=`<text x="${ml-8}" y="${Y(3)+12}" text-anchor="end" font-size="10" fill="#BE6F16">darüber</text>`;
+      s+=`<text x="${ml-8}" y="${Y(0)-4}" text-anchor="end" font-size="10" fill="#BE6F16">darunter</text>`;
+    }else{
+      if(sp.band&&(sp.band[0]!=null||sp.band[1]!=null)){
+        const roh1=Y(sp.band[1]!=null?sp.band[1]:y1),roh0=Y(sp.band[0]!=null?sp.band[0]:y0);
+        const b1=Math.max(mt,Math.min(roh1,roh0)),b0=Math.min(unten,Math.max(roh1,roh0));
+        if(b0>b1){
+          s+=`<rect x="${ml}" y="${b1}" width="${W-ml-mr}" height="${Math.max(1,b0-b1)}" fill="#E3F0E1"/>`;
+          s+=`<text x="${W-mr-4}" y="${b1+12}" text-anchor="end" font-size="10" fill="#2C7A4B">${esc(sp.bandLabel||'Sollbereich')}${(roh1<mt||roh0>unten)?' (reicht über den Ausschnitt hinaus)':''}</text>`;
+        }
+      }
+      for(let k=0;k<=3;k++){const v=y0+(y1-y0)*k/3,y=Y(v);
+        s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/>`+
+           `<text x="${ml-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v)}</text>`}
+    }
+    /* Titel und Einheit der Spur */
+    s+=`<text x="${ml}" y="${oben+13}" font-size="11.5" font-weight="600" fill="#141D17">${esc(sp.titel)}</text>`;
+    if(sp.yLabel)s+=`<text x="${W-mr}" y="${oben+13}" text-anchor="end" font-size="10.5" fill="#697A6C">${esc(sp.yLabel)}</text>`;
+    /* Punkte */
+    for(const se of serien)for(const q of se.punkte){
+      if(q.x<x0||q.x>x1)continue;
+      const cx=X(q.x),cy=Y(q.y);
+      s+=marke(se.form,cx,cy,se.klein?3.5:5,se.farbe,se.klein?0.55:1);
+      treffer.push({cx,cy,tipp:q.tipp,kennung:q.kennung,klein:se.klein});
+    }
+    if(!sicht.length)s+=`<text x="${(ml+W-mr)/2}" y="${(mt+unten)/2}" text-anchor="middle" font-size="11" fill="#A8B3A4">${esc(sp.leerText||'keine Messung in diesem Zeitraum')}</text>`;
+    s+=`<line x1="${ml}" x2="${W-mr}" y1="${unten}" y2="${unten}" stroke="#DCE3D5"/>`;
+    oben+=h;
+  });
+
+  /* Ereignis- und Fotospur */
+  const evO=oben;
+  if(evH){
+    s+=`<text x="${ml-8}" y="${evO+14}" text-anchor="end" font-size="10" fill="#697A6C">Logbuch</text>`;
+    for(const ev of (o.ereignisse||[])){
+      if(ev.x<x0||ev.x>x1)continue;
+      const x=X(ev.x);
+      s+=`<line x1="${x}" x2="${x}" y1="6" y2="${evO+18}" stroke="${ev.farbe||'#141D17'}" stroke-dasharray="3 4" opacity=".45"/>`;
+      s+=`<circle cx="${x}" cy="${evO+11}" r="4.5" fill="${ev.farbe||'#141D17'}" style="cursor:help" data-tipp="${esc(ev.tipp||'')}"/>`;
+    }
+    if((o.fotos||[]).length){
+      s+=`<text x="${ml-8}" y="${evO+32}" text-anchor="end" font-size="10" fill="#697A6C">Fotos</text>`;
+      let letzt=-1e9;
+      for(const g of o.fotos){
+        if(g.x<x0||g.x>x1)continue;
+        const x=X(g.x);
+        if(x-letzt<13)continue;letzt=x;
+        s+=`<g style="cursor:pointer" data-tun="fotoTag" data-datum="${esc(g.datum)}" data-tipp="${esc(g.tipp)}">
+          <rect x="${x-8}" y="${evO+21}" width="16" height="16" rx="3" fill="transparent"/>
+          <rect x="${x-6}" y="${evO+25}" width="12" height="9" rx="2" fill="#3A6DA6"/>
+          <circle cx="${x}" cy="${evO+29.5}" r="2.2" fill="#fff"/>
+          ${g.anzahl>1?`<circle cx="${x+7}" cy="${evO+23}" r="5" fill="#141D17"/><text x="${x+7}" y="${evO+26}" text-anchor="middle" font-size="7.5" fill="#fff" font-weight="600">${g.anzahl}</text>`:''}
+        </g>`;
+      }
+    }
+  }
+
+  /* Gemeinsame Zeitachse, einmal */
+  const achseY=evO+evH+2;
+  s+=`<line x1="${ml}" x2="${W-mr}" y1="${achseY}" y2="${achseY}" stroke="#141D17"/>`;
+  for(const t of zeitMarken(x0,x1))
+    s+=`<line x1="${X(t.x)}" x2="${X(t.x)}" y1="${achseY}" y2="${achseY+4}" stroke="#141D17"/>`+
+       `<text x="${X(t.x)}" y="${achseY+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(t.text)}</text>`;
+  s+=`<text x="${W-mr}" y="${achseY+29}" text-anchor="end" font-size="10" fill="#A8B3A4">Ziehen verschiebt · Rad zoomt · Doppelklick setzt zurück</text>`;
+
+  /* Trefferflaechen zuletzt, damit sie oben liegen */
+  for(const t of treffer)
+    s+=`<circle class="hit" cx="${t.cx}" cy="${t.cy}" r="${t.klein?7:11}" data-tipp="${esc(t.tipp||'')}"${
+      (o.aufKlick&&t.kennung)?` data-tun="diagPunkt" data-id="${esc(t.kennung)}" style="cursor:pointer"`:' style="cursor:help"'}/>`;
+  s+=`<line class="zeiger" x1="-99" x2="-99" y1="4" y2="${achseY}" stroke="#141D17" stroke-width="1" opacity=".35" pointer-events="none"/>`;
+  box.innerHTML=s+'</svg>';
+  stapelBedienung(box,{W,ml,mr,x0,x1});
+}
+/* Sinnvolle Marken auf der Zeitachse, je nach Spannweite */
+function zeitMarken(x0,x1){
+  const t=(x1-x0)/864e5,out=[];
+  const d0=new Date(x0);
+  if(t<=70){                                        /* Wochen */
+    const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
+    while(d.getUTCDay()!==1)d.setUTCDate(d.getUTCDate()+1);
+    for(;+d<=x1;d.setUTCDate(d.getUTCDate()+7))
+      if(+d>=x0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+  }else{                                            /* Monate */
+    const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1));
+    const N=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    for(;+d<=x1;d.setUTCMonth(d.getUTCMonth()+1))
+      if(+d>=x0)out.push({x:+d,text:N[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2)});
+  }
+  return out.length?out:[{x:x0,text:fmtK(new Date(x0).toISOString().slice(0,10))}];
+}
+/* Ziehen, Zoomen, Zuruecksetzen – wirkt auf alle Spuren gleichzeitig, weil
+   sie sich denselben x-Bereich teilen. */
+let koVon=null,koBis=null;
+/* Der Zustand des Ziehens liegt bewusst AUSSERHALB der Funktion. Jede
+   Verschiebung zeichnet das Diagramm neu, dabei werden die Ereignisbehandler
+   ersetzt – laege der Zustand in ihrer Umgebung, waere das Ziehen nach dem
+   ersten Bildpunkt zu Ende, und man muesste die Maustaste immer wieder neu
+   druecken. */
+let zieht=false,ziehBewegt=false,ziehStart=0,ziehVon=0,ziehBis=0;
+function stapelBedienung(box,g){
+  const svg=box.querySelector('svg');if(!svg)return;
+  const zeiger=box.querySelector('.zeiger');
+  const zuX=ev=>{
+    const r=svg.getBoundingClientRect();
+    if(!r.width)return null;
+    return (ev.clientX-r.left)*(g.W/r.width);
+  };
+  const zuZeit=px=>g.x0+(px-g.ml)/((g.W-g.ml-g.mr)||1)*(g.x1-g.x0);
+  if(zieht)box.style.cursor='grabbing';
+  box.onmousedown=ev=>{
+    const px=zuX(ev);if(px==null||px<g.ml)return;
+    zieht=true;ziehBewegt=false;ziehStart=px;ziehVon=g.x0;ziehBis=g.x1;
+    box.style.cursor='grabbing';ev.preventDefault();
+  };
+  box.onmousemove=ev=>{
+    const px=zuX(ev);if(px==null)return;
+    if(zeiger&&px>=g.ml){zeiger.setAttribute('x1',px);zeiger.setAttribute('x2',px)}
+    if(!zieht)return;
+    if(Math.abs(px-ziehStart)<2)return;
+    ziehBewegt=true;
+    const d=(ziehStart-px)/((g.W-g.ml-g.mr)||1)*(ziehBis-ziehVon);
+    koVon=ziehVon+d;koBis=ziehBis+d;vlZeit=null;
+    /* Waehrend des Ziehens wird nur die Zeichnung erneuert, nicht die Tabellen
+       darunter – sonst ruckelt es. Der Rest folgt beim Loslassen. */
+    if(DIAG&&DIAG.zeichnen){tippWeg();DIAG.zeichnen()}else diagFrisch();
+  };
+  /* Nur nach einer echten Verschiebung wird der ganze Reiter erneuert. Sonst
+     wuerde schon ein einfacher Klick die Zeichnung austauschen – und ein
+     Doppelklick koennte gar nicht mehr entstehen, weil sein erstes Ziel
+     zwischendurch aus dem Dokument verschwaende. */
+  const los=()=>{const b=zieht&&ziehBewegt;zieht=false;ziehBewegt=false;box.style.cursor='';if(b)diagFrisch()};
+  box.onmouseup=los;
+  box.onmouseleave=()=>{los();if(zeiger){zeiger.setAttribute('x1',-99);zeiger.setAttribute('x2',-99)}};
+  box.addEventListener('wheel',ev=>{
+    const px=zuX(ev);if(px==null||px<g.ml)return;
+    ev.preventDefault();
+    const mitte=zuZeit(px);
+    const f=ev.deltaY>0?1.25:0.8;
+    const nv=mitte-(mitte-g.x0)*f,nb=mitte+(g.x1-mitte)*f;
+    if(nb-nv<3*864e5)return;                        /* nicht enger als drei Tage */
+    koVon=nv;koBis=nb;vlZeit=null;diagFrisch();
+  },{passive:false});
+  box.ondblclick=()=>{koVon=koBis=null;vlZeit='alles';diagFrisch()};
+}
+
 /* Baustein fuer den Inhalt des Infokaestchens. Alles wird hier maskiert,
    damit ein Satzname mit spitzer Klammer kein Markup einschleusen kann. */
 function tippBau(kopf,farbe,zeilen,fuss){
@@ -1517,24 +1855,6 @@ function chartIndex(box,erh){
   box.innerHTML=s+'</svg>';
 }
 
-function chartProfil(box,zeilen){
-  if(!zeilen.length)return leerBox(box,'Keine gemeinsamen Parameter zum Vergleichen.');
-  const W=Math.max(box.clientWidth||760,520),ml=124,mr=160,zh=24,H=zeilen.length*zh+34;
-  const max=Math.max(0.12,...zeilen.map(z=>Math.abs(z.delta)));
-  const mitte=ml+(W-ml-mr)/2,halb=(W-ml-mr)/2;
-  let s=svgAuf(W,H,'Wirkungsprofil');
-  s+=`<text x="${mitte-halb*0.5}" y="12" text-anchor="middle" font-size="10.5" fill="#BE6F16">weiter weg vom Optimum</text>`;
-  s+=`<text x="${mitte+halb*0.5}" y="12" text-anchor="middle" font-size="10.5" fill="#2C7A4B">Richtung Optimum</text>`;
-  zeilen.forEach((z,i)=>{
-    const y=22+i*zh,len=Math.abs(z.delta)/max*halb*0.92,pos=z.delta>0;
-    s+=`<text x="${ml-8}" y="${y+13}" text-anchor="end" font-size="11.5" fill="#141D17">${esc(NAME[z.k]||z.k)}</text>`;
-    s+=`<rect x="${pos?mitte:mitte-len}" y="${y+3}" width="${Math.max(1.5,len)}" height="14" rx="3" fill="${pos?'#2C7A4B':'#BE6F16'}" opacity=".85" style="cursor:help" data-tipp="${esc(tippBau(NAME[z.k]||z.k,pos?'#2C7A4B':'#BE6F16',[['Blatt',z.blatt+'blatt'],['Vorher',nz(z.vor)+' '+einheit(z.k)],['Nachher',nz(z.nach)+' '+einheit(z.k)]],pos?'Richtung Optimum':'weiter weg vom Optimum'))}"/>`;
-    s+=`<text x="${W-mr+8}" y="${y+14}" font-size="11" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(z.vor)} → ${nz(z.nach)}${istOk(z.stNach)?' ✓':''}</text>`;
-  });
-  s+=`<line x1="${mitte}" x2="${mitte}" y1="16" y2="${H-8}" stroke="#141D17" opacity=".5"/>`;
-  box.innerHTML=s+'</svg>';
-}
-
 function chartSaetze(box,saetze){
   const mit=saetze.filter(s=>s.aussaat);
   if(!mit.length)return leerBox(box,'Noch kein Satz mit bekanntem oder ableitbarem Aussaatdatum.');
@@ -1583,9 +1903,12 @@ document.addEventListener('change',ev=>{
   const f=AKTION[t.dataset.aend];if(f)f(t.dataset,ev,t);
 });
 
-const TABS=[['lage','Überblick'],['analysen','Analysen'],['naehrstoff','Nährstoffe'],['wirkung','Wirkung'],
+/* «Wirkung» ist entfallen: Vorher/Nachher um ein Ereignis leistet der Reiter
+   «Verlauf» mit Ereignismarkern und Zoom besser, und die alte Ansicht war
+   ohnehin nur qualitativ. */
+const TABS=[['lage','Überblick'],['analysen','Analysen'],['verlauf','Verlauf'],['naehrstoff','Nährstoffe'],
  ['substrat','Substrat'],['giess','Giesswasser'],['logbuch','Logbuch'],['fotos','Fotos'],['rundgang','Rundgang'],['planer','Planer'],['saetze','Sätze & Einstellungen']];
-const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),naehrstoff:()=>vNaehr(),wirkung:()=>vWirkung(),
+const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),verlauf:()=>vVerlauf(),naehrstoff:()=>vNaehr(),
  substrat:()=>vSubstrat(),giess:()=>vGiess(),logbuch:()=>vLogbuch(),fotos:()=>vFotos(),rundgang:()=>vRund(),planer:()=>vPlaner(),saetze:()=>vSaetze()};
 function render(){
   const yVor=window.scrollY||window.pageYOffset||0;
@@ -1594,7 +1917,7 @@ function render(){
   el('stand').textContent=dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
   const f=ANSICHT[tab]||ANSICHT.lage;
   DIAG=null;
-  if(letzterTab!==tab)diagAus.clear();
+  if(letzterTab!==tab){diagAus.clear();koVon=koBis=null}
   try{el('view').innerHTML=f()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
     <p class="muted">Die übrigen Reiter funktionieren weiter, und deine Daten sind unverändert. Sichere sie und schick mir die Meldung unten.</p>
@@ -1615,9 +1938,16 @@ let letzterTab=null;
 function diagFrisch(){
   tippWeg();
   if(!DIAG)return render();
+  /* Zwischen dem Ersetzen der Bedienelemente und dem Zeichnen ist die Seite
+     kurz um die Hoehe des Diagramms kuerzer. Der Browser begrenzt die
+     Scrollposition dann auf das neue Seitenende und holt sie nicht zurueck,
+     wenn die Seite wieder waechst – wer unten stand, landete oben. Darum
+     wird sie hier gemerkt und danach wiederhergestellt. */
+  const yVor=window.scrollY||window.pageYOffset||0;
   try{
     for(const [id,fn] of DIAG.teile){const b=el(id);if(!b)return render();b.innerHTML=fn()}
     if(DIAG.zeichnen)DIAG.zeichnen();
+    if((window.scrollY||window.pageYOffset||0)!==yVor)window.scrollTo({top:yVor});
   }catch(err){render()}
 }
 AKTION.reiter=d=>{const dg=el('dlg');if(dg.open)dg.close();tab=d.reiter;render()};
@@ -1813,18 +2143,8 @@ function vLage(){
       <td class="tiny muted">${x.wann.map(y=>esc(y.satz)+' '+fmtK(y.datum)).join(' · ')}</td></tr>`).join('')}
     </tbody></table></div></div>`;
 
-  s+=`<div class="card"><div class="hd"><div><h2>Welche Nährstoffe sind chronisch daneben?</h2>
-    <p class="sub">Über alle bisherigen Erhebungen gerechnet. Diese Auswertung ist vom Kulturalter unabhängig und darum auch bei unregelmässiger Beprobung belastbar.</p></div></div>
-    <div class="scroll"><table><thead><tr><th>Nährstoff</th><th>im Optimum</th><th>beurteilt am</th><th>Richtung</th><th>mittlere Lage</th></tr></thead><tbody>
-    ${bil.map(b=>`<tr><td><strong>${esc(NAME[b.k])}</strong>${b.haupt?' <span class="tag">Hauptnährstoff</span>':''}
-        <div class="tiny muted">${esc(MOBIL[b.k]||'')}</div></td>
-      <td><span class="pill ${b.quote>=0.6?'ok':b.quote>0?'na':'off'}">${b.ok} von ${b.n}</span></td>
-      <td class="tiny muted">${b.art==='beide'?'Jung- und Altblatt':esc(b.art)+'blatt'}</td>
-      <td class="small">${b.tief&&b.hoch?`${b.tief}× zu tief, ${b.hoch}× zu hoch`:b.tief?'immer zu tief':b.hoch?'immer zu hoch':'im Rahmen'}${b.rand?` <span class="tiny muted">(${b.rand}× knapp)</span>`:''}</td>
-      <td style="min-width:150px">${lageBalken(b.mittel)}</td></tr>`).join('')}
-    </tbody></table></div>
-    ${bil.filter(b=>b.quote===0&&b.haupt).length?`<div class="note">${bil.filter(b=>b.quote===0&&b.haupt).map(b=>NAME[b.k]).join(', ')} lag in keiner einzigen Erhebung im Optimum. Das ist kein Ausreisser, sondern ein Grundzustand der Düngung – dort liegt der grösste Hebel.</div>`:''}
-  </div>`;
+  s+=ranglisteKarte();
+  s+=eingangsKarte();
 
   /* Die Befunde sind der Inhalt, nicht die Diagramme. Sie stehen deshalb
      direkt nach der Kennzahlzeile – bei einer einzigen Analyse standen sie
@@ -1867,6 +2187,77 @@ AKTION.ueSatzWahl=d=>{
   if(!w.length)return toast('Für diese Zusammenstellung liegen keine Messwerte vor.');
   ueParams=w;diagAus.clear();diagFrisch();
 };
+
+/* ── Rangliste der Mängel ──────────────────────────────────────────────── */
+function ranglisteKarte(){
+  const r=rangliste();
+  if(!r.length)return '';
+  const daneben=r.filter(x=>x.anteil>0);
+  return `<div class="card"><div class="hd"><div><h2>Woran fehlt es wirklich</h2>
+    <p class="sub">Alle Parameter über alle Erhebungen, nach Schwere geordnet – Anteil ausserhalb des Sollbereichs mal mittlerem Abstand.
+    Beurteilt wird jeder an dem Blatt, an dem er aussagekräftig ist. Diese Auswertung ist vom Kulturalter unabhängig und darum auch bei unregelmässiger Beprobung belastbar.</p></div></div>
+    <div class="scroll"><table><thead><tr><th>Parameter</th><th>ausserhalb</th><th>Richtung</th><th>zuletzt</th><th>Verlauf</th><th>beurteilt am</th></tr></thead><tbody>
+    ${r.map(x=>`<tr class="klick" data-tun="rangDetail" data-k="${esc(x.k)}">
+      <td><strong>${esc(NAME[x.k]||x.k)}</strong>${HAUPT.includes(x.k)?' <span class="tag">Hauptnährstoff</span>':''}
+        <div class="tiny muted">${esc(MOBIL[x.k]||'')}</div></td>
+      <td><span class="pill ${x.anteil===0?'ok':x.anteil<0.5?'na':'off'}">${x.daneben} von ${x.n}</span></td>
+      <td class="small">${esc(x.richtung)}${x.richtung==='gemischt'?` <span class="tiny muted">(${x.tief}× tief, ${x.hoch}× hoch)</span>`:''}</td>
+      <td class="mono">${nz(x.letzter.wert)} <span class="tiny muted">${esc(einheit(x.k))}</span>
+        <div class="tiny">${stPill(x.letzter.st)}</div></td>
+      <td class="small"><span style="font-size:15px">${pfeil(x.delta)}</span> ${esc(pfeilText(x.delta,x.richtung))}</td>
+      <td class="tiny muted">${esc(x.blatt==='beide'?'Jung- und Altblatt':x.blatt+'blatt')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="tiny muted" style="margin-top:8px">Eine Zeile anklicken zeigt alle Einzelwerte dieses Parameters.
+    Der Pfeil vergleicht das erste mit dem letzten Drittel der Erhebungen – bei ${r[0].n} Erhebungen ist das ein Hinweis, kein Nachweis.
+    Werte unter der Nachweisgrenze sind nicht enthalten.</p>
+    ${daneben.filter(x=>x.anteil===1&&HAUPT.includes(x.k)).length?`<div class="note">${daneben.filter(x=>x.anteil===1&&HAUPT.includes(x.k)).map(x=>esc(NAME[x.k])).join(', ')} lag in <strong>keiner einzigen</strong> Erhebung im Sollbereich. Das ist kein Ausreisser, sondern ein Grundzustand.</div>`:''}
+  </div>`;
+}
+AKTION.rangDetail=d=>{
+  const x=rangliste().find(y=>y.k===d.k);
+  if(!x)return;
+  const mob=MOBIL[x.k]||'unbekannt';
+  dialog(`${NAME[x.k]||x.k} über alle Erhebungen`,
+    `<p class="small">${esc(MOBILTEXT[mob]||'')}</p>
+     <div class="scroll"><table><thead><tr><th>Datum</th><th>Satz</th><th>Blatt</th><th>Wert</th><th>Beurteilung</th><th>Lage 0–3</th></tr></thead><tbody>
+     ${x.punkte.map(p=>`<tr><td class="mono">${fmt(p.datum)}</td><td class="mono">${esc(p.satz||'')}</td>
+       <td class="tiny">${esc(p.blatt)}</td><td class="mono">${nz(p.wert)} ${esc(einheit(x.k))}</td>
+       <td>${stPill(p.st)}</td><td class="mono">${nz(p.lage,2)}</td></tr>`).join('')}
+     </tbody></table></div>
+     <p class="tiny muted" style="margin-top:8px">Die Erhebungen stammen aus verschiedenen Sätzen mit unterschiedlichem Alter.
+     Ein Verlauf über diese Zeilen vermischt deshalb Alterseffekte mit echten Veränderungen.</p>`,
+    '<button data-tun="dlgZu">Schliessen</button>');
+};
+
+/* ── Eingangsbilanz ────────────────────────────────────────────────────── */
+function eingangsKarte(){
+  const b=eingangsbilanz();
+  const ohne=b.filter(x=>x.ohneQuelle);
+  const nie=b.filter(x=>x.nieGegeben);
+  return `<div class="card"><div class="hd"><div><h2>Was überhaupt hineinkommt <span class="tag schaetz">Annahme</span></h2>
+    <p class="sub">Für jedes Element: welches Produkt es liefert, und ob es je gegeben wurde.
+    Ein Element ohne Quelle kann im Blatt nicht auftauchen – sein Mangel braucht dann keine weitere Erklärung.
+    Gerechnet aus den Produktangaben unter «Sätze &amp; Einstellungen»; die Gehalte stammen von den Etiketten.</p></div></div>
+    ${ohne.length?`<div class="note warn"><strong>Ohne jede Quelle: ${ohne.map(x=>esc(x.el.name)).join(', ')}.</strong>
+      Keines der hinterlegten Produkte enthält diese Elemente. Was im Wasser davon gemessen wird, stammt aus dem Frischwasser oder aus dem Substrat.</div>`:''}
+    <div class="scroll"><table><thead><tr><th>Element</th><th>Quelle</th><th>Gehalt</th><th>zuletzt gegeben</th><th>im Giesswasser</th></tr></thead><tbody>
+    ${b.map(x=>`<tr><td><strong>${esc(x.el.name)}</strong></td>
+      <td>${x.quellen.length?x.quellen.map(q=>esc(q.name)).join(', ')
+        :'<span class="val-off">keine</span>'}</td>
+      <td class="mono tiny">${x.quellen.map(q=>nz(q.anteil,2)+' %').join(' · ')||'–'}</td>
+      <td class="tiny">${x.quellen.length
+        ? (x.quellen.some(q=>q.zuletzt)
+           ? x.quellen.filter(q=>q.zuletzt).map(q=>fmt(q.zuletzt)).sort().reverse()[0]
+           : '<span class="val-off">nie im Logbuch</span>')
+        : '–'}</td>
+      <td class="mono">${x.imWasser==null?'<span class="muted">nicht gemessen</span>'
+        :(x.wasserUnter?'&lt;':'')+nz(x.imWasser,3)+' <span class="tiny muted">'+esc(x.el.gw.map(k=>einheit(k))[0])+'</span>'
+          +`<div class="tiny muted">${fmt(x.wasserDatum)}</div>`}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${nie.length?`<p class="tiny muted" style="margin-top:8px">${nie.map(x=>esc(x.el.name)).join(', ')}: ein Produkt liefert es, aber im Logbuch steht keine Gabe. Entweder wurde nichts gegeben, oder es fehlt der Eintrag.</p>`:''}
+    <p class="tiny muted">Die Spalte «im Giesswasser» zeigt die neueste Wasseranalyse. Alle bisherigen stammen aus dem <strong>Rücklauf</strong>, nicht aus frisch angesetzter Lösung – sie sagen also, was übrig blieb, nicht was hineinging.</p>
+  </div>`;
+}
 
 /* ── Eine Erhebung als Ganzes ────────────────────────────
    Der Weg «Datei hochladen und verstehen» endet hier: alle Werte des
@@ -2211,7 +2602,289 @@ AKTION.uebernehmen=()=>{
   toast(PRUEF_BEARB?'Gespeichert.':`${n} Probe${n>1?'n':''} übernommen. Nicht vergessen: sichern.`);
 };
 
-/* ══════════ 10 · Nährstoffe ══════════
+/* ══════════ 10 · Verlauf: Pflanze und Wasser auf einer Zeitachse ══════
+   Der Reiter beantwortet die Frage, die sich in keinem der bisherigen
+   beantworten liess: Was war im Wasser, und was kam in der Pflanze an?
+   Blattsaft oben, Giesswasser unten, Logbuch und Fotos als eigene Spur,
+   eine gemeinsame Zeitachse. Zoomen und Verschieben wirken auf alles.
+
+   Bewusst NICHT umgerechnet: Blattsaft-ppm und Wasser-mmol/l messen
+   verschiedene Dinge, zwischen ihnen steht die Wurzel. Eine Umrechnung
+   würde eine Massenbilanz suggerieren, die es nicht gibt.               */
+
+/* Fünf benannte Fragen statt 22 mal 21 Kombinationen. Jede sagt, was zu
+   sehen sein sollte – und was die Erwartung widerlegen würde. */
+const PAARE_VOR=[
+ {id:'n',name:'Stickstoffform',blatt:['NO3','NH4'],wasser:['gw_NO3','gw_NH4','gw_NO2'],
+  frage:'Der Dünger liefert Stickstoff, aber als Ammonium. Wird daraus Nitrat?',
+  erwartung:'Im Wasser viel Ammonium und wenig Nitrat, im Blatt Nitrat unter dem Sollbereich.',
+  widerlegt:'Nitrat im Wasser in derselben Grössenordnung wie Ammonium – dann läuft die Nitrifikation.'},
+ {id:'fe',name:'Kommt das Eisen an?',blatt:['Fe'],wasser:['gw_Fe','gw_pH'],
+  frage:'Eisen wird mit dem Dünger gegeben. Steht es im Wasser?',
+  erwartung:'Im Wasser fast nichts trotz Dosierung, im Blatt fallend.',
+  widerlegt:'Eisen im Wasser in der Grössenordnung des Dosierten – dann fällt es nicht aus.'},
+ {id:'zn',name:'Kommt das Zink an?',blatt:['Zn'],wasser:['gw_Zn','gw_pH'],
+  frage:'Dasselbe für Zink – der zweite Kandidat für die Streifen.',
+  erwartung:'Wie beim Eisen.',
+  widerlegt:'Zink im Wasser messbar und im Blatt trotzdem tief – dann liegt es an der Aufnahme, nicht an der Fällung.'},
+ {id:'k',name:'Kalium',blatt:['K'],wasser:['gw_K','gw_NH4'],
+  frage:'Kalium hat keine Düngerquelle. Und Ammonium konkurriert an derselben Wurzel.',
+  erwartung:'Wenig Kalium im Wasser, viel Ammonium, Kalium im Blatt tief.',
+  widerlegt:'Kalium im Wasser hoch und im Blatt trotzdem tief – dann ist es Konkurrenz, nicht Mangel an Angebot.'},
+ {id:'ph',name:'pH und was er ausfällt',blatt:['Fe','Zn','Mn'],wasser:['gw_pH','gw_HCO3'],
+  frage:'Der pH steigt. Fallen die Spurenelemente mit ihm aus?',
+  erwartung:'Steigender pH, im Blatt fallendes Eisen und Zink.',
+  widerlegt:'Fallender oder gleichbleibender pH bei gleichzeitig fallenden Spurenelementen.'}];
+
+let vlPaar='n',vlSkala='lage',vlTank=true,vlLog=true,vlZeit='alles';
+function vVerlauf(){
+  const erh=erhebungen();
+  const gw=gwProben();
+  if(!erh.length&&!gw.length)return leerHinweis('Noch keine Analysen',
+    'Dieser Reiter stellt Blattsaft und Giesswasser auf eine gemeinsame Zeitachse. Dafür braucht es wenigstens eine Analyse.',
+    '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
+  const gwStellen=[...new Set(gw.map(gwStelle))].sort();
+  const gwForm={};gwStellen.forEach((st,i)=>gwForm[st]=FORMEN[i%FORMEN.length]);
+
+  /* Alles, was von der gewählten Frage abhängt, wird bei JEDEM Neuzeichnen
+     frisch bestimmt. Läge es im äusseren Gültigkeitsbereich, wechselte die
+     Schaltfläche, aber nicht der Inhalt – genau dieser Fehler ist beim Bauen
+     passiert und von der Browserprüfung gefunden worden. */
+  function vlAb(){
+    const paar=PAARE_VOR.find(p=>p.id===vlPaar)||PAARE_VOR[0];
+    return {paar,farbe:farbenFuer(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))};
+  }
+
+  function blattSerien(paar,farbe){
+    const out=[];
+    for(const k of paar.blatt)for(const al of ['jung','alt','misch']){
+      const punkte=[];
+      for(const e of erh){
+        const pr=e.proben[al];if(!pr)continue;
+        const w=pr.werte[k];if(!w||w.wert==null||w.unter)continue;
+        const o=optVon(pr,k);
+        const y=vlSkala==='lage'?lage(w.wert,o):w.wert;
+        if(y==null)continue;
+        const st=status(w.wert,o,w.unter);
+        punkte.push({x:+new Date(e.datum),y,kennung:e.id,
+          tipp:tippBau(NAME[k]||k,farbe[k],[
+            ['Pflanze',(e.satz||'?')+(e.zustand?' · '+e.zustand:'')],
+            ['Probe',fmt(e.datum)],
+            e.alter.woche!=null?['Kulturwoche',nz(e.alter.woche,1)]:null,
+            ['Blatt',al==='misch'?'Mischprobe':al+'es Blatt'],
+            ['Messwert',nz(w.wert)+' '+einheit(k)],
+            o?['Sollbereich',(o[0]!=null?nz(o[0]):'offen')+'–'+(o[1]!=null?nz(o[1]):'offen')]:null,
+            st?['Beurteilung',STTEXT[st]]:null],'Anklicken öffnet die ganze Erhebung.')});
+      }
+      if(punkte.length)out.push({id:'b|'+k+'|'+al,name:(paar.blatt.length>1?(NAME[k]||k)+' · ':'')+al,
+        farbe:farbe[k],form:BLATTFORM[al]||'kreis',punkte});
+    }
+    return out;
+  }
+  /* Wasserparameter mit verschiedenen Einheiten bekommen getrennte Spuren.
+     Eisen in µmol/l und der pH auf einer Achse wären zufällig ähnlich gross
+     und würden eine Vergleichbarkeit vortäuschen, die es nicht gibt. */
+  function wasserSerien(paar,farbe){
+    const out=[];
+    for(const k of paar.wasser){
+      const basis=k.slice(3);
+      for(const st of gwStellen){
+        const punkte=[];
+        for(const a of gw.filter(x=>gwStelle(x)===st)){
+          const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
+          const mg=inMgL(k,w.wert);
+          punkte.push({x:+new Date(a.datum),y:w.wert,kennung:a.id,
+            tipp:tippBau(gwName(k),farbe[basis],[
+              ['Wasser',st],['Probe',fmt(a.datum)],
+              ['Messwert',nz(w.wert)+' '+einheit(k)],
+              mg!=null?['entspricht',nz(mg,2)+' mg/l']:null],'Anklicken öffnet die ganze Wasserprobe.')});
+        }
+        if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,einh:einheit(k),
+          name:(paar.wasser.length>1?gwName(k)+' · ':'')+st,
+          farbe:farbe[basis],form:gwForm[st]||'kreis',punkte});
+      }
+    }
+    /* Tankmessungen als dichte, kleine Ebene – dort ist das Wasser nicht leer */
+    if(vlTank&&paar.wasser.includes('gw_pH')){
+      const p=db.messungen.filter(m=>m.ph!=null&&m.datum);
+      if(p.length)out.push({id:'w|tank|ph',einh:'',name:'pH am Tank',farbe:'#8C9A88',form:'kreis',klein:true,
+        punkte:p.map(m=>({x:+new Date(m.datum),y:m.ph,
+          tipp:tippBau('pH am Tank','#8C9A88',[['Datum',fmt(m.datum)],
+            m.stelle?['Stelle',m.stelle]:null,['pH',nz(m.ph,2)],
+            m.ec!=null?['EC',nz(m.ec,2)+' mS/cm']:null],m.notiz||'')}))});
+    }
+    return out;
+  }
+  /* Welche Parameter dieser Frage sind im Wasser ueberhaupt nie gemessen?
+     Ohne diese Auskunft verschwindet die untere Spur wortlos, und die Frage
+     sieht beantwortet aus, obwohl die halbe Antwort fehlt. */
+  function wasserFehlt(paar){
+    const tankPH=vlTank&&db.messungen.some(m=>m.ph!=null&&m.datum);
+    return paar.wasser.filter(k=>{
+      if(k==='gw_pH'&&tankPH)return false;          /* der Tank liefert den pH */
+      return !gw.some(a=>a.werte[k]&&a.werte[k].wert!=null&&!a.werte[k].unter);
+    });
+  }
+  /* Nach Einheit gruppieren – je Einheit eine eigene Spur mit eigener Achse. */
+  function wasserSpuren(paar,ws){
+    const gruppen=new Map();
+    for(const se of ws){
+      const e=se.einh==null?'':se.einh;
+      if(!gruppen.has(e))gruppen.set(e,[]);
+      gruppen.get(e).push(se);
+    }
+    const n=gruppen.size||1;
+    return [...gruppen.entries()].map(([e,serien],i)=>{
+      const params=[...new Set(serien.map(x=>x.param).filter(Boolean))];
+      const einWert=params.length===1?gwRichtVon(params[0]):null;
+      return {titel:'Wasser · '+(params.map(k=>gwName(k)).join(', ')||'Giesswasser')
+              +((vlTank&&e===''&&serien.some(x=>x.klein))?' und Tank':''),
+        serien,yTyp:'wert',band:einWert?[null,einWert.bis]:null,bandLabel:'Richtwert (Annahme)',
+        yLabel:e||'ohne Einheit',hoehe:n>1?(i===0?170:150):200,
+        leerText:'keine Wasseranalyse in diesem Zeitraum'};
+    });
+  }
+
+  function vlZeichnen(){
+    const {paar,farbe}=vlAb();
+    const bs=blattSerien(paar,farbe),ws=wasserSerien(paar,farbe);
+    /* Was im Wasser nie gemessen wurde, bekommt trotzdem eine Spur – eine
+       leere, die sagt warum. Verschwaende sie stillschweigend, sähe die
+       Frage beantwortet aus, obwohl die halbe Antwort fehlt. */
+    const wSpuren=wasserSpuren(paar,ws),fehlt=wasserFehlt(paar);
+    if(fehlt.length)wSpuren.push({titel:'Wasser · '+fehlt.map(k=>gwName(k)).join(', '),
+      serien:[],yTyp:'wert',yLabel:'',hoehe:fehlt.length&&wSpuren.length?86:150,
+      leerText:'in keiner Wasserprobe gemessen – diese Hälfte der Frage bleibt offen'});
+    const einBlatt=paar.blatt.length===1&&vlSkala!=='lage';
+    const band=einBlatt?(erh.map(e=>optVon(leitProbe(e)||{optima:{}},paar.blatt[0])).find(Boolean)||null):null;
+    chartStapel(el('cVl'),{
+      von:koVon,bis:koBis,aufKlick:true,
+      spuren:[
+        {titel:'Pflanze · Blattsaft',serien:bs,yTyp:vlSkala==='lage'?'lage':'wert',band,
+         yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
+         hoehe:200,leerText:'keine Blattsaftprobe in diesem Zeitraum'}
+      ].concat(wSpuren),
+      ereignisse:vlLog?db.ereignisse.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({
+        x:+new Date(e.datum),farbe:evFarbe(e.typ),
+        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmt(e.datum)],
+          e.titel?['Titel',e.titel]:null,e.mittel?['Mittel',evMittelName(e.mittel)]:null,
+          e.menge!=null?['Menge',evMenge(e)]:null,
+          e.stelle&&e.stelle!=='beide'?['Stelle',e.stelle]:null],e.notiz||'')})):[],
+      fotos:fotoSpur?fotoGruppen():[]});
+    el('legVl').innerHTML=legende(bs.concat(ws.filter(x=>!x.klein)),diagAus,
+      vlSkala==='lage'?'oben Lage 0–3 · unten Messwerte des Labors':'oben und unten je eigene Achse');
+  }
+
+  function vlKopf(){
+    const {paar}=vlAb();
+    let t=`<div class="hd"><div><h2>${esc(paar.name)}</h2>
+      <p class="sub">${esc(paar.frage)}</p></div></div>
+      <div class="werkzeug">
+        <div class="wz"><span class="lab">Frage</span>
+          ${PAARE_VOR.map(p=>`<span class="chip ${vlPaar===p.id?'on':''}" data-tun="vlPaar" data-v="${p.id}">${esc(p.name)}</span>`).join('')}
+        </div>
+        <div class="wz">
+          <span class="lab">Pflanze</span>
+          <span class="seg">${[['lage','Lage 0–3'],['wert','Messwert',paar.blatt.length>1]].map(([v,l,aus])=>
+            `<button class="${vlSkala===v?'on':''}"${aus?' disabled title="Mehrere Nährstoffe mit verschiedenen Grössenordnungen – nur die Lage 0–3 ist gemeinsam lesbar."':''} data-tun="vlSkala" data-v="${v}">${l}</button>`).join('')}</span>
+          <span class="lab" style="min-width:0;margin-left:8px">Zeitraum</span>
+          <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${vlZeit===v?'on':''}" data-tun="vlZeit" data-v="${v}">${l}</button>`).join('')}</span>
+          ${paar.wasser.includes('gw_pH')?`<span class="chip ${vlTank?'on':''}" data-tun="vlTank" style="margin-left:8px">pH am Tank</span>`:''}
+          <span class="chip ${vlLog?'on':''}" data-tun="vlLog">Logbuch</span>${fotoChip()}
+        </div></div>
+      <div id="cVl" class="diagramm"></div><div class="legend" id="legVl"></div>
+      <div class="note neutral"><strong>Was zu sehen sein sollte:</strong> ${esc(paar.erwartung)}<br>
+        <strong>Was die Erwartung widerlegen würde:</strong> ${esc(paar.widerlegt)}</div>`;
+    if(!gw.length)t+=`<div class="note warn">Es ist noch keine Wasseranalyse erfasst – die untere Spur bleibt leer. Ohne sie lässt sich die Frage «was war im Wasser» nicht beantworten.</div>`;
+    else{
+      const fehlt=wasserFehlt(paar);
+      if(fehlt.length)t+=`<div class="note warn">Im Giesswasser ${fehlt.length>1?'sind':'ist'} <strong>${esc(fehlt.map(k=>gwName(k)).join(', '))}</strong> in keiner Probe gemessen.
+        Die untere Spur bleibt deshalb leer, und diese Frage lässt sich mit dem vorhandenen Bestand <strong>nicht</strong> beantworten –
+        das Blattbild allein sagt nicht, ob es am Angebot oder an der Aufnahme liegt.
+        ${fehlt.indexOf('gw_NO2')>=0?'Nitrit ist der Trennversuch zwischen «Nitrifikation gestört» und «Ammonium wird einfach nachgeliefert»; frag es beim nächsten Auftrag mit an.':'Beim nächsten Wasserauftrag mitbestellen.'}</div>`;
+    }
+    if(gw.length&&gw.length<4)t+=`<p class="tiny muted">Nur ${gw.length} Wasseranalyse${gw.length>1?'n':''}. Zwischen zwei Punkten wird bewusst nicht interpoliert – was dazwischen war, weiss niemand.</p>`;
+    t+=`<p class="tiny muted">Blattsaft und Wasser haben getrennte Achsen und werden <strong>nicht</strong> ineinander umgerechnet.
+      Zwischen beiden stehen Wurzel, Substrat und Transpiration; eine Umrechnung würde eine Bilanz vortäuschen, die es nicht gibt.</p>`;
+    return t;
+  }
+
+  function vlUnten(){
+    const {paar}=vlAb();
+    const ja=jungAlt().filter(x=>paar.blatt.includes(x.k));
+    let t='';
+    if(ja.length)t+=`<div class="card"><div class="hd"><div><h2>Jung gegen Alt</h2>
+      <p class="sub">Das Verhältnis der Blattetagen verrät, ob ein Nährstoff umverteilt wird – und es entscheidet, welche Etage ein Symptom zeigen müsste.</p></div></div>
+      <div class="scroll"><table><thead><tr><th>Nährstoff</th><th>Mobilität</th><th>jung/alt im Mittel</th><th>erwartet</th><th>Lesart</th></tr></thead><tbody>
+      ${ja.map(x=>`<tr><td><strong>${esc(NAME[x.k]||x.k)}</strong></td><td>${esc(x.mob)}</td>
+        <td class="mono ${x.auffaellig?'val-off':''}">${nz(x.mittel,2)} <span class="tiny muted">n=${x.n}</span></td>
+        <td class="tiny muted">${esc(x.erwartet)}</td>
+        <td class="small">${x.mob==='mobil'
+          ? (x.auffaellig?'Das Jungblatt hält mehr als das Altblatt – die Pflanze räumt das Altblatt aus. Zeichen von Knappheit.':'unauffällig')
+          : x.mob==='immobil'
+          ? (x.auffaellig?'Im Altblatt nicht weniger als im Jungblatt – ungewöhnlich für einen immobilen Nährstoff.':'Jungblatt höher, wie erwartet: der Nachschub kommt im Altblatt nie an. Ein Symptom müsste am Jungblatt erscheinen.')
+          : 'teilmobil – beide Blattetagen zählen'}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="tiny muted" style="margin-top:8px">Bei mobilen Nährstoffen erscheint ein Mangel zuerst am <strong>Altblatt</strong>, bei immobilen am <strong>Jungblatt</strong>.
+      Wer ein Symptom fotografiert, sollte deshalb die Blattetage festhalten – im Reiter Fotos gibt es dafür ein Feld. Das trennt Magnesium von Eisen und Zink schneller als jede Analyse.</p></div>`;
+    /* Zahlen zum gewählten Paar */
+    t+=`<div class="card"><h2>Die Zahlen dahinter</h2>
+      ${paar.blatt.map(k=>`<details><summary>${esc(NAME[k]||k)} im Blattsaft</summary><div style="margin-top:10px">${vlTabelle(k)}</div></details>`).join('')}
+      ${paar.wasser.map(k=>`<details><summary>${esc(gwName(k))} im Wasser</summary><div style="margin-top:10px">${vlWasserTabelle(k)}</div></details>`).join('')}
+    </div>`;
+    return t;
+  }
+  function vlTabelle(k){
+    const zeilen=erh.map(e=>{
+      const wj=e.proben.jung&&e.proben.jung.werte[k],wa=e.proben.alt&&e.proben.alt.werte[k];
+      const o=optVon(leitProbe(e),k);
+      return {e,wj,wa,o,b:e.bew[k]};
+    });
+    return `<div class="scroll"><table><thead><tr><th>Datum</th><th>Satz</th><th>Alter</th><th>jung</th><th>alt</th><th>Bewertung</th></tr></thead><tbody>
+    ${zeilen.map(r=>`<tr class="klick" data-tun="erhebung" data-id="${esc(r.e.id)}">
+      <td class="mono">${fmt(r.e.datum)}</td><td class="mono">${esc(r.e.satz||'')} ${zustandTag(r.e.zustand)}</td>
+      <td class="tiny">${alterTag(r.e.alter)}</td>
+      <td style="min-width:140px">${balken(r.wj,r.o)}</td><td style="min-width:140px">${balken(r.wa,r.o)}</td>
+      <td>${r.b&&!r.b.fehlt?stPill(r.b.ok?(r.b.rand?'randtief':'ok'):(r.b.st==='tief'?'tief':'hoch')):'<span class="pill na">nicht bewertet</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  function vlWasserTabelle(k){
+    const r=gwRichtVon(k);
+    return gw.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Entnahmestelle</th><th>Wert</th><th>entspricht</th>${r?'<th>Richtwert</th>':''}</tr></thead><tbody>
+    ${gw.map(a=>{const w=a.werte[k];
+      return `<tr class="klick" data-tun="detail" data-id="${esc(a.id)}"><td class="mono">${fmt(a.datum)}</td>
+      <td>${esc(gwStelle(a))}</td>
+      <td class="mono${(w&&r&&!w.unter&&w.wert>r.bis)?' val-off':''}">${w?zeigeWert(w):'–'} <span class="tiny muted">${esc(einheit(k))}</span></td>
+      <td class="mono tiny">${w&&inMgL(k,w.wert)!=null?nz(inMgL(k,w.wert),2)+' mg/l':'–'}</td>
+      ${r?`<td class="tiny muted">bis ${nz(r.bis)} <span class="tag schaetz">Annahme</span></td>`:''}</tr>`}).join('')}
+    </tbody></table></div>`:'<p class="muted small">Noch keine Wasseranalyse.</p>';
+  }
+
+  DIAG={teile:[['vlKarte',vlKopf],['vlUnten',vlUnten]],zeichnen:vlZeichnen,klick:id=>{
+    if(erh.some(e=>e.id===id))erhebungDetail(id);else detail(id);
+  }};
+  nachRender=vlZeichnen;
+  return `<div class="card" id="vlKarte">${vlKopf()}</div><div id="vlUnten">${vlUnten()}</div>`;
+}
+AKTION.vlPaar=d=>{vlPaar=d.v;diagAus.clear();
+  const p=PAARE_VOR.find(x=>x.id===d.v);
+  if(p&&p.blatt.length>1)vlSkala='lage';
+  diagFrisch()};
+AKTION.vlSkala=d=>{vlSkala=d.v;diagFrisch()};
+AKTION.vlTank=()=>{vlTank=!vlTank;diagFrisch()};
+AKTION.vlLog=()=>{vlLog=!vlLog;diagFrisch()};
+AKTION.vlZeit=d=>{
+  vlZeit=d.v;
+  if(d.v==='alles'){koVon=koBis=null}
+  else{
+    const alle=erhebungen().map(e=>+new Date(e.datum)).concat(gwProben().map(a=>+new Date(a.datum)));
+    const bis=alle.length?Math.max(...alle):Date.now();
+    koBis=bis+3*864e5;koVon=bis-(+d.v)*864e5;
+  }
+  diagFrisch();
+};
+
+/* ══════════ 10b · Nährstoffe im Einzelnen ══════════
    Das Diagramm ist hier das Herzstück: es steht zuoberst, alle Regler stehen
    darüber, und jeder Regler zeichnet nur das Diagramm neu – die Seite bleibt
    stehen, wo sie ist. Die Tabellen darunter beantworten dieselbe Frage in
@@ -2503,121 +3176,6 @@ AKTION.nsSkala=d=>{nsSkala=d.v;diagFrisch()};
 AKTION.nsBlatt=d=>{nsBlatt=d.v;diagFrisch()};
 AKTION.nsLinien=d=>{nsLinien=d.v;diagFrisch()};
 AKTION.nsLog=()=>{nsLog=!nsLog;diagFrisch()};
-
-/* ══════════ 11 · Wirkung ══════════ */
-let wk=null,wkVor=null,wkNach=null;
-function vWirkung(){
-  const evs=[...db.ereignisse].filter(e=>e.datum).sort((a,b)=>a.datum.localeCompare(b.datum));
-  if(!evs.length)return leerHinweis('Noch keine Änderung erfasst',
-    'Das ist die Leitfrage: was haben unsere Entscheidungen bewirkt? Trage im Logbuch ein, was ihr geändert habt – Dünger, Dosierung, Substrat, ein Präparat. Danach vergleicht die App die Erhebung davor mit der danach.',
-    '<button class="primary" data-tun="reiter" data-reiter="logbuch">Zum Logbuch</button>');
-  if(!wk||!evs.some(e=>e.id===wk)){wk=evs[evs.length-1].id;wkVor=wkNach=null}
-  const ev=evs.find(e=>e.id===wk);
-  const betroffen=ev.geltung==='saetze'&&ev.saetze&&ev.saetze.length?ev.saetze:null;
-  const erh=erhebungen();
-  const passt=e=>!betroffen||betroffen.includes(e.satz);
-  const autoVor=erh.filter(e=>e.datum<ev.datum&&passt(e)).pop();
-  const autoNach=erh.find(e=>e.datum>=ev.datum&&passt(e));
-  const vor=erh.find(e=>e.id===wkVor)||autoVor;
-  const nach=erh.find(e=>e.id===wkNach)||autoNach;
-  const opt=(e,sel)=>`<option value="${esc(e.id)}"${sel?' selected':''}>${fmt(e.datum)} · Satz ${esc(e.satz)}${e.zustand?' ('+esc(e.zustand)+')':''} · ${e.alter.woche!=null?(e.alter.sicher?'':'~')+nz(e.alter.woche,1)+' W':'Alter ?'}</option>`;
-
-  let inhalt='';
-  if(vor&&nach){
-    const zeilen=kern().map(k=>{
-      const bv=vor.bew[k],bn=nach.bew[k];
-      if(!bv||bv.fehlt||!bn||bn.fehlt)return null;
-      if(bv.art!==bn.art)return null;
-      const mv=(bv.mass||bv.werte),mn=(bn.mass||bn.werte);
-      const av=mittel(mv.map(w=>abstand(lage(w.wert,w.opt))).filter(x=>x!=null));
-      const an=mittel(mn.map(w=>abstand(lage(w.wert,w.opt))).filter(x=>x!=null));
-      if(av==null||an==null)return null;
-      return {k,blatt:bv.art,vor:mittel(mv.map(w=>w.wert)),nach:mittel(mn.map(w=>w.wert)),
-        delta:av-an,stNach:bn.ok?'ok':bn.st};
-    }).filter(Boolean).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
-    if(zeilen.length){
-      nachRender=()=>chartProfil(el('cProfil'),zeilen);
-      const bes=zeilen.filter(z=>z.delta>0.02).length,sch=zeilen.filter(z=>z.delta<-0.02).length;
-      const iv=vor.index?Math.round(vor.index.anteil*100):null,inx=nach.index?Math.round(nach.index.anteil*100):null;
-      const wochen=Math.round(tage(vor.datum,nach.datum)/7);
-      const g=[];
-      if(vor.satz!==nach.satz)g.push(`die Proben stammen aus verschiedenen Sätzen (${vor.satz} und ${nach.satz}), die sich auch ohne die Änderung unterscheiden würden`);
-      if(vor.alter.woche!=null&&nach.alter.woche!=null&&Math.abs(vor.alter.woche-nach.alter.woche)>1.5)
-        g.push(`die Bestände waren unterschiedlich alt (${nz(vor.alter.woche,1)} gegen ${nz(nach.alter.woche,1)} Wochen), und mit dem Alter erschöpft sich die Grunddüngung`);
-      if(wochen>8)g.push(`zwischen den Erhebungen liegen ${wochen} Wochen, in denen sich auch die Jahreszeit verändert hat`);
-      if(wochen<2)g.push(`zwischen der Änderung und der zweiten Erhebung liegen nur ${wochen===0?'wenige Tage':wochen+' Woche'} – im Blattsaft ist eine Wirkung meist erst nach zwei bis drei Wochen sichtbar`);
-      const spaeter=db.ereignisse.filter(x=>x.id!==ev.id&&x.datum>ev.datum&&x.datum<=nach.datum);
-      if(spaeter.length)g.push(`dazwischen liegen ${spaeter.length} weitere Einträge im Logbuch (${spaeter.map(x=>x.titel||x.typ).join(', ')})`);
-      inhalt=`<div class="row" style="gap:26px;margin-bottom:12px">
-        <div><h4>Anteil im Optimum</h4><div style="display:flex;align-items:baseline;gap:8px">
-          <b style="font-family:'Bricolage Grotesque';font-size:24px">${iv==null?'–':iv+' %'}</b><span class="muted">→</span>
-          <b style="font-family:'Bricolage Grotesque';font-size:24px" class="${(inx||0)>=(iv||0)?'val-ok':'val-off'}">${inx==null?'–':inx+' %'}</b></div></div>
-        <div><h4>Bewegung</h4><div class="small">${bes} Nährstoffe Richtung Optimum, ${sch} davon weg</div>
-          <div class="tiny muted">${zeilen.length} von ${kern().length} Nährstoffen vergleichbar, jeder am massgeblichen Blatt</div></div></div>
-        <div id="cProfil" class="scroll"></div>
-        <p class="tiny muted" style="margin-top:10px">Der Balken zeigt die Veränderung des Abstands zum Optimum, nicht die Rohdifferenz. Ein Wert, der von weit unter dem Soll auf knapp darunter steigt, wandert nach rechts, auch wenn er das Optimum noch nicht erreicht.
-        Verglichen wird je Nährstoff dasselbe Blatt wie in der Kennzahl – phloemmobile am Altblatt, immobile am Jungblatt.</p>
-        <div class="note">Das ist ein Indiz, kein Beweis.${g.length?' Konkret: '+esc(g.join('; '))+'.':''} Belastbar wird es, wenn dieselbe Änderung ein zweites Mal in dieselbe Richtung zeigt – oder über eine Vergleichsgruppe.</div>`;
-    }else inhalt='<div class="note">Vorher und nachher gibt es keinen Nährstoff, der in beiden Erhebungen am selben Blatt beurteilbar wäre.</div>';
-  }else inhalt='<div class="note">Für diese Änderung fehlt eine Erhebung davor oder danach. Der Rhythmus Analyse – Änderung – Analyse ist genau der, der hier auswertbar wird. Im Planer kannst du die nächste Beprobung dafür einplanen.</div>';
-
-  /* Vergleichsgruppe: der einzige Modus, der Management von Alter und
-     Jahreszeit trennt – gleiches Haus, gleiche Woche, nur ein Teil betroffen. */
-  let gruppe='';
-  if(betroffen){
-    const fenster=[ev.datum,plus(ev.datum,56)];
-    const nachher=erh.filter(e=>e.datum>=fenster[0]&&e.datum<=fenster[1]&&e.index);
-    const a=nachher.filter(e=>betroffen.includes(e.satz)),b=nachher.filter(e=>!betroffen.includes(e.satz));
-    gruppe=`<div class="card"><div class="hd"><div><h2>Vergleichsgruppe</h2>
-      <p class="sub">Diese Änderung betrifft nur einen Teil der Sätze. Die übrigen standen im selben Haus, unter demselben Klima, in denselben Wochen – das ist der einzige Vergleich, der Management von Kulturalter und Jahreszeit trennt.</p></div></div>
-      ${a.length&&b.length?`<div class="row" style="gap:30px">
-        <div><h4>Betroffen (${esc(betroffen.join(', '))})</h4>
-          <b style="font-family:'Bricolage Grotesque';font-size:24px" class="val-ok">${Math.round(mittel(a.map(e=>e.index.anteil))*100)} %</b>
-          <div class="tiny muted">Mittel aus ${a.length} Erhebung${a.length>1?'en':''}</div></div>
-        <div><h4>Nicht betroffen</h4>
-          <b style="font-family:'Bricolage Grotesque';font-size:24px">${Math.round(mittel(b.map(e=>e.index.anteil))*100)} %</b>
-          <div class="tiny muted">Mittel aus ${b.length} Erhebung${b.length>1?'en':''}</div></div>
-        <div style="flex:1;min-width:230px"><h4>Unterschied</h4>
-          <div class="small">${Math.round((mittel(a.map(e=>e.index.anteil))-mittel(b.map(e=>e.index.anteil)))*100)} Prozentpunkte zugunsten der ${mittel(a.map(e=>e.index.anteil))>=mittel(b.map(e=>e.index.anteil))?'betroffenen':'nicht betroffenen'} Sätze</div></div></div>
-      <div class="note">Auch das ist noch kein Beweis: Die Sätze wurden nicht zufällig zugeteilt, und bei ${a.length+b.length} Erhebungen trägt der Vergleich noch wenig. Aber er ist der belastbarste, den euer Betrieb im laufenden Geschäft erzeugen kann.</div>`
-      :`<div class="note">Im Fenster von acht Wochen nach der Änderung fehlt ${!a.length?'eine Erhebung in den betroffenen Sätzen':'eine Erhebung in den übrigen Sätzen'}. Beprobt beide Gruppen im selben Zeitraum, dann entsteht hier ein echter Vergleich.</div>`}
-    </div>`;
-  }
-
-  /* Rundgänge: nur die des betroffenen Bereichs, nicht alle vermischt */
-  const t=+new Date(ev.datum),f=42*864e5;
-  const rgPasst=r=>!betroffen||r.satz==='alle'||betroffen.includes(r.satz);
-  const vorR=db.rundgaenge.filter(r=>{const x=+new Date(r.datum);return x<t&&x>=t-f&&rgPasst(r)});
-  const nachR=db.rundgaenge.filter(r=>{const x=+new Date(r.datum);return x>=t&&x<=t+f&&rgPasst(r)});
-  const arten=[...new Set([...vorR,...nachR].flatMap(r=>r.eintraege.map(e=>e.schaden)))];
-  const mit=(rs,art)=>{const v=rs.map(r=>{const x=r.eintraege.find(y=>y.schaden===art);return x?x.stufe:null}).filter(x=>x!=null);return v.length?mittel(v):null};
-  const bef=arten.map(art=>({art,vor:mit(vorR,art),nach:mit(nachR,art)})).filter(x=>x.vor!=null||x.nach!=null);
-
-  return `<div class="card"><div class="hd"><div><h2>Wirkung einer Änderung</h2>
-      <p class="sub">${esc(ev.typ)}${ev.titel?' · '+esc(ev.titel):''} vom ${fmt(ev.datum)}${betroffen?` · nur Sätze ${esc(betroffen.join(', '))}`:' · ganzes Haus'}</p></div>
-    <select data-aend="wkWahl">${evs.map(e=>`<option value="${esc(e.id)}"${e.id===wk?' selected':''}>${fmt(e.datum)} – ${esc(e.titel||e.typ)}</option>`).join('')}</select></div>
-    <div class="row" style="margin-bottom:14px">
-      <div><label class="lab">Erhebung davor</label><select data-aend="wkVor">
-        ${erh.filter(e=>e.datum<ev.datum).map(e=>opt(e,vor&&e.id===vor.id)).join('')||'<option>keine</option>'}</select></div>
-      <div><label class="lab">Erhebung danach</label><select data-aend="wkNach">
-        ${erh.filter(e=>e.datum>=ev.datum).map(e=>opt(e,nach&&e.id===nach.id)).join('')||'<option>keine</option>'}</select></div>
-      <div class="tiny muted" style="max-width:300px">Am aussagekräftigsten ist ein Paar aus demselben Satz oder wenigstens aus Beständen ähnlichen Alters.</div>
-    </div>
-    ${inhalt}</div>
-  ${gruppe}
-  <div class="card"><div class="hd"><div><h2>Befall in derselben Zeit</h2>
-    <p class="sub">Mittlere Befallsstufe der Rundgänge sechs Wochen davor und danach${betroffen?', nur für die betroffenen Sätze und Ganzhaus-Rundgänge':''} – als Beobachtung nebeneinander, nicht als Zusammenhang.</p></div></div>
-    ${bef.length?`<div class="scroll"><table><thead><tr><th>Schaden</th><th>davor</th><th>danach</th><th>Richtung</th></tr></thead><tbody>
-      ${bef.map(x=>{const d=(x.nach==null?0:x.nach)-(x.vor==null?0:x.vor);
-        return `<tr><td>${esc(schaden(x.art).name)}</td><td class="mono">${x.vor==null?'–':nz(x.vor,1)}</td><td class="mono">${x.nach==null?'–':nz(x.nach,1)}</td>
-        <td>${x.vor==null||x.nach==null?'<span class="muted">nicht vergleichbar</span>':d<-0.2?'<span class="pill ok">zurückgegangen</span>':d>0.2?'<span class="pill off">zugenommen</span>':'<span class="pill na">unverändert</span>'}</td></tr>`}).join('')}
-      </tbody></table></div>
-      <div class="note">Befallsdruck folgt zuerst Jahreszeit und Klima. Ob die Ernährung mitspielt, lässt sich aus solchen Paaren nicht ableiten. Die App behauptet hier bewusst keine Kausalität.</div>`
-      :'<p class="muted small">In diesem Zeitfenster liegen keine passenden Rundgänge vor.</p>'}</div>`;
-}
-AKTION.wkWahl=(d,ev)=>{wk=ev.target.value;wkVor=wkNach=null;render()};
-AKTION.wkVor=(d,ev)=>{wkVor=ev.target.value;render()};
-AKTION.wkNach=(d,ev)=>{wkNach=ev.target.value;render()};
 
 /* ══════════ 12 · Substrat und Wasser ══════════ */
 /* Richtwerte für das Substrat sind GESETZTE ANNAHMEN, keine Laborvorgaben.
@@ -3154,17 +3712,32 @@ function bilanzGiess(probe,alleProben){
     const pr=db.produkte[e.mittel];return pr.form!=='fest'&&!pr.dichte}).map(e=>e.mittel))];
   const jeRes=eintraege.filter(e=>e.jeReservoir).length;
   const nurStelle=eintraege.filter(e=>e.stelle&&e.stelle!=='beide').length;
+  /* Verduennung: im Fenster nachgefuelltes Wasser aus dem Logbuch. Jede Gabe
+     wird mit exp(-nachher nachgefuellte Menge / Systemvolumen) abgewertet –
+     das ist das einfachste Modell eines durchmischten Behaelters, dem
+     nachgefuellt wird. Es steht und faellt mit lueckenloser Erfassung der
+     Wasserzugaben und ist deshalb ausdruecklich als Modell gekennzeichnet. */
+  const wasser=db.ereignisse.filter(e=>e.typ==='Wasserzugabe'&&e.menge!=null&&e.datum
+    &&e.datum>f.von&&e.datum<=f.bis)
+    .map(e=>({datum:e.datum,menge:e.menge*(e.jeReservoir?2:1)}));
+  const wasserGesamt=wasser.reduce((a,b)=>a+b.menge,0);
+  const nachSpuelung=datum=>wasser.filter(w=>w.datum>datum).reduce((a,b)=>a+b.menge,0);
   const zeilen=[];
   for(const el of BILANZ_EL){
-    let g=0,hat=false;
+    let g=0,gRest=0,hat=false;
     for(const e of eintraege){
       const m=eintragMasse(e,el);
-      if(m&&m.g!=null){g+=m.g;hat=true}
+      if(m&&m.g!=null){
+        g+=m.g;hat=true;
+        gRest+=m.g*Math.exp(-nachSpuelung(e.datum)/systemLiter());
+      }
     }
     if(!hat)continue;
     const mgL=g/systemLiter()*1000;
     const mikro=el.gw.every(k=>GW_MIKRO.indexOf(k.slice(3))>=0);
-    const dosiert=mikro?mgL/ATOMMASSE[el.el]*1000:mgL/ATOMMASSE[el.el];
+    const um=x=>mikro?x/ATOMMASSE[el.el]*1000:x/ATOMMASSE[el.el];
+    const dosiert=um(mgL);
+    const verduennt=wasserGesamt>0?um(gRest/systemLiter()*1000):null;
     let gemessen=null,unter=false;
     for(const k of el.gw){
       const w=probe.werte[k];
@@ -3172,10 +3745,12 @@ function bilanzGiess(probe,alleProben){
       gemessen=(gemessen||0)+w.wert;
       if(w.unter)unter=true;
     }
-    zeilen.push({el,dosiert,gemessen,unter,einheit:mikro?'µmol/l':'mmol/l',
-      anteil:(gemessen!=null&&dosiert>0)?gemessen/dosiert:null});
+    zeilen.push({el,dosiert,verduennt,gemessen,unter,einheit:mikro?'µmol/l':'mmol/l',
+      anteil:(gemessen!=null&&dosiert>0)?gemessen/dosiert:null,
+      anteilV:(gemessen!=null&&verduennt>0)?gemessen/verduennt:null});
   }
   return {fenster:f,deckung,eintraege,zeilen,ohneDichte,jeRes,nurStelle,
+    wasser,wasserGesamt,
     genug:deckung.anteil>=BILANZ_DECKUNG&&eintraege.length>0};
 }
 
@@ -3206,15 +3781,25 @@ function bilanzKarte(alle){
       <p class="tiny muted">Der schnellste Weg dorthin ist der Excel-Import: er macht aus der Bemerkungsspalte Logbucheinträge.</p>`;
     return s+'</div>';
   }
-  s+=`<div class="scroll"><table><thead><tr><th>Element</th><th>dosiert (berechnet)</th><th>gemessen</th><th>Anteil</th><th>Einheit</th></tr></thead><tbody>
+  const mitV=b.wasserGesamt>0;
+  s+=`<div class="scroll"><table><thead><tr><th>Element</th><th>dosiert (berechnet)</th>
+    ${mitV?'<th>nach Verdünnung <span class="tag schaetz">Modell</span></th>':''}
+    <th>gemessen</th><th>Anteil</th><th>Einheit</th></tr></thead><tbody>
     ${b.zeilen.map(z=>`<tr><td><strong>${esc(z.el.name)}</strong>${z.el.frisch?' <span class="tag">auch im Frischwasser</span>':''}
         ${z.el.hinweis?`<div class="tiny muted">${esc(z.el.hinweis)}</div>`:''}</td>
       <td class="mono">${nz(z.dosiert,z.einheit==='µmol/l'?1:3)}</td>
+      ${mitV?`<td class="mono">${z.verduennt==null?'–':nz(z.verduennt,z.einheit==='µmol/l'?1:3)}</td>`:''}
       <td class="mono">${z.gemessen==null?'<span class="muted">nicht gemessen</span>':(z.unter?'&lt;':'')+nz(z.gemessen,z.einheit==='µmol/l'?1:3)}</td>
       <td>${z.anteil==null?'<span class="muted">–</span>':
-        `<span class="pill ${z.anteil>=0.6?'ok':z.anteil>=0.2?'na':'off'}">${nz(z.anteil*100,0)} %</span>`}</td>
+        `<span class="pill ${z.anteil>=0.6?'ok':z.anteil>=0.2?'na':'off'}">${nz(z.anteil*100,0)} %</span>`
+        +(mitV&&z.anteilV!=null?`<div class="tiny muted">${nz(z.anteilV*100,0)} % nach Verdünnung</div>`:'')}</td>
       <td class="tiny muted">${esc(z.einheit)}</td></tr>`).join('')}
     </tbody></table></div>`;
+  if(mitV)s+=`<p class="tiny muted" style="margin-top:8px"><strong>Zur Verdünnungsspalte.</strong>
+    Im Zeitraum sind ${nz(b.wasserGesamt,0)} Liter Wasserzugabe im Logbuch erfasst, das ist das ${nz(b.wasserGesamt/systemLiter(),1)}-fache des Systemvolumens.
+    Die Spalte rechnet jede Gabe mit dem Anteil ab, der nach den späteren Wasserzugaben noch im System wäre – das einfachste Modell eines durchmischten Behälters.
+    Es setzt voraus, dass <em>alle</em> Wasserzugaben im Logbuch stehen; fehlt eine, ist die Zahl zu hoch. Sie ist ein Modell, kein Messwert.</p>`;
+  else s+=`<p class="tiny muted" style="margin-top:8px">Im Zeitraum ist keine Wasserzugabe im Logbuch erfasst. Ohne sie kann die App die Verdünnung durch das wöchentliche Nachfüllen nicht berücksichtigen – die Spalte «dosiert» ist deshalb eine Obergrenze, und der Anteil rechts entsprechend eine Untergrenze.</p>`;
 
   s+=`<div class="note neutral"><strong>Was diese Rechnung nicht ist.</strong>
     Sie gilt für eine <em>frisch angesetzte</em> Lösung: Menge mal Gehalt geteilt durch Systemvolumen.
@@ -4075,6 +4660,7 @@ function vLogbuch(){
           ${e.quelle==='excel'?'<span class="tag schaetz">aus Excel-Import</span>':''}
           <div style="flex:1"></div>
           ${fo.length?`<span class="chip" data-tun="fotoTag" data-datum="${esc(e.datum)}">${fo.length} Foto${fo.length>1?'s':''}</span>`:''}
+          <button class="ghost" data-tun="wirkung" data-id="${esc(e.id)}">Wirkung prüfen</button>
           <button class="ghost" data-tun="lbWieder" data-id="${esc(e.id)}">wieder so</button>
           <button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button>
           <button class="ghost" data-tun="evWeg" data-id="${esc(e.id)}">entfernen</button>
@@ -4290,6 +4876,104 @@ AKTION.evSpeichern=()=>{
   if(i>=0)db.ereignisse[i]=ev;else db.ereignisse.push(ev);
   aend();el('dlg').close();render();toast('Gespeichert.');
 };
+
+/* ── Wirkung einer Änderung prüfen ──────────────────────────────────────
+   Früher ein eigener Reiter. Als Dialog am Logbucheintrag ist es besser
+   aufgehoben: die Frage entsteht dort, wo die Änderung steht.
+   Der Vergleichsgruppen-Teil ist der einzige Modus, der Management von
+   Kulturalter und Jahreszeit trennt – gleiches Haus, gleiche Woche, nur ein
+   Teil betroffen. Genau deshalb ist er nicht mit weggefallen.            */
+let WK=null;
+AKTION.wirkung=d=>{WK={ev:d.id,vor:null,nach:null};wirkungDialog()};
+AKTION.wkVor=(d,ev)=>{WK.vor=ev.target.value||null;wirkungDialog()};
+AKTION.wkNach=(d,ev)=>{WK.nach=ev.target.value||null;wirkungDialog()};
+function wirkungDialog(){
+  const ev=db.ereignisse.find(x=>x.id===WK.ev);
+  if(!ev)return toast('Diesen Eintrag gibt es nicht mehr.');
+  const betroffen=ev.geltung==='saetze'&&ev.saetze&&ev.saetze.length?ev.saetze:null;
+  const erh=erhebungen();
+  const passt=e=>!betroffen||betroffen.includes(e.satz);
+  const autoVor=erh.filter(e=>e.datum<ev.datum&&passt(e)).pop();
+  const autoNach=erh.find(e=>e.datum>=ev.datum&&passt(e));
+  const vor=erh.find(e=>e.id===WK.vor)||autoVor;
+  const nach=erh.find(e=>e.id===WK.nach)||autoNach;
+  const opt=(e,sel)=>`<option value="${esc(e.id)}"${sel?' selected':''}>${fmt(e.datum)} · ${esc(e.satz)}${e.zustand?' ('+esc(e.zustand)+')':''} · ${e.alter.woche!=null?(e.alter.sicher?'':'~')+nz(e.alter.woche,1)+' W':'Alter ?'}</option>`;
+
+  let inhalt='';
+  if(vor&&nach){
+    const zeilen=kern().map(k=>{
+      const bv=vor.bew[k],bn=nach.bew[k];
+      if(!bv||bv.fehlt||!bn||bn.fehlt||bv.art!==bn.art)return null;
+      const mv=(bv.mass||bv.werte),mn=(bn.mass||bn.werte);
+      const av=mittel(mv.map(w=>abstand(lage(w.wert,w.opt))).filter(x=>x!=null));
+      const an=mittel(mn.map(w=>abstand(lage(w.wert,w.opt))).filter(x=>x!=null));
+      if(av==null||an==null)return null;
+      return {k,blatt:bv.art,vor:mittel(mv.map(w=>w.wert)),nach:mittel(mn.map(w=>w.wert)),
+        delta:av-an,stNach:bn.ok?'ok':bn.st};
+    }).filter(Boolean).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
+    if(zeilen.length){
+      const bes=zeilen.filter(z=>z.delta>0.02).length,sch=zeilen.filter(z=>z.delta<-0.02).length;
+      const iv=vor.index?Math.round(vor.index.anteil*100):null,inx=nach.index?Math.round(nach.index.anteil*100):null;
+      const wochen=Math.round(tage(vor.datum,nach.datum)/7);
+      const g=[];
+      if(vor.satz!==nach.satz)g.push(`die Proben stammen aus verschiedenen Sätzen (${vor.satz} und ${nach.satz}), die sich auch ohne die Änderung unterscheiden würden`);
+      if(vor.alter.woche!=null&&nach.alter.woche!=null&&Math.abs(vor.alter.woche-nach.alter.woche)>1.5)
+        g.push(`die Bestände waren unterschiedlich alt (${nz(vor.alter.woche,1)} gegen ${nz(nach.alter.woche,1)} Wochen), und mit dem Alter erschöpft sich die Grunddüngung`);
+      if(wochen>8)g.push(`zwischen den Erhebungen liegen ${wochen} Wochen, in denen sich auch die Jahreszeit verändert hat`);
+      if(wochen<2)g.push(`zwischen der Änderung und der zweiten Erhebung liegen nur ${wochen===0?'wenige Tage':wochen+' Woche'} – im Blattsaft ist eine Wirkung meist erst nach zwei bis drei Wochen sichtbar`);
+      const spaeter=db.ereignisse.filter(x=>x.id!==ev.id&&x.datum>ev.datum&&x.datum<=nach.datum);
+      if(spaeter.length)g.push(`dazwischen liegen ${spaeter.length} weitere Einträge im Logbuch (${spaeter.map(x=>x.titel||x.typ).join(', ')})`);
+      inhalt=`<div class="row" style="gap:26px;margin-bottom:12px">
+        <div><h4>Anteil im Optimum</h4><div style="display:flex;align-items:baseline;gap:8px">
+          <b style="font-family:'Bricolage Grotesque';font-size:24px">${iv==null?'–':iv+' %'}</b><span class="muted">→</span>
+          <b style="font-family:'Bricolage Grotesque';font-size:24px" class="${(inx||0)>=(iv||0)?'val-ok':'val-off'}">${inx==null?'–':inx+' %'}</b></div></div>
+        <div><h4>Bewegung</h4><div class="small">${bes} Nährstoffe Richtung Sollbereich, ${sch} davon weg</div>
+          <div class="tiny muted">${zeilen.length} von ${kern().length} vergleichbar, jeder am massgeblichen Blatt</div></div></div>
+        <div class="scroll"><table><thead><tr><th>Nährstoff</th><th>Blatt</th><th>vorher</th><th>nachher</th><th>Richtung</th></tr></thead><tbody>
+        ${zeilen.map(z=>`<tr><td><strong>${esc(NAME[z.k]||z.k)}</strong></td>
+          <td class="tiny muted">${esc(z.blatt==='beide'?'jung und alt':z.blatt+'blatt')}</td>
+          <td class="mono">${nz(z.vor)}</td><td class="mono">${nz(z.nach)} <span class="tiny muted">${esc(einheit(z.k))}</span></td>
+          <td class="small ${z.delta>0.02?'val-ok':z.delta<-0.02?'val-off':''}">${z.delta>0.02?'↗ Richtung Sollbereich':z.delta<-0.02?'↘ weiter weg':'→ unverändert'}${istOk(z.stNach)?' ✓':''}</td></tr>`).join('')}
+        </tbody></table></div>
+        <p class="tiny muted" style="margin-top:8px">Verglichen wird der Abstand zum Sollbereich, nicht die Rohdifferenz. Ein Wert, der von weit unter dem Soll auf knapp darunter steigt, gilt als Bewegung Richtung Sollbereich, auch wenn er ihn noch nicht erreicht.</p>
+        <div class="note">Das ist ein Indiz, kein Beweis.${g.length?' Konkret: '+esc(g.join('; '))+'.':''} Belastbar wird es, wenn dieselbe Änderung ein zweites Mal in dieselbe Richtung zeigt – oder über eine Vergleichsgruppe.</div>`;
+    }else inhalt='<div class="note">Vorher und nachher gibt es keinen Nährstoff, der in beiden Erhebungen am selben Blatt beurteilbar wäre.</div>';
+  }else inhalt='<div class="note">Für diese Änderung fehlt eine Erhebung davor oder danach. Der Rhythmus Analyse – Änderung – Analyse ist genau der, der hier auswertbar wird. Im Planer lässt sich die nächste Beprobung dafür eintragen.</div>';
+
+  let gruppe='';
+  if(betroffen){
+    const bis=plus(ev.datum,56);
+    const nachher=erh.filter(e=>e.datum>=ev.datum&&e.datum<=bis&&e.index);
+    const a=nachher.filter(e=>betroffen.includes(e.satz)),b=nachher.filter(e=>!betroffen.includes(e.satz));
+    gruppe=`<h4 style="margin-top:18px">Vergleichsgruppe</h4>
+      <p class="tiny muted">Gleiches Haus, gleiche Wochen, nur ein Teil der Sätze betroffen – der einzige Modus, der Management von Kulturalter und Jahreszeit trennt.</p>
+      ${a.length&&b.length?`<div class="row" style="gap:26px;margin-top:8px">
+        <div><h4>Betroffen (${esc(betroffen.join(', '))})</h4>
+          <b style="font-family:'Bricolage Grotesque';font-size:22px">${Math.round(mittel(a.map(e=>e.index.anteil))*100)} %</b>
+          <div class="tiny muted">${a.length} Erhebung${a.length>1?'en':''}</div></div>
+        <div><h4>Nicht betroffen</h4>
+          <b style="font-family:'Bricolage Grotesque';font-size:22px">${Math.round(mittel(b.map(e=>e.index.anteil))*100)} %</b>
+          <div class="tiny muted">${b.length} Erhebung${b.length>1?'en':''}</div></div>
+        <div><h4>Unterschied</h4>
+          <div class="small">${Math.round((mittel(a.map(e=>e.index.anteil))-mittel(b.map(e=>e.index.anteil)))*100)} Prozentpunkte zugunsten der ${mittel(a.map(e=>e.index.anteil))>=mittel(b.map(e=>e.index.anteil))?'betroffenen':'nicht betroffenen'} Sätze</div>
+          <div class="tiny muted">bei ${a.length} gegen ${b.length} Erhebungen ist das ein Hinweis, noch kein Beweis</div></div></div>`
+      :`<div class="note">Im Fenster von acht Wochen nach der Änderung fehlt ${!a.length?'eine Erhebung in den betroffenen Sätzen':'eine Erhebung in den übrigen Sätzen'}. Beprobt beide Gruppen im selben Zeitraum, dann entsteht hier ein echter Vergleich.</div>`}`;
+  }else{
+    gruppe=`<div class="note neutral" style="margin-top:16px">Diese Änderung betrifft das ganze Gewächshaus. Damit gibt es keine Vergleichsgruppe – und der Vergleich oben kann Management, Kulturalter und Jahreszeit nicht trennen.
+      Änderungen, die nur einen Teil der Sätze betreffen, sind fachlich weit ergiebiger: trag das unter «Gilt für» ein, wenn es zutrifft.</div>`;
+  }
+
+  dialog(`Wirkung von «${ev.titel||ev.typ}» vom ${fmt(ev.datum)}`,
+    `<div class="row" style="margin-bottom:14px">
+      <div><label class="lab">Erhebung davor</label><select data-aend="wkVor">
+        <option value="">automatisch${autoVor?' ('+fmt(autoVor.datum)+')':''}</option>
+        ${erh.filter(e=>e.datum<ev.datum).map(e=>opt(e,vor&&e.id===vor.id&&WK.vor)).join('')}</select></div>
+      <div><label class="lab">Erhebung danach</label><select data-aend="wkNach">
+        <option value="">automatisch${autoNach?' ('+fmt(autoNach.datum)+')':''}</option>
+        ${erh.filter(e=>e.datum>=ev.datum).map(e=>opt(e,nach&&e.id===nach.id&&WK.nach)).join('')}</select></div>
+    </div>${inhalt}${gruppe}`,
+    '<button data-tun="dlgZu">Schliessen</button>');
+}
 
 /* ══════════ 14 · Rundgang ══════════ */
 let rg={datum:heute(),satz:'alle',eintraege:{},notiz:'',kultur:''};
@@ -4832,7 +5516,7 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
   if(el('dlg').open)return;
   if(DIAG)return diagFrisch();
-  if(['lage','naehrstoff','wirkung','substrat','giess','planer'].indexOf(tab)>=0)render()},250)});
+  if(['lage','verlauf','naehrstoff','substrat','giess','planer'].indexOf(tab)>=0)render()},250)});
 document.addEventListener('keydown',e=>{
   if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sichern()}
 });

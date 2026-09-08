@@ -1,7 +1,7 @@
 const A=require('./harness.js');
 let fehler=0;
 const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
-const TABS=['vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vLogbuch','vRund','vPlaner','vSaetze'];
+const TABS=['vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vLogbuch','vRund','vPlaner','vSaetze'];
 function alleReiter(label){
   const bad=[];
   for(const t of TABS){

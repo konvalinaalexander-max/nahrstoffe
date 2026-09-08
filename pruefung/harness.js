@@ -38,12 +38,13 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'optVon','optQuelle','status','istOk','istRand','lage','abstand','ausmass','schwereVon',
  'erhebungen','massgebliche','bewerte','indexVon','bilanz','verh','substratZu','befunde','wiederkehrend',
  'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
- 'vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
- 'chartPunkte','chartIndex','chartProfil','chartSaetze','render','sichern','laden','felderText',
+ 'vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
+ 'chartPunkte','chartIndex','chartStapel','chartSaetze','zeitMarken','PAARE_VOR','render','sichern','laden','felderText',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',
  'bilanzGiess','bilanzFenster','bilanzDeckung','bilanzKarte','eintragMasse','BILANZ_EL','ATOMMASSE','systemLiter',
+ 'rangliste','eingangsbilanz','jungAlt','ranglisteKarte','eingangsKarte','pfeil','pfeilText','HAUPT','MOBILTEXT',
  'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',

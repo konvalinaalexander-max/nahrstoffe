@@ -133,6 +133,124 @@ require('fs').mkdirSync(shots,{recursive:true});
   await p.click('#nsKarte button:text-is("Was daneben liegt")');await p.waitForTimeout(350);
   console.log('  ✓ Voreinstellung gewählt:',(await p.$eval('#nsKarte h2',e=>e.textContent)));
 
+  console.log('\n── Verlauf: gekoppelte Zeitachse ──');
+  await p.click('#nav button:text-is("Verlauf")');await p.waitForTimeout(450);
+
+  /* Das Diagramm ist auch hier die erste Karte. */
+  const vlErst=await p.$eval('#view > div:first-child',e=>e.id||'');
+  console.log((vlErst==='vlKarte'?'  ✓ ':'  ✗ ')+'Das gekoppelte Diagramm ist die erste Karte ('+(vlErst||'ohne Kennung')+')');
+  if(vlErst!=='vlKarte')fehler.push('Verlauf: Diagramm steht nicht zuoberst');
+
+  /* Mehrere Spuren, aber nur EINE Zeitachse: sonst waere die Kopplung nur behauptet. */
+  const vlSvgN=await p.$$eval('#cVl svg',e=>e.length);
+  const vlSpuren=await p.$$eval('#cVl text',es=>es.map(e=>e.textContent).filter(t=>/^(Pflanze|Wasser)/.test(t)));
+  const vlAchse=await p.$$eval('#cVl text',es=>es.filter(e=>/Ziehen verschiebt/.test(e.textContent)).length);
+  console.log('  Spuren:',vlSpuren.join(' | '));
+  console.log(((vlSvgN===1&&vlSpuren.length>=2)?'  ✓ ':'  ✗ ')+'Mehrere Spuren in einer einzigen Zeichnung ('+vlSvgN+' SVG, '+vlSpuren.length+' Spuren)');
+  if(vlSvgN!==1||vlSpuren.length<2)fehler.push('Verlauf: Spuren nicht gekoppelt');
+  console.log((vlAchse===1?'  ✓ ':'  ✗ ')+'Und genau eine gemeinsame Zeitachse');
+  if(vlAchse!==1)fehler.push('Verlauf: nicht genau eine Zeitachse');
+
+  /* Der Wechsel der Frage muss Titel, Diagramm UND Text aendern – nicht nur
+     die Schaltflaeche einfaerben. Genau dieser Fehler ist beim Bauen passiert. */
+  await p.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await p.waitForTimeout(200);
+  const vy=await p.evaluate(()=>window.scrollY);
+  const vlVor={t:await p.$eval('#vlKarte h2',e=>e.textContent),
+               s:await p.$eval('#cVl',e=>e.innerHTML.length),
+               n:await p.$eval('#vlKarte .note',e=>e.innerText)};
+  await p.$eval('#vlKarte .chip:text-is("Kommt das Eisen an?")',e=>e.click());await p.waitForTimeout(450);
+  const vlNach={t:await p.$eval('#vlKarte h2',e=>e.textContent),
+                s:await p.$eval('#cVl',e=>e.innerHTML.length),
+                n:await p.$eval('#vlKarte .note',e=>e.innerText)};
+  const vy2=await p.evaluate(()=>window.scrollY);
+  /* Wird die Seite durch den Wechsel kuerzer, rutscht sie zwangslaeufig hoch.
+     Erwartet wird deshalb die alte Stelle, begrenzt auf das neue Seitenende. */
+  const vMax=await p.evaluate(()=>Math.max(0,document.body.scrollHeight-window.innerHeight));
+  const vErw=Math.min(vy,vMax);
+  console.log('  Frage:',JSON.stringify(vlVor.t),'→',JSON.stringify(vlNach.t));
+  const gewechselt2=vlVor.t!==vlNach.t&&vlVor.n!==vlNach.n&&vlVor.s!==vlNach.s;
+  console.log((gewechselt2?'  ✓ ':'  ✗ ')+'Der Wechsel der Frage ändert Titel, Diagramm und Erwartungstext');
+  if(!gewechselt2)fehler.push('Verlauf: Fragewechsel wirkt nicht auf den Inhalt');
+  console.log((Math.abs(vErw-vy2)<40?'  ✓ ':'  ✗ ')+'Ohne Seitensprung ('+vy+' → '+vy2+', möglich wären '+vMax+')');
+  if(Math.abs(vErw-vy2)>=40)fehler.push('Verlauf: Seitensprung beim Fragewechsel');
+
+  /* Getrennte Achsen je Einheit: µmol/l und pH duerfen sich keine teilen. */
+  const vlEinh=await p.$$eval('#cVl text',es=>es.map(e=>e.textContent).filter(t=>/µmol\/l|ohne Einheit|Lage 0–3/.test(t)));
+  console.log('  Einheiten der Spuren:',[...new Set(vlEinh)].join(' | '));
+  console.log((new Set(vlEinh).size>=2?'  ✓ ':'  ✗ ')+'Jede Spur trägt ihre eigene Einheit');
+  if(new Set(vlEinh).size<2)fehler.push('Verlauf: Einheiten nicht getrennt');
+
+  /* Zoomen, Ziehen, Zuruecksetzen */
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(200);
+  const marken=()=>p.$$eval('#cVl text',es=>es.map(e=>e.textContent).filter(t=>/^\d\d\.\d\d\.$|^(Jan|Feb|Mär|Apr|Mai|Jun|Jul|Aug|Sep|Okt|Nov|Dez) \d\d$/.test(t)));
+  const box=await (await p.$('#cVl')).boundingBox();
+  const mx=box.x+box.width*0.6,my=box.y+box.height*0.45;
+  const mVor=await marken();
+  await p.mouse.move(mx,my);await p.waitForTimeout(120);
+
+  /* Der gemeinsame Zeiger steht dort, wo die Maus steht – über allen Spuren. */
+  const zeiger=await p.$eval('#cVl .zeiger',e=>({x:+e.getAttribute('x1'),h:+e.getAttribute('y2')-+e.getAttribute('y1')}));
+  console.log(((zeiger.x>0&&zeiger.h>100)?'  ✓ ':'  ✗ ')+'Ein gemeinsamer Zeiger läuft über alle Spuren (x='+Math.round(zeiger.x)+', Höhe '+Math.round(zeiger.h)+')');
+  if(!(zeiger.x>0&&zeiger.h>100))fehler.push('Verlauf: kein gemeinsamer Zeiger');
+
+  await p.mouse.wheel(0,-240);await p.waitForTimeout(400);
+  const mZoom=await marken();
+  console.log('  Zeitmarken vor dem Zoom:',mVor.join(' '),'· danach:',mZoom.join(' '));
+  const gezoomt=JSON.stringify(mVor)!==JSON.stringify(mZoom);
+  console.log((gezoomt?'  ✓ ':'  ✗ ')+'Das Mausrad zoomt den Ausschnitt');
+  if(!gezoomt)fehler.push('Verlauf: Mausrad zoomt nicht');
+
+  /* Nach dem Zoomen darf kein Zeitraumknopf mehr aktiv sein – sonst luegt er. */
+  const aktivNachZoom=await p.$$eval('#vlKarte [data-tun="vlZeit"]',es=>es.filter(e=>e.classList.contains('on')).map(e=>e.textContent));
+  console.log((aktivNachZoom.length===0?'  ✓ ':'  ✗ ')+'Kein Zeitraumknopf behauptet danach noch, er gelte ('+(aktivNachZoom.join(',')||'keiner')+')');
+  if(aktivNachZoom.length)fehler.push('Verlauf: Zeitraumknopf bleibt nach dem Zoom aktiv');
+
+  await p.mouse.move(mx,my);await p.mouse.down();
+  await p.mouse.move(mx-160,my,{steps:8});await p.mouse.up();await p.waitForTimeout(400);
+  const mZieh=await marken();
+  console.log((JSON.stringify(mZoom)!==JSON.stringify(mZieh)?'  ✓ ':'  ✗ ')+'Ziehen verschiebt den Ausschnitt · '+mZieh.join(' '));
+  if(JSON.stringify(mZoom)===JSON.stringify(mZieh))fehler.push('Verlauf: Ziehen verschiebt nicht');
+
+  await p.mouse.dblclick(mx,my);await p.waitForTimeout(450);
+  const mZurueck=await marken();
+  console.log((JSON.stringify(mZurueck)===JSON.stringify(mVor)?'  ✓ ':'  ✗ ')+'Doppelklick setzt auf den ganzen Zeitraum zurück');
+  if(JSON.stringify(mZurueck)!==JSON.stringify(mVor))fehler.push('Verlauf: Doppelklick setzt nicht zurueck');
+  const aktivZurueck=await p.$$eval('#vlKarte [data-tun="vlZeit"]',es=>es.filter(e=>e.classList.contains('on')).map(e=>e.textContent));
+  console.log((aktivZurueck.join('')==='alles'?'  ✓ ':'  ✗ ')+'Und der Knopf «alles» ist wieder aktiv');
+
+  /* Zeitraumknopf greift */
+  await p.click('#vlKarte [data-tun="vlZeit"]:text-is("6 Wochen")');await p.waitForTimeout(400);
+  const m6=await marken();
+  console.log(((m6.length&&m6.length<=7)?'  ✓ ':'  ✗ ')+'«6 Wochen» schneidet den Ausschnitt zu ('+m6.join(' ')+')');
+  if(!(m6.length&&m6.length<=7))fehler.push('Verlauf: Zeitraumknopf greift nicht');
+  await p.click('#vlKarte [data-tun="vlZeit"]:text-is("alles")');await p.waitForTimeout(350);
+
+  /* Ein Punkt oeffnet die ganze Erhebung, wie im Reiter Nährstoffe. */
+  const vlHits=await p.$$('#cVl .hit');
+  if(vlHits.length){
+    const hb=await vlHits[vlHits.length-1].boundingBox();
+    await p.mouse.move(hb.x+hb.width/2,hb.y+hb.height/2);await p.waitForTimeout(140);
+    const vt=await p.$eval('.tipp',e=>({an:e.classList.contains('an'),t:e.innerText}));
+    console.log((vt.an?'  ✓ ':'  ✗ ')+'Infokästchen am Punkt: '+JSON.stringify(vt.t.replace(/\n/g,' · ').slice(0,80)));
+    if(!vt.an)fehler.push('Verlauf: kein Tooltip am Punkt');
+  }else{console.log('  ✗ keine anfassbaren Punkte');fehler.push('Verlauf: Punkte ohne Trefferflaeche')}
+  await p.screenshot({path:shots+'/verlauf.png',fullPage:false});
+
+  /* Die Wirkungsanalyse ist vom eigenen Reiter in den Logbuch-Zeitstrahl gewandert. */
+  console.log('\n── Wirkungsanalyse am Logbucheintrag ──');
+  await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(400);
+  const wBtn=await p.$('#view .zs button:text-is("Wirkung prüfen")');
+  if(wBtn){
+    await wBtn.click();await p.waitForTimeout(500);
+    const wt=await p.$eval('#dlgBody',e=>e.innerText);
+    console.log((/Vergleichsgruppe/.test(wt)?'  ✓ ':'  ✗ ')+'Die Vergleichsgruppen-Analyse ist erhalten geblieben');
+    if(!/Vergleichsgruppe/.test(wt))fehler.push('Wirkungsanalyse ohne Vergleichsgruppe');
+    console.log((/kein Beweis/.test(wt)?'  ✓ ':'  ✗ ')+'Und sagt weiterhin, dass sie nichts beweist');
+    if(!/kein Beweis/.test(wt))fehler.push('Wirkung: Vorbehalt fehlt');
+    await p.screenshot({path:shots+'/wirkung.png',fullPage:false});
+    await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(250);
+  }else{console.log('  ✗ kein Knopf «Wirkung prüfen» am Zeitstrahl');fehler.push('Wirkung: Knopf fehlt')}
+
   console.log('\n── Tabellenimport (CSV, ohne jede Bibliothek) ──');
   if(process.env.TAB){
     await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(350);
@@ -369,7 +487,7 @@ require('fs').mkdirSync(shots,{recursive:true});
   console.log('  Hinweis auf fehlendes pdf.js:',/konnte nicht geladen werden/.test(an)?'ja':'NEIN');
   const disabled=await p.$eval('#view .drop button',b=>b.disabled);
   console.log('  Knopf «Dateien wählen» deaktiviert:',disabled?'ja':'NEIN');
-  console.log('  Alles Übrige bedienbar: ja (siehe oben, neun Reiter gerendert)');
+  console.log('  Alles Übrige bedienbar: ja (siehe oben, elf Reiter gerendert)');
 
   console.log('\n── Escaping ──');
   await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(300);

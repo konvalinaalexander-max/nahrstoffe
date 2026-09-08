@@ -7,17 +7,18 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
 /* ein winziges, echtes JPEG als Data-URL (1x1 Pixel) */
 const MINI='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
 
-console.log('════ Migration von Schema 5 auf 6 ════');
+console.log('════ Migration von Schema 5 auf 7 ════');
 {
   const alt={schema:5,analysen:[],ereignisse:[{id:'e1',datum:'2026-07-01',typ:'pH-Korrektur'}],
     messungen:[{id:'m1',datum:'2026-07-01',ph:6.4,ec:1.2}],rundgaenge:[],saetze:{},eigeneOptima:{}};
   const r=A.migriere(JSON.parse(JSON.stringify(alt)));
   r.notizen.forEach(n=>console.log('   ·',n));
-  ok(r.db.schema===6,'Schema auf 6 gehoben');
+  ok(r.db.schema===7,'Schema auf 7 gehoben');
   ok(Array.isArray(r.db.fotos)&&r.db.fotos.length===0,'Fotoablage leer angelegt');
   ok(r.db.produkte&&r.db.produkte.biovin&&r.db.produkte.epsotop,'Produktstammdaten angelegt');
   ok(r.db.produkte.biovin.gehalt.N_gesamt===9&&r.db.produkte.epsotop.gehalt.Mg===9.86,'Mit den Etikettwerten vorbelegt');
-  ok(r.db.einst.systemLiter===20000,'Systemvolumen mit 20 000 Litern vorbelegt');
+  ok(r.db.einst.systemLiter===19200,'Systemvolumen mit 19 200 Litern vorbelegt (zwei Reservoirs à 9 600)');
+  ok(r.db.analysen.every(a=>a.herkunft==='unbekannt'),'Herkunft der Proben angelegt, auf «unbekannt»');
   ok(r.db.messungen[0].quelle==='hand','Bestehende Messungen als von Hand erfasst gekennzeichnet');
   ok(r.db.ereignisse[0].quelle==='hand','Bestehende Logbucheintraege ebenso');
   ok(r.notizen.some(n=>/Fotoablage/.test(n)),'Die Migration sagt, dass es eine Fotoablage gibt');

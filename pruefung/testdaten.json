@@ -950,9 +950,347 @@
     },
     "gw_HCO3": {
      "wert": 290
+    },
+    "gw_NO3": {
+     "wert": 0.34
+    },
+    "gw_NH4": {
+     "wert": 3.69
+    },
+    "gw_NO2": {
+     "wert": 0.02,
+     "unter": true
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.4
+    },
+    "gw_Mn": {
+     "wert": 0.3
+    },
+    "gw_Zn": {
+     "wert": 0.2
+    },
+    "gw_Cu": {
+     "wert": 0.3
     }
    },
-   "optima": {}
+   "optima": {},
+   "stelle": "Reservoir Hinten",
+   "laborId": "W-2608-01"
+  },
+  {
+   "id": "g2",
+   "typ": "giesswasser",
+   "datum": "2026-08-01",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.9
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 310
+    },
+    "gw_NO3": {
+     "wert": 0.21
+    },
+    "gw_NH4": {
+     "wert": 4.1
+    },
+    "gw_NO2": {
+     "wert": 0.02
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.3
+    },
+    "gw_Mn": {
+     "wert": 0.25
+    },
+    "gw_Zn": {
+     "wert": 0.15
+    },
+    "gw_Cu": {
+     "wert": 0.3
+    }
+   },
+   "optima": {},
+   "stelle": "Reservoir Vorne",
+   "laborId": "W-g2"
+  },
+  {
+   "id": "g3",
+   "typ": "giesswasser",
+   "datum": "2026-07-06",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.1
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 265
+    },
+    "gw_NO3": {
+     "wert": 0.62
+    },
+    "gw_NH4": {
+     "wert": 2.9
+    },
+    "gw_NO2": {
+     "wert": 0.05
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.7
+    },
+    "gw_Mn": {
+     "wert": 0.44
+    },
+    "gw_Zn": {
+     "wert": 0.31
+    },
+    "gw_Cu": {
+     "wert": 0.3
+    }
+   },
+   "optima": {},
+   "stelle": "Reservoir Hinten",
+   "laborId": "W-g3"
+  },
+  {
+   "id": "g4",
+   "typ": "giesswasser",
+   "datum": "2026-07-06",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.3
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 272
+    },
+    "gw_NO3": {
+     "wert": 0.55
+    },
+    "gw_NH4": {
+     "wert": 3.05
+    },
+    "gw_NO2": {
+     "wert": 0.04
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.6
+    },
+    "gw_Mn": {
+     "wert": 0.4
+    },
+    "gw_Zn": {
+     "wert": 0.28
+    },
+    "gw_Cu": {
+     "wert": 0.3
+    }
+   },
+   "optima": {},
+   "stelle": "Reservoir Vorne",
+   "laborId": "W-g4"
+  },
+  {
+   "id": "g5",
+   "typ": "giesswasser",
+   "datum": "2026-08-19",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.5
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 298
+    },
+    "gw_NO3": {
+     "wert": 0.28
+    },
+    "gw_NH4": {
+     "wert": 3.95
+    },
+    "gw_NO2": {
+     "wert": 0.03
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.4
+    },
+    "gw_Mn": {
+     "wert": 0.3
+    },
+    "gw_Zn": {
+     "wert": 0.18
+    },
+    "gw_Cu": {
+     "wert": 0.3
+    }
+   },
+   "optima": {},
+   "stelle": "Reservoir Hinten",
+   "laborId": "W-g5"
+  },
+  {
+   "id": "g6",
+   "typ": "giesswasser",
+   "datum": "2026-08-19",
+   "blattalter": null,
+   "zustand": null,
+   "satz": null,
+   "werte": {
+    "gw_pH": {
+     "wert": 7.8
+    },
+    "gw_EC": {
+     "wert": 0.6
+    },
+    "gw_Na": {
+     "wert": 18
+    },
+    "gw_Cl": {
+     "wert": 26
+    },
+    "gw_Ca": {
+     "wert": 88
+    },
+    "gw_HCO3": {
+     "wert": 305
+    },
+    "gw_NO3": {
+     "wert": 0.19
+    },
+    "gw_NH4": {
+     "wert": 4.32
+    },
+    "gw_NO2": {
+     "wert": 0.02
+    },
+    "gw_K": {
+     "wert": 0.41
+    },
+    "gw_Mg": {
+     "wert": 2.1
+    },
+    "gw_S": {
+     "wert": 2.0
+    },
+    "gw_Fe": {
+     "wert": 0.3
+    },
+    "gw_Mn": {
+     "wert": 0.24
+    },
+    "gw_Zn": {
+     "wert": 0.14
+    },
+    "gw_Cu": {
+     "wert": 0.3
+    }
+   },
+   "optima": {},
+   "stelle": "Reservoir Vorne",
+   "laborId": "W-g6"
   }
  ],
  "ereignisse": [

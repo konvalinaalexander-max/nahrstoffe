@@ -125,7 +125,7 @@ console.log('\n════ Der Reiter Giesswasser ════');
 
   console.log('\n  Alle Reiter mit Wasserdaten:');
   const bad=[];
-  for(const t of ['vLage','vAnalysen','vNaehr','vWirkung','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze']){
+  for(const t of ['vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos']){
     try{const x=A[t]();A.nachRenderRun();if(/undefined|NaN|\[object Object\]/.test(x))bad.push(t)}
     catch(e){bad.push(t+' WIRFT '+e.message)}
   }

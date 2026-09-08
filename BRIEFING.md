@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: September 2026 · Schema 6 · rund 330 KB, 4870 Zeilen, eine Datei.
+Stand: September 2026 · Schema 7 · rund 375 KB, 5200 Zeilen, eine Datei.
 
 ---
 
@@ -112,9 +112,11 @@ Wichtige Eigenheiten, die im Parser abgebildet sind:
 Ein einziges globales Objekt `db`. `leer()` definiert die Form:
 
 ```js
-{schema:6, version:0, gespeichert:null,
+{schema:7, version:0, gespeichert:null,
  analysen:[],      // jede Probe eine Zeile: typ, datum, satz, blattalter,
-                   // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle
+                   // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle,
+                   // herkunft ('ruecklauf'|'zulauf'|'tank'|'unbekannt'),
+                   // symptom ('symptomatisch'|'gesund'|'unbekannt'), gewaschen
  ereignisse:[],    // Logbuch: typ, datum, mittel, menge, einheit, stelle,
                    // jeReservoir, felder{}, geltung, saetze[], quelle
  messungen:[],     // pH/EC am Tank: datum, stelle, ph, ec, ecFrisch, temp,
@@ -127,7 +129,7 @@ Ein einziges globales Objekt `db`. `leer()` definiert die Form:
  eigeneOptima:{},  // eigene Sollbereiche, schlagen die des Labors — je Grenze
  plan:{zielwochen:[2,4,6], begleitet:[], geplant:[]},   // geplant: +typ, +analyseId
  einst:{verlagerung:1.3, kMg:8, kCa:3, nh4no3:0.5, toleranz:5,
-        dauerSommer:7, dauerWinter:10, systemLiter:20000,
+        dauerSommer:7, dauerWinter:10, systemLiter:19200,
         kern:[…], schaeden:[…], gwRicht:{}}}
 ```
 
@@ -148,6 +150,21 @@ Analysen nach `satz|datum|zustand` — eine Jung- und eine Altblattprobe desselb
 Tages sind **eine** Erhebung mit zwei Proben. Fast alle Auswertungen arbeiten auf
 Erhebungen, nicht auf Analysen. `e.proben` ist `{jung, alt, misch}`, `e.bew` die
 Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
+
+**Schema 7 (neu).** Drei Felder je Analyse und ein neuer Wasserparameter:
+
+- `herkunft` — eine Wasserprobe aus dem **Rücklauf** misst nicht dasselbe wie
+  eine aus dem Zulauf. Vorher stand nirgends, welche von beiden es war, und
+  jede Bilanz tat so, als sei es der Zulauf. Migration setzt `'unbekannt'`,
+  **nicht** geraten.
+- `symptom` und `gewaschen` — ob die Probe von auffälligen oder gesunden
+  Pflanzen stammt, und ob das Blatt gewaschen war. Ungewaschenes Blatt
+  erklärt Aluminium und Silizium aus Substratstaub, nicht aus der Wurzel.
+- `gw_NO2` (Nitrit, mmol/l) — der **Trennversuch** zwischen «Nitrifikation
+  gestört» und «Ammonium wird laufend nachgeliefert». Ohne ihn bleibt die
+  Ursache der Ammoniumlage unentscheidbar.
+- `einst.systemLiter` wird von 20 000 auf **19 200 l** berichtigt (2 × 9 600).
+  Die Migration sagt das in ihrem Bericht.
 
 **Persistenz:** ausschliesslich JSON-Datei herunterladen und hochladen.
 `migriere(roh)` hebt alte Dateien an und meldet in einem Dialog, was es geändert
@@ -250,9 +267,9 @@ Skriptteil ist durchnummeriert:
 | 3 | Parser | `parseNCC`, `parseIns`, `parseGiess`, `parseAuto`, `pdfPunkte` |
 | 4 | Datenmodell | `leer`, `migriere`, `erhebungen`, `bewerte`, `bilanz`, `alter` |
 | 5 | Regeln | `befunde` — die acht Regelgruppen |
-| 6 | Diagramme | `chartPunkte`, `chartIndex`, `chartProfil`, `chartSaetze`, Tooltip |
+| 6 | Diagramme | `chartPunkte`, `chartStapel`, `chartIndex`, `chartProfil`, `chartSaetze`, Tooltip |
 | 7 | Gerüst | `render`, `diagFrisch`, Ereignisverdrahtung, Dialog |
-| 8–16 | je ein Reiter | `vLage`, `vAnalysen`, `vNaehr`, … |
+| 8–17 | je ein Reiter | `vLage`, `vAnalysen`, `vVerlauf`, `vNaehr`, … |
 | 17 | Sichern und Laden | Download, Upload, Migration |
 | 18 | Verdrahtung | Dateieingaben, Drag-and-drop, Resize, Start |
 
@@ -275,8 +292,44 @@ wird auf `render()` zurückgefallen.
 > abhängt — Farben, Einheiten, Skala, Begründungstexte — muss **innerhalb** der
 > neu aufgerufenen Funktion bestimmt werden, nicht im äusseren
 > Gültigkeitsbereich der Ansicht. Sonst zeigt das Diagramm nach einer Änderung
-> noch die Werte der vorigen Auswahl. Dafür gibt es in `vNaehr` und `vGiess` je
-> eine Funktion `nsAb()` bzw. `gwAb()`.
+> noch die Werte der vorigen Auswahl. Dafür gibt es in `vNaehr`, `vGiess` und
+> `vVerlauf` je eine Funktion `nsAb()`, `gwAb()` bzw. `vlAb()`. Dieser Fehler
+> ist im Projekt **dreimal** gemacht worden — beim dritten Mal hat ihn die
+> Browserprüfung gefunden, nicht der Blick auf den Code.
+
+**3 · `diagFrisch()` stellt die Scrollposition wieder her.** Zwischen dem
+Ersetzen der Bedienelemente und dem Zeichnen ist die Seite kurz um die Höhe des
+Diagramms kürzer. Der Browser begrenzt die Scrollposition dann auf das neue
+Seitenende und holt sie **nicht** zurück, wenn die Seite wieder wächst. Wer
+unten stand, landete oben — dieselbe Wirkung wie ein Seitensprung, andere
+Ursache.
+
+### `chartStapel` — mehrere Spuren, eine Zeitachse
+
+Für den Reiter Verlauf. `chartStapel(box, {spuren, von, bis, ereignisse, fotos,
+aufKlick})`; jede Spur ist `{titel, serien, yTyp:'lage'|'wert', band, bandLabel,
+yLabel, hoehe, leerText}`. Vier Entscheidungen, die nicht wieder aufgeweicht
+werden sollten:
+
+- **Jede Spur hat ihre eigene y-Achse, eine einzige Zeitachse steht ganz
+  unten.** Das ist der ganze Zweck: derselbe Tag ist überall derselbe x-Wert.
+- **Die y-Achse folgt den Messwerten, nicht dem Richtwert.** Ein Richtwert von
+  20 µmol/l gegen gemessene 3 würde die Auflösung dorthin ziehen, wo nichts
+  steht. Das Band wird stattdessen auf die sichtbare Fläche beschnitten und
+  trägt dann den Zusatz «(reicht über den Ausschnitt hinaus)».
+- **Serien werden nach Einheit gruppiert** (`wasserSpuren`). µmol/l und pH
+  haben sich einmal eine Achse geteilt — sie lagen zufällig in derselben
+  Grössenordnung, sahen plausibel aus und waren falsch.
+- **Eine Grösse, die im Wasser nie gemessen wurde, bekommt trotzdem eine
+  Spur** — eine leere, die sagt warum. Verschwände sie stillschweigend, sähe
+  die Frage beantwortet aus, obwohl die halbe Antwort fehlt.
+
+Ziehen verschiebt, Rad zoomt, Doppelklick setzt zurück (`stapelBedienung`).
+Der Zustand des Ziehens liegt **ausserhalb** der Funktion: jede Verschiebung
+zeichnet neu und ersetzt dabei die Ereignisbehandler. Läge er in deren
+Umgebung, wäre das Ziehen nach dem ersten Bildpunkt zu Ende. Und ein voller
+Neuaufbau erfolgt erst beim Loslassen — sonst könnte gar kein Doppelklick mehr
+entstehen, weil sein erstes Ziel zwischendurch aus dem Dokument verschwände.
 
 ### Die Diagrammregeln
 
@@ -304,17 +357,17 @@ Datumsachse.
 
 ---
 
-## 7 · Die zehn Reiter
+## 7 · Die elf Reiter
 
 | Reiter | Beantwortet |
 |---|---|
-| **Überblick** | Kennzahlen · Nährstofflage über die Zeit · Befunde je Satz · was chronisch daneben liegt |
+| **Überblick** | Kennzahlen · Nährstofflage über die Zeit · **Rangliste der Mängel** · **Eingangsbilanz** · Befunde je Satz · was chronisch daneben liegt |
 | **Analysen** | PDFs einlesen, Kontrolldialog vor der Übernahme, alle Proben, Handeingabe |
+| **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse**, fünf benannte Fragen |
 | **Nährstoffe** | Ein oder mehrere Nährstoffe über Zeit oder Kulturwoche, mit Tabellen darunter |
-| **Wirkung** | Vorher/Nachher um ein Logbuchereignis — bewusst qualitativ, siehe Abschnitt 8 |
 | **Substrat** | Angebot im Substrat gegen Aufnahme im Blatt |
 | **Giesswasser** | Verlauf je Parameter und Entnahmestelle, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
-| **Logbuch** | Schnellerfassung in einer Zeile, Zeitstrahl nach Monaten, nach Art filterbar, «wieder so» zum Duplizieren |
+| **Logbuch** | Schnellerfassung in einer Zeile, Zeitstrahl nach Monaten, nach Art filterbar, «wieder so» zum Duplizieren, **«Wirkung prüfen» je Eintrag** |
 | **Fotos** | Galerie je Tag; jedes Foto erscheint als Kamerasymbol unter den Zeitdiagrammen |
 | **Rundgang** | Wöchentliche Bonitur, Schadbilder in Stufen 0–3 |
 | **Planer** | Geplante Proben von Hand; die automatischen Vorschläge stehen zugeklappt darunter |
@@ -346,8 +399,8 @@ nötig sind. Die wichtigsten:
   **einziger** Versuch löst das — bei der nächsten Beprobung drei Proben statt
   einer: eine homogenisierte in drei Teile (analytische Streuung) plus zwei
   getrennte Sammelproben (Probenahme-Streuung). Kosten: zwei zusätzliche
-  Analysen, einmalig. Ohne diesen Versuch bleibt der Reiter Wirkung dauerhaft
-  qualitativ.
+  Analysen, einmalig. Ohne diesen Versuch bleibt die Wirkungsanalyse (jetzt
+  ein Dialog am Logbucheintrag) dauerhaft qualitativ.
 - **Rückwirkende Neubewertung (M).** Ändert der Nutzer eine Schwelle, ändern
   sich auch alte Befunde, ohne Vermerk.
 
@@ -404,8 +457,8 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (318 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (389 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
@@ -424,9 +477,10 @@ GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 | `f1` | Fotos: Migration, Fotospur, Escaping, Grössenwarnung |
 | `l1` | Logbuch: Umstellung auf strukturierte Mengen, Umbenennungen |
 | `x1` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen |
-| `b1` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken |
+| `b1` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken, Verdünnung |
+| `v1` | Reiter Verlauf: Schema 7, gemeinsame Zeitachse, getrennte Achsen je Einheit, Rangliste, Eingangsbilanz, Jung gegen Alt |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
-| `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Offline-Verhalten, Escaping |
+| `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
@@ -448,6 +502,7 @@ Chromium zur Verfügung.
 | `UMBAU.md` | was der Neubau geändert hat, inklusive der Nachträge zu Giesswasser und Diagrammen |
 | `AUFTRAG-ERWEITERUNG.md` | der Auftrag für Fotos, Logbuch, Excel-Import, Bilanz und Planer — umgesetzt |
 | `PROMPT-DATENMODELL.md` | Auftrag für die statistische Prüfung |
+| `ENTWURF-KREISLAUF.md` | Entwurf zum Problembriefing: was am Briefing falsch ist, das Datenmodell Schema 7, welche Reiter wegfallen — **vier Fragen darin sind offen** |
 | `pruefung/LIESMICH.md` | wie die Prüfungen aufgebaut sind |
 
 ---

@@ -92,7 +92,7 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
   await p.click('#dlgFoot button:text-is("Schliessen")');
   await p.waitForTimeout(300);
 
-  console.log('\n── Alle zehn Reiter ──');
+  console.log('\n── Alle elf Reiter ──');
   const reiter=await p.$$eval('#nav button',bs=>bs.map(b=>b.textContent));
   for(const t of reiter){
     await p.click(`#nav button:text-is("${t}")`);

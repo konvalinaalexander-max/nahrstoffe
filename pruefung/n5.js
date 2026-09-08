@@ -45,7 +45,10 @@ d.saetze={'28-478':{},'30-500':{}};
 d.ereignisse=[{id:'e1',datum:'2026-08-10',typ:'Neues Substrat / Grunddüngung',titel:'Ökohum neu',
   felder:{substrat:'Ökohum'},geltung:'saetze',saetze:['28-478']}];
 A.setDb(d);
-const hw=A.vWirkung();
+/* Die Wirkungsanalyse ist vom eigenen Reiter in einen Dialog am
+   Logbucheintrag gewandert – die Vergleichsgruppe ist dabei erhalten. */
+A.AKTION.wirkung({id:'e1'});
+const hw=global.document.getElementById('dlgBody').innerHTML;
 ok(/Vergleichsgruppe/.test(hw),'Der Abschnitt Vergleichsgruppe erscheint');
 ok(/Betroffen \(28-478\)/.test(hw),'Die betroffenen Sätze werden benannt');
 ok(/Nicht betroffen/.test(hw),'Die Kontrollgruppe ebenso');
@@ -55,10 +58,13 @@ ok(/Prozentpunkte zugunsten/.test(hw),'Der Unterschied wird beziffert');
 ok(/noch kein Beweis/.test(hw),'Und ausdrücklich nicht als Beweis ausgegeben');
 
 console.log('\n════ 19 · NEU: Vorschlag, die Vergleichsgruppe zu vervollständigen ════');
+/* Relativ zu heute, sonst laeuft dieser Test mit dem Kalender ab: ein Satz
+   mit festem Aussaatdatum ist irgendwann nicht mehr «laufend». */
+const tagVor=n=>{const d=new Date();d.setUTCDate(d.getUTCDate()-n);return d.toISOString().slice(0,10)};
 const d2=A.leer();
-d2.analysen=[mk('28-478','2026-08-20','jung',1.1)];
-d2.saetze={'28-478':{aussaat:'2026-07-10'},'30-500':{aussaat:'2026-07-20'}};
-d2.ereignisse=[{id:'e1',datum:'2026-08-10',typ:'Neues Substrat / Grunddüngung',titel:'Ökohum neu',
+d2.analysen=[mk('28-478',tagVor(18),'jung',1.1)];
+d2.saetze={'28-478':{aussaat:tagVor(28)},'30-500':{aussaat:tagVor(21)}};
+d2.ereignisse=[{id:'e1',datum:tagVor(28),typ:'Neues Substrat / Grunddüngung',titel:'Ökohum neu',
   felder:{},geltung:'saetze',saetze:['28-478']}];
 A.setDb(d2);
 const v=A.vorschlaege();

@@ -12,7 +12,7 @@ const gabe=(datum,mittel,menge,extra)=>Object.assign({id:'e'+datum+mittel,datum,
 /* Ein sauber gefuehrtes Logbuch: in jeder Woche des Fensters ein Eintrag. */
 function aufbau(){
   const d=A.leer();
-  d.einst.systemLiter=20000;
+  d.einst.systemLiter=20000;   /* der Test rechnet bewusst mit dem runden Wert */
   d.analysen=[probe('2026-07-01',{}),probe('2026-08-01',{gw_Fe:0.4,gw_Mn:0.3,gw_Zn:0.2,gw_Cu:0.3,
     gw_NO3:0.3,gw_NH4:3.69,gw_Mg:2.1,gw_S:2.0})];
   d.ereignisse=[
