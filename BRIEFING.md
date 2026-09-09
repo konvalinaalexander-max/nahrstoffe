@@ -170,6 +170,11 @@ ist der Punkt:
 | `null` | gehört ausdrücklich **zu keiner** — bildet keine Reihe, bleibt aber vollständig im Bestand und in den Tabellen |
 | fehlt | noch **nicht entschieden** — bildet solange ihre eigene Reihe, damit ohne Zutun nichts anders aussieht als vorher |
 
+Der Unterschied zwischen `null` und «fehlt» muss die Sicherung überleben:
+`JSON.stringify` behält `null`, verwirft aber `undefined`. Ein
+ausgeschlossenes «Vorne, mitt H2O2» darf nach dem Öffnen nicht wieder als
+«noch offen» dastehen. `rundreise.js` prüft genau das.
+
 `stellenVorschlag(bez)` leitet aus dem Wortlaut einen **Vorschlag** ab
 («vorne»/«RV» → vorne). Er wird nie von selbst angewandt; «Vorschläge
 übernehmen» füllt nur, was noch offen ist. Nennt eine Bezeichnung eine
@@ -570,7 +575,7 @@ BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weitera
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
-| `rundreise.js` | Chromium: erfassen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
+| `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
 gitignoriert. Wer die HTML-Datei ändert und die Prüfungen laufen lässt, ohne

@@ -41,9 +41,23 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
     await p.waitForTimeout(2500);
     await p.click('#dlgFoot button:text-is("Übernehmen")');await p.waitForTimeout(900);
   }
+  /* Die Zuordnung der Entnahmestellen ist Handarbeit - sie muss die Sicherung
+     ueberleben, sonst faengt man nach jedem Weitergeben von vorne an. */
+  await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(500);
+  const zuKnopf=await p.$('#view button:text-is("Jetzt zuordnen")');
+  if(zuKnopf){
+    await zuKnopf.click();await p.waitForTimeout(500);
+    await p.click('#dlgBody button:text-is("Vorschläge übernehmen")');await p.waitForTimeout(600);
+    await p.click('#dlgBody tr:has-text("H2O2"):has-text("mitt") button:text-is("nicht verwenden")');await p.waitForTimeout(600);
+    await p.fill('#dlgBody input[data-aend="stelleName"][data-id="v"]','Reservoir vorne (Tisch 1–4)');
+    await p.dispatchEvent('#dlgBody input[data-aend="stelleName"][data-id="v"]','change');await p.waitForTimeout(500);
+    await p.click('#dlgFoot button:text-is("Fertig")');await p.waitForTimeout(500);
+  }else{console.log('  ✗ kein Zuordnungshinweis in den Testdaten');fehler++}
+
   const vor=await p.evaluate(()=>({an:db.analysen.length,ev:db.ereignisse.length,me:db.messungen.length,
     fo:db.fotos.length,schema:db.schema,notiz:db.ereignisse.map(e=>e.notiz).filter(Boolean).pop(),
-    bytes:db.fotos.reduce((s,f)=>s+(f.daten||'').length,0)}));
+    bytes:db.fotos.reduce((s,f)=>s+(f.daten||'').length,0),stellen:JSON.stringify(db.stellen)}));
+  console.log('   Zuordnung:',vor.stellen);
   console.log('   Bestand:',vor.an,'Analysen ·',vor.ev,'Logbuch ·',vor.fo,'Fotos ·',Math.round(vor.bytes/1024),'KB Bilddaten');
 
   console.log('\n════ Sichern: eine Datei, alles darin ════');
@@ -74,13 +88,17 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
   await p2.goto('file://'+ziel);await p2.waitForTimeout(2000);
   const nach=await p2.evaluate(()=>({an:db.analysen.length,ev:db.ereignisse.length,me:db.messungen.length,
     fo:db.fotos.length,schema:db.schema,notiz:db.ereignisse.map(e=>e.notiz).filter(Boolean).pop(),
-    bytes:db.fotos.reduce((s,f)=>s+(f.daten||'').length,0),dirty}));
+    bytes:db.fotos.reduce((s,f)=>s+(f.daten||'').length,0),dirty,stellen:JSON.stringify(db.stellen)}));
   ok(nach.an===vor.an&&nach.ev===vor.ev&&nach.me===vor.me&&nach.fo===vor.fo,
      `Alles ist da: ${nach.an} Analysen, ${nach.ev} Logbuch, ${nach.me} Messungen, ${nach.fo} Fotos`);
   ok(nach.notiz===GIFT,'Auch der Text mit Skript-Ende, Apostroph und Umlauten – zeichengenau');
   ok(nach.bytes===vor.bytes,'Die Bilddaten ebenfalls, Byte für Byte');
   ok(st2.filter(x=>/ALARMFENSTER/.test(x)).length===0,'Nichts davon wird ausgeführt: kein Alarmfenster');
   ok(nach.dirty===false,'Die frisch geöffnete Datei gilt als gesichert, nicht als geändert');
+  ok(nach.stellen===vor.stellen,'Die Zuordnung der Entnahmestellen kommt vollständig mit');
+  ok(/"Vorne, mitt H2O2":null/.test(nach.stellen),
+     'Auch das ausdrückliche «nicht verwenden» – null überlebt die Sicherung, anders als ein fehlender Eintrag');
+  ok(/Tisch 1–4/.test(nach.stellen),'Und der selbst vergebene Name der Stelle');
   const meldung=await p2.$$eval('.toast',es=>es.map(e=>e.textContent));
   console.log('   ',meldung.join(' | '));
   ok(meldung.some(t=>/Aus dieser Datei geladen/.test(t)),'Beim Öffnen steht da, woher die Daten stammen');
@@ -94,6 +112,10 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
     if(/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test(txt)){fehler++;console.log('  ✗ FEHLER Reiter '+t)}
   }
   console.log('  ✓ Jeder Reiter baut sich auf');
+  await p2.click('#nav button:text-is("Giesswasser")');await p2.waitForTimeout(500);
+  const gwNach=await p2.$eval('#view',e=>e.innerText);
+  ok(/Tisch 1–4/.test(gwNach),'Die zugeordneten Namen stehen sofort in den Karten – ohne erneutes Zuordnen');
+  ok(!/Jetzt zuordnen/.test(gwNach),'Und es ist nichts mehr offen');
   const roh=await p2.$eval('#view',e=>e.innerHTML);
   ok(roh.indexOf('<img src=x')<0,'Kein eingeschleustes Markup aus der Notiz');
 
