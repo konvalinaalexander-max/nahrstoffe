@@ -926,371 +926,519 @@
    "optima": {}
   },
   {
-   "id": "g1",
+   "id": "gw_vorneZwei0",
    "typ": "giesswasser",
-   "datum": "2026-08-01",
+   "labor": "NovaCropControl",
+   "herkunft": "ruecklauf",
+   "symptom": "unbekannt",
+   "gewaschen": null,
+   "laborId": "202608200042",
+   "datum": "2026-08-18",
+   "satz": null,
    "blattalter": null,
    "zustand": null,
-   "satz": null,
+   "stelle": "Reservoir Vorne",
+   "kultur": "Eichhof 8B",
    "werte": {
-    "gw_pH": {
-     "wert": 7.4
-    },
     "gw_EC": {
-     "wert": 0.6
+     "wert": 1,
+     "unter": false
     },
-    "gw_Na": {
-     "wert": 18
+    "gw_pH": {
+     "wert": 7.6,
+     "unter": false
     },
-    "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 290
-    },
-    "gw_NO3": {
-     "wert": 0.34
+    "gw_KCa": {
+     "wert": 0.42,
+     "unter": false
     },
     "gw_NH4": {
-     "wert": 3.69
+     "wert": 3.69,
+     "unter": false
     },
-    "gw_NO2": {
-     "wert": 0.02,
+    "gw_K": {
+     "wert": 0.5,
+     "unter": false
+    },
+    "gw_Na": {
+     "wert": 0.7,
+     "unter": false
+    },
+    "gw_Ca": {
+     "wert": 1.1,
+     "unter": false
+    },
+    "gw_Mg": {
+     "wert": 2.1,
+     "unter": false
+    },
+    "gw_Si": {
+     "wert": 0.1,
      "unter": true
     },
-    "gw_K": {
-     "wert": 0.41
-    },
-    "gw_Mg": {
-     "wert": 2.1
-    },
-    "gw_S": {
-     "wert": 2.0
-    },
-    "gw_Fe": {
-     "wert": 0.4
-    },
-    "gw_Mn": {
-     "wert": 0.3
-    },
-    "gw_Zn": {
-     "wert": 0.2
-    },
-    "gw_Cu": {
-     "wert": 0.3
-    }
-   },
-   "optima": {},
-   "stelle": "Reservoir Hinten",
-   "laborId": "W-2608-01"
-  },
-  {
-   "id": "g2",
-   "typ": "giesswasser",
-   "datum": "2026-08-01",
-   "blattalter": null,
-   "zustand": null,
-   "satz": null,
-   "werte": {
-    "gw_pH": {
-     "wert": 7.9
-    },
-    "gw_EC": {
-     "wert": 0.6
-    },
-    "gw_Na": {
-     "wert": 18
+    "gw_NO3": {
+     "wert": 0.3,
+     "unter": true
     },
     "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 310
-    },
-    "gw_NO3": {
-     "wert": 0.21
-    },
-    "gw_NH4": {
-     "wert": 4.1
-    },
-    "gw_NO2": {
-     "wert": 0.02
-    },
-    "gw_K": {
-     "wert": 0.41
-    },
-    "gw_Mg": {
-     "wert": 2.1
+     "wert": 1,
+     "unter": false
     },
     "gw_S": {
-     "wert": 2.0
+     "wert": 2,
+     "unter": false
+    },
+    "gw_HCO3": {
+     "wert": 2.64,
+     "unter": false
+    },
+    "gw_P": {
+     "wert": 1.47,
+     "unter": false
     },
     "gw_Fe": {
-     "wert": 0.3
+     "wert": 0.4,
+     "unter": false
     },
     "gw_Mn": {
-     "wert": 0.25
+     "wert": 0.3,
+     "unter": true
     },
     "gw_Zn": {
-     "wert": 0.15
+     "wert": 0.2,
+     "unter": true
+    },
+    "gw_B": {
+     "wert": 5,
+     "unter": true
     },
     "gw_Cu": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Mo": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Al": {
+     "wert": 5,
+     "unter": true
     }
    },
    "optima": {},
+   "optArt": {}
+  },
+  {
+   "id": "gw_vorneZwei1",
+   "typ": "giesswasser",
+   "labor": "NovaCropControl",
+   "herkunft": "ruecklauf",
+   "symptom": "unbekannt",
+   "gewaschen": null,
+   "laborId": "202607300193",
+   "datum": "2026-07-23",
+   "satz": null,
+   "blattalter": null,
+   "zustand": null,
    "stelle": "Reservoir Vorne",
-   "laborId": "W-g2"
-  },
-  {
-   "id": "g3",
-   "typ": "giesswasser",
-   "datum": "2026-07-06",
-   "blattalter": null,
-   "zustand": null,
-   "satz": null,
+   "kultur": "Eichhof 8B",
    "werte": {
-    "gw_pH": {
-     "wert": 7.1
-    },
     "gw_EC": {
-     "wert": 0.6
+     "wert": 0.8,
+     "unter": false
     },
-    "gw_Na": {
-     "wert": 18
+    "gw_pH": {
+     "wert": 7.3,
+     "unter": false
     },
-    "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 265
-    },
-    "gw_NO3": {
-     "wert": 0.62
+    "gw_KCa": {
+     "wert": 0.25,
+     "unter": false
     },
     "gw_NH4": {
-     "wert": 2.9
-    },
-    "gw_NO2": {
-     "wert": 0.05
+     "wert": 4.55,
+     "unter": false
     },
     "gw_K": {
-     "wert": 0.41
+     "wert": 0.3,
+     "unter": false
+    },
+    "gw_Na": {
+     "wert": 0.5,
+     "unter": false
+    },
+    "gw_Ca": {
+     "wert": 1.2,
+     "unter": false
     },
     "gw_Mg": {
-     "wert": 2.1
+     "wert": 0.8,
+     "unter": false
+    },
+    "gw_Si": {
+     "wert": 0.1,
+     "unter": true
+    },
+    "gw_NO3": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Cl": {
+     "wert": 0.9,
+     "unter": false
     },
     "gw_S": {
-     "wert": 2.0
+     "wert": 0.8,
+     "unter": false
+    },
+    "gw_HCO3": {
+     "wert": 1.71,
+     "unter": false
+    },
+    "gw_P": {
+     "wert": 2.81,
+     "unter": false
     },
     "gw_Fe": {
-     "wert": 0.7
+     "wert": 3.4,
+     "unter": false
     },
     "gw_Mn": {
-     "wert": 0.44
+     "wert": 0.6,
+     "unter": false
     },
     "gw_Zn": {
-     "wert": 0.31
+     "wert": 1,
+     "unter": false
+    },
+    "gw_B": {
+     "wert": 5,
+     "unter": true
     },
     "gw_Cu": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Mo": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Al": {
+     "wert": 5,
+     "unter": true
     }
    },
    "optima": {},
-   "stelle": "Reservoir Hinten",
-   "laborId": "W-g3"
+   "optArt": {}
   },
   {
-   "id": "g4",
+   "id": "gw_hintenOhne0",
    "typ": "giesswasser",
-   "datum": "2026-07-06",
+   "labor": "NovaCropControl",
+   "herkunft": "ruecklauf",
+   "symptom": "unbekannt",
+   "gewaschen": null,
+   "laborId": "202608240086",
+   "datum": "2026-08-06",
+   "satz": null,
    "blattalter": null,
    "zustand": null,
-   "satz": null,
+   "stelle": "Hinter, Ohne H2O2",
+   "kultur": "Eichhof 8B",
    "werte": {
-    "gw_pH": {
-     "wert": 7.3
-    },
     "gw_EC": {
-     "wert": 0.6
+     "wert": 0.8,
+     "unter": false
     },
-    "gw_Na": {
-     "wert": 18
+    "gw_pH": {
+     "wert": 7.4,
+     "unter": false
     },
-    "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 272
-    },
-    "gw_NO3": {
-     "wert": 0.55
+    "gw_KCa": {
+     "wert": 0.23,
+     "unter": false
     },
     "gw_NH4": {
-     "wert": 3.05
-    },
-    "gw_NO2": {
-     "wert": 0.04
+     "wert": 2.62,
+     "unter": false
     },
     "gw_K": {
-     "wert": 0.41
+     "wert": 0.3,
+     "unter": false
+    },
+    "gw_Na": {
+     "wert": 0.6,
+     "unter": false
+    },
+    "gw_Ca": {
+     "wert": 1.4,
+     "unter": false
     },
     "gw_Mg": {
-     "wert": 2.1
+     "wert": 0.8,
+     "unter": false
+    },
+    "gw_Si": {
+     "wert": 0.1,
+     "unter": true
+    },
+    "gw_NO3": {
+     "wert": 1.4,
+     "unter": false
+    },
+    "gw_Cl": {
+     "wert": 0.9,
+     "unter": false
     },
     "gw_S": {
-     "wert": 2.0
+     "wert": 0.7,
+     "unter": false
+    },
+    "gw_HCO3": {
+     "wert": 3.92,
+     "unter": false
+    },
+    "gw_P": {
+     "wert": 0.08,
+     "unter": false
     },
     "gw_Fe": {
-     "wert": 0.6
+     "wert": 1,
+     "unter": false
     },
     "gw_Mn": {
-     "wert": 0.4
+     "wert": 0.3,
+     "unter": true
     },
     "gw_Zn": {
-     "wert": 0.28
+     "wert": 0.6,
+     "unter": false
+    },
+    "gw_B": {
+     "wert": 5,
+     "unter": true
     },
     "gw_Cu": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Mo": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Al": {
+     "wert": 5,
+     "unter": true
     }
    },
    "optima": {},
-   "stelle": "Reservoir Vorne",
-   "laborId": "W-g4"
+   "optArt": {}
   },
   {
-   "id": "g5",
+   "id": "gw_vorneMit0",
    "typ": "giesswasser",
-   "datum": "2026-08-19",
+   "labor": "NovaCropControl",
+   "herkunft": "ruecklauf",
+   "symptom": "unbekannt",
+   "gewaschen": null,
+   "laborId": "202608240087",
+   "datum": "2026-08-06",
+   "satz": null,
    "blattalter": null,
    "zustand": null,
-   "satz": null,
+   "stelle": "Vorne, mitt H2O2",
+   "kultur": "Eichhof 8B",
    "werte": {
-    "gw_pH": {
-     "wert": 7.5
-    },
     "gw_EC": {
-     "wert": 0.6
+     "wert": 0.9,
+     "unter": false
     },
-    "gw_Na": {
-     "wert": 18
+    "gw_pH": {
+     "wert": 7.9,
+     "unter": false
     },
-    "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 298
-    },
-    "gw_NO3": {
-     "wert": 0.28
+    "gw_KCa": {
+     "wert": 0.21,
+     "unter": false
     },
     "gw_NH4": {
-     "wert": 3.95
-    },
-    "gw_NO2": {
-     "wert": 0.03
+     "wert": 3.55,
+     "unter": false
     },
     "gw_K": {
-     "wert": 0.41
+     "wert": 0.3,
+     "unter": false
+    },
+    "gw_Na": {
+     "wert": 0.6,
+     "unter": false
+    },
+    "gw_Ca": {
+     "wert": 1.4,
+     "unter": false
     },
     "gw_Mg": {
-     "wert": 2.1
+     "wert": 0.8,
+     "unter": false
+    },
+    "gw_Si": {
+     "wert": 0.1,
+     "unter": true
+    },
+    "gw_NO3": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Cl": {
+     "wert": 0.8,
+     "unter": false
     },
     "gw_S": {
-     "wert": 2.0
+     "wert": 0.7,
+     "unter": false
+    },
+    "gw_HCO3": {
+     "wert": 6.28,
+     "unter": false
+    },
+    "gw_P": {
+     "wert": 0.08,
+     "unter": false
     },
     "gw_Fe": {
-     "wert": 0.4
+     "wert": 1.5,
+     "unter": false
     },
     "gw_Mn": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": true
     },
     "gw_Zn": {
-     "wert": 0.18
+     "wert": 0.7,
+     "unter": false
+    },
+    "gw_B": {
+     "wert": 5,
+     "unter": true
     },
     "gw_Cu": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Mo": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Al": {
+     "wert": 5,
+     "unter": true
     }
    },
    "optima": {},
-   "stelle": "Reservoir Hinten",
-   "laborId": "W-g5"
+   "optArt": {}
   },
   {
-   "id": "g6",
+   "id": "gw_rvBasilikum0",
    "typ": "giesswasser",
-   "datum": "2026-08-19",
+   "labor": "NovaCropControl",
+   "herkunft": "ruecklauf",
+   "symptom": "unbekannt",
+   "gewaschen": null,
+   "laborId": "202609040037",
+   "datum": "2026-09-01",
+   "satz": null,
    "blattalter": null,
    "zustand": null,
-   "satz": null,
+   "stelle": "Basilikum RV",
+   "kultur": "Eichhof 8B",
    "werte": {
-    "gw_pH": {
-     "wert": 7.8
-    },
     "gw_EC": {
-     "wert": 0.6
+     "wert": 1,
+     "unter": false
     },
-    "gw_Na": {
-     "wert": 18
+    "gw_pH": {
+     "wert": 7,
+     "unter": false
     },
-    "gw_Cl": {
-     "wert": 26
-    },
-    "gw_Ca": {
-     "wert": 88
-    },
-    "gw_HCO3": {
-     "wert": 305
-    },
-    "gw_NO3": {
-     "wert": 0.19
+    "gw_KCa": {
+     "wert": 0.9,
+     "unter": false
     },
     "gw_NH4": {
-     "wert": 4.32
-    },
-    "gw_NO2": {
-     "wert": 0.02
+     "wert": 4.46,
+     "unter": false
     },
     "gw_K": {
-     "wert": 0.41
+     "wert": 0.7,
+     "unter": false
+    },
+    "gw_Na": {
+     "wert": 0.4,
+     "unter": false
+    },
+    "gw_Ca": {
+     "wert": 0.7,
+     "unter": false
     },
     "gw_Mg": {
-     "wert": 2.1
+     "wert": 1.7,
+     "unter": false
+    },
+    "gw_Si": {
+     "wert": 0.1,
+     "unter": true
+    },
+    "gw_NO3": {
+     "wert": 0.3,
+     "unter": false
+    },
+    "gw_Cl": {
+     "wert": 0.9,
+     "unter": false
     },
     "gw_S": {
-     "wert": 2.0
+     "wert": 1.7,
+     "unter": false
+    },
+    "gw_HCO3": {
+     "wert": 1.48,
+     "unter": false
+    },
+    "gw_P": {
+     "wert": 2.31,
+     "unter": false
     },
     "gw_Fe": {
-     "wert": 0.3
+     "wert": 1.7,
+     "unter": false
     },
     "gw_Mn": {
-     "wert": 0.24
+     "wert": 0.3,
+     "unter": false
     },
     "gw_Zn": {
-     "wert": 0.14
+     "wert": 1,
+     "unter": false
+    },
+    "gw_B": {
+     "wert": 5,
+     "unter": true
     },
     "gw_Cu": {
-     "wert": 0.3
+     "wert": 0.3,
+     "unter": false
+    },
+    "gw_Mo": {
+     "wert": 0.3,
+     "unter": true
+    },
+    "gw_Al": {
+     "wert": 5,
+     "unter": true
     }
    },
    "optima": {},
-   "stelle": "Reservoir Vorne",
-   "laborId": "W-g6"
+   "optArt": {}
   }
  ],
  "ereignisse": [

@@ -18,13 +18,13 @@ function aufbau(){
   return d;
 }
 
-console.log('════ Schema 7 ════');
+console.log('════ Schema 8 ════');
 {
   const r=A.migriere({schema:6,analysen:[{id:'a',typ:'blattsaft',datum:'2026-08-18',werte:{},optima:{}}],
     ereignisse:[],messungen:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
     einst:{systemLiter:20000}});
   r.notizen.filter(n=>/Nitrit|Herkunft|Systemvolumen/.test(n)).forEach(n=>console.log('   ·',n));
-  ok(r.db.schema===7,'Schema auf 7 gehoben');
+  ok(r.db.schema===8,'Schema auf 8 gehoben');
   ok(r.db.analysen[0].herkunft==='unbekannt','Herkunft der Probe angelegt, auf «unbekannt» – nichts geraten');
   ok(r.db.analysen[0].symptom==='unbekannt','Symptomatisch oder gesund: das Feld gibt es jetzt');
   ok(r.db.analysen[0].gewaschen===null,'Und ob das Blatt gewaschen war');

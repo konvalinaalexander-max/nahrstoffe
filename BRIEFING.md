@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: September 2026 · Schema 7 · rund 385 KB, 5300 Zeilen, eine Datei.
+Stand: September 2026 · Schema 8 · rund 395 KB, 5400 Zeilen, eine Datei.
 
 ---
 
@@ -112,7 +112,7 @@ Wichtige Eigenheiten, die im Parser abgebildet sind:
 Ein einziges globales Objekt `db`. `leer()` definiert die Form:
 
 ```js
-{schema:7, version:0, gespeichert:null,
+{schema:8, version:0, gespeichert:null,
  analysen:[],      // jede Probe eine Zeile: typ, datum, satz, blattalter,
                    // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle,
                    // herkunft ('ruecklauf'|'zulauf'|'tank'|'unbekannt'),
@@ -124,6 +124,7 @@ Ein einziges globales Objekt `db`. `leer()` definiert die Form:
  fotos:[],         // id, datum, titel, notiz, satz, etage, analyseId,
                    // herkunftDatum, breite, hoehe, daten (Data-URL, JPEG)
  produkte:{},      // Stammdaten: name, form, dichte, gehalt{Element:%}, quelle
+ stellen:{},       // Entnahmestellen: gruppen[{id,name}] + zu{<Bezeichnung>:<id|null>}
  rundgaenge:[],    // wöchentliche Bonitur, Schadbilder in Stufen 0–3
  saetze:{},        // je Satz: eingetragenes Aussaatdatum, Notizen
  eigeneOptima:{},  // eigene Sollbereiche, schlagen die des Labors — je Grenze
@@ -151,7 +152,36 @@ Tages sind **eine** Erhebung mit zwei Proben. Fast alle Auswertungen arbeiten au
 Erhebungen, nicht auf Analysen. `e.proben` ist `{jung, alt, misch}`, `e.bew` die
 Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
 
-**Schema 7 (neu).** Drei Felder je Analyse und ein neuer Wasserparameter:
+**Schema 8 (neu): Entnahmestellen zuordnen.** Das Labor schreibt auf jeden
+Bericht eine eigene Bezeichnung — «Reservoir Vorne», «Basilikum RV», «Hinter,
+Ohne H2O2», «Vorne, mitt H2O2» — und der Betrieb wird das weiter tun. Vier
+Bezeichnungen für zwei Reservoirs zerlegen jeden Verlauf in vier Reihen.
+
+Die Anwendung fasst das **nicht** von sich aus zusammen. «mit H2O2» ist
+derselbe Ort, aber nicht derselbe Zustand; ob das in dieselbe Reihe gehört,
+kann nur ein Mensch entscheiden. Also: `db.stellen.gruppen` sind die Stellen,
+die es wirklich gibt (Vorgabe: zwei Reservoirs), `db.stellen.zu` ordnet jede
+**Bezeichnung** einer zu. Drei Zustände, und der Unterschied zwischen ihnen
+ist der Punkt:
+
+| `zu[bez]` | heisst |
+|---|---|
+| eine id | gehört zu dieser Stelle |
+| `null` | gehört ausdrücklich **zu keiner** — bildet keine Reihe, bleibt aber vollständig im Bestand und in den Tabellen |
+| fehlt | noch **nicht entschieden** — bildet solange ihre eigene Reihe, damit ohne Zutun nichts anders aussieht als vorher |
+
+`stellenVorschlag(bez)` leitet aus dem Wortlaut einen **Vorschlag** ab
+(«vorne»/«RV» → vorne). Er wird nie von selbst angewandt; «Vorschläge
+übernehmen» füllt nur, was noch offen ist. Nennt eine Bezeichnung eine
+Behandlung (H2O2 ohne «ohne»), trägt der Vorschlag sichtbar einen Vorbehalt.
+
+`gwStelle(a)` liefert weiterhin die Bezeichnung des Berichts und wird nirgends
+überschrieben — in Tabellen und Infokästchen steht immer das Original, bei
+Zuordnung ergänzt um «auf dem Bericht: …». Für alles, was Reihen bildet, gilt
+`stelleSchluessel(a)` / `stelleName(a)`, und `gwSichtbar(a)` hält
+Ausgeschlossenes aus den Diagrammen.
+
+**Schema 7.** Drei Felder je Analyse und ein neuer Wasserparameter:
 
 - `herkunft` — eine Wasserprobe aus dem **Rücklauf** misst nicht dasselbe wie
   eine aus dem Zulauf. Vorher stand nirgends, welche von beiden es war, und
@@ -415,10 +445,10 @@ Datumsachse.
 |---|---|
 | **Überblick** | Kennzahlen · Nährstofflage über die Zeit · **Rangliste der Mängel** · **Eingangsbilanz** · Befunde je Satz · was chronisch daneben liegt |
 | **Analysen** | PDFs einlesen, Kontrolldialog vor der Übernahme, alle Proben, Handeingabe |
-| **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse** — fünf benannte Fragen als Startpunkt, darunter jeder Nährstoff und jede Wassergrösse einzeln wählbar |
+| **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse** — fünf benannte Fragen als Startpunkt, darunter jeder Nährstoff und jede Wassergrösse einzeln wählbar; Blattetage und Linien filterbar |
 | **Nährstoffe** | Ein oder mehrere Nährstoffe über Zeit oder Kulturwoche, mit Tabellen darunter |
 | **Substrat** | Angebot im Substrat gegen Aufnahme im Blatt |
-| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
+| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, **Entnahmestellen zuordnen**, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
 | **Logbuch** | Schnellerfassung in einer Zeile, Zeitstrahl nach Monaten, nach Art filterbar, «wieder so» zum Duplizieren, **«Wirkung prüfen» je Eintrag** |
 | **Fotos** | Galerie je Tag; jedes Foto erscheint als Kamerasymbol unter den Zeitdiagrammen |
 | **Rundgang** | Wöchentliche Bonitur, Schadbilder in Stufen 0–3 |
@@ -512,8 +542,8 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (430 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (478 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
@@ -536,6 +566,7 @@ BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weitera
 | `b1` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken, Verdünnung |
 | `v1` | Reiter Verlauf: Schema 7, gemeinsame Zeitachse, getrennte Achsen, freie Auswahl, Farbkopplung, Rangliste, Eingangsbilanz, Jung gegen Alt |
 | `d1` | Selbstsicherung: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
+| `st1` | Entnahmestellen zuordnen — gegen die vier echten Berichte mit ihren vier Schreibweisen |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |

@@ -282,6 +282,72 @@ require('fs').mkdirSync(shots,{recursive:true});
   }else{console.log('  ✗ keine anfassbaren Punkte');fehler.push('Verlauf: Punkte ohne Trefferflaeche')}
   await p.screenshot({path:shots+'/verlauf.png',fullPage:false});
 
+  /* Entnahmestellen zuordnen: das Labor schreibt jedes Mal etwas anderes. */
+  console.log('\n── Entnahmestellen zuordnen ──');
+  await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(500);
+  const stHinweis=await p.$('#view button:text-is("Jetzt zuordnen")');
+  console.log((stHinweis?'  ✓ ':'  ✗ ')+'Der Reiter weist von sich aus auf die offenen Bezeichnungen hin');
+  if(!stHinweis)fehler.push('Stellen: kein Hinweis im Reiter');
+  const reihenVor=await p.$$eval('#legGw .pos',e=>e.length);
+  if(stHinweis){
+    await stHinweis.click();await p.waitForTimeout(500);
+    const dt=await p.$eval('#dlgTitel',e=>e.textContent);
+    console.log((/Entnahmestellen zuordnen/.test(dt)?'  ✓ ':'  ✗ ')+'Der Dialog öffnet: '+dt);
+    const zeilen=await p.$$eval('#dlgBody tbody tr',e=>e.length);
+    const bez=await p.$$eval('#dlgBody tbody tr td:first-child strong',es=>es.map(e=>e.textContent));
+    console.log('   Bezeichnungen:',bez.join(' | '));
+    console.log((bez.length>=4?'  ✓ ':'  ✗ ')+'Jede Bezeichnung aus den echten Berichten steht da');
+    if(bez.length<4)fehler.push('Stellen: Bezeichnungen unvollstaendig');
+    const warn=await p.$eval('#dlgBody',e=>e.innerText);
+    console.log((/Wasserstoffperoxid/.test(warn)?'  ✓ ':'  ✗ ')+'Die behandelte Probe trägt einen Vorbehalt');
+    if(!/Wasserstoffperoxid/.test(warn))fehler.push('Stellen: kein Vorbehalt bei H2O2');
+    console.log((/noch offen/.test(warn)?'  ✓ ':'  ✗ ')+'Ohne Zutun ist nichts zugeordnet');
+    await p.click('#dlgBody button:text-is("Vorschläge übernehmen")');await p.waitForTimeout(700);
+    const nach=await p.$eval('#dlgBody',e=>e.innerText);
+    console.log((!/noch offen/.test(nach)?'  ✓ ':'  ✗ ')+'«Vorschläge übernehmen» ordnet alles zu, was ableitbar ist');
+    if(/noch offen/.test(nach))fehler.push('Stellen: Vorschlaege greifen nicht');
+    /* Die behandelte Probe herausnehmen */
+    await p.click('#dlgBody tr:has-text("H2O2"):has-text("mitt") button:text-is("nicht verwenden")');await p.waitForTimeout(600);
+    await p.screenshot({path:shots+'/stellen.png',fullPage:false});
+    await p.click('#dlgFoot button:text-is("Fertig")');await p.waitForTimeout(600);
+    const reihenNach=await p.$$eval('#legGw .pos',e=>e.length);
+    console.log('   Reihen im Diagramm: '+reihenVor+' → '+reihenNach);
+    console.log((reihenNach<reihenVor?'  ✓ ':'  ✗ ')+'Aus vielen Bezeichnungen werden die Stellen, die es wirklich gibt');
+    if(reihenNach>=reihenVor)fehler.push('Stellen: Zuordnung wirkt nicht auf die Reihen');
+    const gwTxt=await p.$eval('#view',e=>e.innerText);
+    console.log((/Reservoir vorne/.test(gwTxt)&&/Reservoir hinten/.test(gwTxt)?'  ✓ ':'  ✗ ')+'Die Karten tragen die zugeordneten Namen');
+    console.log((/zugeordnet:/.test(gwTxt)?'  ✓ ':'  ✗ ')+'Und nennen, welche Bezeichnungen dahinterstehen');
+    if(!/zugeordnet:/.test(gwTxt))fehler.push('Stellen: Herkunft der Bezeichnung fehlt');
+    console.log((!/Jetzt zuordnen/.test(gwTxt)?'  ✓ ':'  ✗ ')+'Der Hinweis verschwindet, sobald nichts mehr offen ist');
+  }
+
+  /* Filter im Reiter Verlauf: Blattetage und Linien. */
+  console.log('\n── Verlauf: Blattetage und Linien ──');
+  await p.click('#nav button:text-is("Verlauf")');await p.waitForTimeout(600);
+  const legAlle=await p.$$eval('#legVl .pos',es=>es.map(e=>e.textContent.trim()));
+  console.log('   Legende, beide Etagen:',legAlle.join(' | '));
+  console.log((legAlle.some(t=>/jung/.test(t))&&legAlle.some(t=>/alt/.test(t))?'  ✓ ':'  ✗ ')+'Vorgabe zeigt beide Blattetagen');
+  console.log((legAlle.some(t=>/Reservoir vorne/.test(t))?'  ✓ ':'  ✗ ')+'Und die Wasserreihen tragen die zugeordneten Stellennamen');
+  if(!legAlle.some(t=>/Reservoir vorne/.test(t)))fehler.push('Verlauf: Zuordnung wirkt nicht');
+  const linVor=await p.$$eval('#cVl polyline',e=>e.length);
+  await p.click('#vlKarte [data-tun="vlLinien"][data-v="reihe"]');await p.waitForTimeout(450);
+  const linNach=await p.$$eval('#cVl polyline',e=>e.length);
+  console.log((linVor===0&&linNach>0?'  ✓ ':'  ✗ ')+'Linien sind zuschaltbar und nicht die Vorgabe ('+linVor+' → '+linNach+')');
+  if(!(linVor===0&&linNach>0))fehler.push('Verlauf: Linien schalten nicht');
+  const linTxt=await p.$eval('#vlKarte',e=>e.innerText);
+  console.log((/Linie ist eine Behauptung/.test(linTxt)?'  ✓ ':'  ✗ ')+'Mit dem Vorbehalt dazu');
+  await p.click('#vlKarte [data-tun="vlEtage"][data-v="jung"]');await p.waitForTimeout(450);
+  const legJung=await p.$$eval('#legVl .pos',es=>es.map(e=>e.textContent.trim()));
+  console.log('   nur jung:',legJung.join(' | '));
+  const nurJung=!legJung.some(t=>/·\s*alt$/.test(t))&&legJung.length<legAlle.length;
+  console.log((nurJung?'  ✓ ':'  ✗ ')+'«nur jung» lässt das Altblatt weg');
+  if(!nurJung)fehler.push('Verlauf: Blattfilter greift nicht');
+  const jungTxt=await p.$eval('#vlKarte',e=>e.innerText);
+  console.log((/sieht die Hälfte/.test(jungTxt)?'  ✓ ':'  ✗ ')+'Und sagt, was man dabei nicht sieht');
+  await p.screenshot({path:shots+'/verlauf_filter.png',fullPage:false});
+  await p.click('#vlKarte [data-tun="vlEtage"][data-v="beide"]');await p.waitForTimeout(400);
+  await p.click('#vlKarte [data-tun="vlLinien"][data-v="keine"]');await p.waitForTimeout(400);
+
   /* Die Wirkungsanalyse ist vom eigenen Reiter in den Logbuch-Zeitstrahl gewandert. */
   console.log('\n── Wirkungsanalyse am Logbucheintrag ──');
   await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(400);

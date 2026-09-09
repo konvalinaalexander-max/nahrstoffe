@@ -41,6 +41,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
  'chartPunkte','chartIndex','chartStapel','chartSaetze','zeitMarken','PAARE_VOR','render','sichern','laden','felderText',
  'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
+ 'stellenVorschlag','stellenListe','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar','stellenDb','stellenDialog','stellenChip','STELLEN_VORGABE','gwStelle','gwProben',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',

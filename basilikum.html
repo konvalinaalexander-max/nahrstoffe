@@ -680,8 +680,17 @@ const PRODUKTE_VORGABE={
   zitronensaeure:{name:'Zitronensäure',form:'fest',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
   halades:{name:'Halades PE',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'}};
 
-const leer=()=>({schema:7,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+/* Der Betrieb hat zwei Reservoirs. Das Labor schreibt aber jedes Mal etwas
+   anderes auf den Bericht: «Reservoir Vorne», «RV Basilikum», «Vorne, mitt
+   H2O2». Es waere falsch, daraus selbstaendig dasselbe zu machen - «Vorne,
+   mitt H2O2» ist eben nicht dieselbe Probe wie «Reservoir Vorne». Darum wird
+   zugeordnet statt geraten: die Anwendung schlaegt vor, der Mensch entscheidet.
+   zu[<Bezeichnung>] ist die Kennung der Stelle, null heisst ausdruecklich
+   «gehoert zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
+const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
+const leer=()=>({schema:8,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
+  stellen:STELLEN_VORGABE(),
   saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4,6],begleitet:[],geplant:[]},
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
     systemLiter:19200,
@@ -701,6 +710,9 @@ function migriere(roh){
   d.saetze=roh.saetze||{};
   d.fotos=(roh.fotos||[]).map(f=>Object.assign({},f));
   d.produkte=Object.assign(JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),roh.produkte||{});
+  d.stellen=roh.stellen&&Array.isArray(roh.stellen.gruppen)
+    ? {gruppen:roh.stellen.gruppen.map(g=>Object.assign({},g)),zu:Object.assign({},roh.stellen.zu||{})}
+    : STELLEN_VORGABE();
   d.analysen=(roh.analysen||[]).map(a=>Object.assign({},a));
   if(von<4){
     let u=0,s=0,al=0;
@@ -791,7 +803,14 @@ function migriere(roh){
       notizen.push('Das Systemvolumen ist von 20 000 auf 19 200 Liter berichtigt (zwei Reservoirs à 9 600). Die Soll-Ist-Bilanz rechnet ab jetzt damit.');
     }
   }
-  d.schema=7;
+  if(von<8){
+    const namen=[...new Set(d.analysen.filter(a=>a.typ==='giesswasser').map(a=>a.stelle).filter(Boolean))];
+    if(namen.length>2)
+      notizen.push(`Im Bestand stehen ${namen.length} verschiedene Bezeichnungen für Entnahmestellen, obwohl es zwei Reservoirs gibt (${namen.slice(0,4).join(', ')}${namen.length>4?' …':''}). Neu lassen sie sich einander zuordnen – im Reiter Giesswasser über «Stellen zuordnen». Bis dahin bleibt jede Bezeichnung eine eigene Reihe, es geht also nichts verloren.`);
+    else if(namen.length)
+      notizen.push('Entnahmestellen lassen sich neu zu Stellen zusammenfassen, falls das Labor dieselbe Stelle unterschiedlich benennt («Stellen zuordnen» im Reiter Giesswasser).');
+  }
+  d.schema=8;
   return {db:d,notizen,von};
 }
 
@@ -1668,6 +1687,17 @@ function chartStapel(box,o){
     /* Titel und Einheit der Spur */
     s+=`<text x="${ml}" y="${oben+13}" font-size="11.5" font-weight="600" fill="#141D17">${esc(sp.titel)}</text>`;
     if(sp.yLabel)s+=`<text x="${W-mr}" y="${oben+13}" text-anchor="end" font-size="10.5" fill="#697A6C">${esc(sp.yLabel)}</text>`;
+    /* Linien vor den Punkten, damit sie nicht darüber liegen. Verbunden wird
+       nur innerhalb einer Reihe - über zwei Blattetagen oder zwei
+       Entnahmestellen hinweg wäre die Linie eine Behauptung über zwei
+       verschiedene Dinge. */
+    if(o.linien)for(const se of serien){
+      if(se.klein)continue;                          /* die dichte Tankebene bleibt punktiert */
+      const sicht2=se.punkte.filter(q=>q.x>=x0&&q.x<=x1).sort((a,b)=>a.x-b.x);
+      if(sicht2.length<2)continue;
+      s+=`<polyline fill="none" stroke="${se.farbe}" stroke-width="1.6" opacity=".5" points="${
+        sicht2.map(q=>X(q.x)+','+Y(q.y)).join(' ')}"/>`;
+    }
     /* Punkte */
     for(const se of serien)for(const q of se.punkte){
       if(q.x<x0||q.x>x1)continue;
@@ -2650,6 +2680,9 @@ const PAARE_VOR=[
    vorformulierte Erwartung. */
 const VL_MAX_BLATT=8,VL_MAX_WASSER=6;
 let vlPaar='n',vlBlatt=null,vlWasser=null,vlSkala='lage',vlTank=true,vlLog=true,vlZeit='alles';
+/* Blattetage und Linien wirken auf die obere Spur. Beides ist eine Frage der
+   Lesbarkeit, keine der Daten: gefiltert wird nur, was gezeigt wird. */
+let vlEtage='beide',vlLinien='keine';
 /* Welche Wassergrössen mussten mangels Platz auf eine fremde Achse? */
 let vlGedraengt=[];
 /* Von einer Voreinstellung auf die eigene Auswahl umschalten, ohne dabei die
@@ -2669,7 +2702,12 @@ function vVerlauf(){
   if(!erh.length&&!gw.length)return leerHinweis('Noch keine Analysen',
     'Dieser Reiter stellt Blattsaft und Giesswasser auf eine gemeinsame Zeitachse. Dafür braucht es wenigstens eine Analyse.',
     '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
-  const gwStellen=[...new Set(gw.map(gwStelle))].sort();
+  /* Gruppiert wird nach zugeordneter Stelle, nicht nach der Schreibweise auf
+     dem Bericht. Ausdrücklich ausgeschlossene Bezeichnungen erscheinen gar
+     nicht erst - sie würden eine Reihe verfälschen. */
+  const gwSicht=gw.filter(gwSichtbar);
+  const gwStellen=[...new Set(gwSicht.map(stelleSchluessel))]
+    .sort((a,b)=>stelleTitel(a).localeCompare(stelleTitel(b)));
   const gwForm={};gwStellen.forEach((st,i)=>gwForm[st]=FORMEN[i%FORMEN.length]);
   /* Zur Wahl steht, was gemessen wurde: im Blatt alles, was in irgendeiner
      Probe vorkommt, im Wasser der ganze Berichtsumfang – auch das, was nie
@@ -2678,6 +2716,8 @@ function vVerlauf(){
     .filter((k,i,a)=>a.indexOf(k)===i)
     .filter(k=>k!=='K/Ca'&&NAME[k]&&erh.some(e=>alleProben(e).some(p=>p.werte[k])));
   const wasserParams=GW_PARAM.map(k=>'gw_'+k).filter(k=>k!=='gw_KCa');
+  /* Nur Blattetagen anbieten, die es im Bestand auch gibt. */
+  const etagenDa=['jung','alt','misch'].filter(al=>erh.some(e=>e.proben[al]));
 
   /* Alles, was von der gewählten Frage abhängt, wird bei JEDEM Neuzeichnen
      frisch bestimmt. Läge es im äusseren Gültigkeitsbereich, wechselte die
@@ -2708,7 +2748,8 @@ function vVerlauf(){
 
   function blattSerien(paar,farbe){
     const out=[];
-    for(const k of paar.blatt)for(const al of ['jung','alt','misch']){
+    const etagen=vlEtage==='beide'?['jung','alt','misch']:[vlEtage];
+    for(const k of paar.blatt)for(const al of etagen){
       const punkte=[];
       for(const e of erh){
         const pr=e.proben[al];if(!pr)continue;
@@ -2727,8 +2768,14 @@ function vVerlauf(){
             o?['Sollbereich',(o[0]!=null?nz(o[0]):'offen')+'–'+(o[1]!=null?nz(o[1]):'offen')]:null,
             st?['Beurteilung',STTEXT[st]]:null],'Anklicken öffnet die ganze Erhebung.')});
       }
-      if(punkte.length)out.push({id:'b|'+k+'|'+al,name:(paar.blatt.length>1?(NAME[k]||k)+' · ':'')+al,
-        farbe:farbe[k],form:BLATTFORM[al]||'kreis',punkte});
+      if(punkte.length){
+        /* Der Reihenname nennt nur, was zur Unterscheidung nötig ist. */
+        const teil=[];
+        if(paar.blatt.length>1)teil.push(NAME[k]||k);
+        if(etagen.length>1)teil.push(al);
+        out.push({id:'b|'+k+'|'+al,name:teil.length?teil.join(' · '):(NAME[k]||k),
+          farbe:farbe[k],form:BLATTFORM[al]||'kreis',punkte});
+      }
     }
     return out;
   }
@@ -2741,17 +2788,19 @@ function vVerlauf(){
       const basis=k.slice(3);
       for(const st of gwStellen){
         const punkte=[];
-        for(const a of gw.filter(x=>gwStelle(x)===st)){
+        for(const a of gwSicht.filter(x=>stelleSchluessel(x)===st)){
           const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
           const mg=inMgL(k,w.wert);
           punkte.push({x:+new Date(a.datum),y:w.wert,kennung:a.id,
             tipp:tippBau(gwName(k),farbe[basis],[
-              ['Wasser',st],['Probe',fmt(a.datum)],
+              ['Wasser',stelleName(a)],
+              stelleVon(a).roh!==stelleName(a)?['auf dem Bericht',stelleVon(a).roh]:null,
+              ['Probe',fmt(a.datum)],
               ['Messwert',nz(w.wert)+' '+einheit(k)],
               mg!=null?['entspricht',nz(mg,2)+' mg/l']:null],'Anklicken öffnet die ganze Wasserprobe.')});
         }
         if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,einh:einheit(k),
-          name:(paar.wasser.length>1?gwName(k)+' · ':'')+st,
+          name:(paar.wasser.length>1?gwName(k)+' · ':'')+stelleTitel(st),
           farbe:farbe[basis],form:gwForm[st]||'kreis',punkte});
       }
     }
@@ -2847,7 +2896,7 @@ function vVerlauf(){
     const einBlatt=paar.blatt.length===1&&vlSkala!=='lage';
     const band=einBlatt?(erh.map(e=>optVon(leitProbe(e)||{optima:{}},paar.blatt[0])).find(Boolean)||null):null;
     chartStapel(el('cVl'),{
-      von:koVon,bis:koBis,aufKlick:true,
+      von:koVon,bis:koBis,aufKlick:true,linien:vlLinien==='reihe',
       spuren:[
         {titel:'Pflanze · Blattsaft',serien:bs,yTyp:vlSkala==='lage'?'lage':'wert',band,
          yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
@@ -2905,6 +2954,16 @@ function vVerlauf(){
             ? `<button class="klein" data-tun="vlPassend" title="Nimmt zu jedem gewählten Nährstoff die gleichnamige Wassergrösse dazu.">passend zur Pflanze</button>`:''}
         </div>
         <div class="wz">
+          <span class="lab">Blatt</span>
+          <span class="seg">${[['beide','beide'],['jung','nur jung'],['alt','nur alt'],['misch','Mischprobe']]
+            .filter(([v])=>v==='beide'||etagenDa.includes(v)).map(([v,l])=>
+            `<button class="${vlEtage===v?'on':''}" data-tun="vlEtage" data-v="${v}">${l}</button>`).join('')}</span>
+          <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
+          <span class="seg">${[['keine','keine'],['reihe','je Reihe']].map(([v,l])=>
+            `<button class="${vlLinien===v?'on':''}" data-tun="vlLinien" data-v="${v}" title="${
+              v==='keine'?'Punkte sind die Messung.':'Verbindet nur innerhalb einer Reihe – nie über zwei Blattetagen oder zwei Entnahmestellen hinweg.'}">${l}</button>`).join('')}</span>
+        </div>
+        <div class="wz">
           <span class="lab">Anzeige</span>
           <span class="seg">${[['lage','Lage 0–3'],['wert','Messwert',paar.blatt.length>1]].map(([v,l,aus])=>
             `<button class="${vlSkala===v?'on':''}"${aus?' disabled title="Mehrere Nährstoffe mit verschiedenen Grössenordnungen – nur die Lage 0–3 ist gemeinsam lesbar."':''} data-tun="vlSkala" data-v="${v}">${l}</button>`).join('')}</span>
@@ -2912,9 +2971,11 @@ function vVerlauf(){
           <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${vlZeit===v?'on':''}" data-tun="vlZeit" data-v="${v}">${l}</button>`).join('')}</span>
           ${paar.wasser.includes('gw_pH')?`<span class="chip ${vlTank?'on':''}" data-tun="vlTank" style="margin-left:8px">pH am Tank</span>`:''}
           <span class="chip ${vlLog?'on':''}" data-tun="vlLog">Logbuch</span>${fotoChip()}
+          ${stellenChip()}
         </div></div>
       <div id="cVl" class="diagramm"></div><div class="legend" id="legVl"></div>
       <div id="vlHinweis"></div>`;
+    if(vlEtage!=='beide'&&!etagenDa.includes(vlEtage))vlEtage='beide';
     const doppelt=paar.blatt.filter(k=>paar.wasser.includes('gw_'+k)).map(k=>NAME[k]||k);
     if(paar.erwartung)t+=`<div class="note neutral"><strong>Was zu sehen sein sollte:</strong> ${esc(paar.erwartung)}<br>
         <strong>Was die Erwartung widerlegen würde:</strong> ${esc(paar.widerlegt)}</div>`;
@@ -2933,6 +2994,10 @@ function vVerlauf(){
         ${fehlt.indexOf('gw_NO2')>=0?'Nitrit ist der Trennversuch zwischen «Nitrifikation gestört» und «Ammonium wird einfach nachgeliefert»; frag es beim nächsten Auftrag mit an.':'Beim nächsten Wasserauftrag mitbestellen.'}</div>`;
     }
     if(gw.length&&gw.length<4)t+=`<p class="tiny muted">Nur ${gw.length} Wasseranalyse${gw.length>1?'n':''}. Zwischen zwei Punkten wird bewusst nicht interpoliert – was dazwischen war, weiss niemand.</p>`;
+    if(vlLinien==='reihe')t+=`<p class="tiny muted">Die Linien verbinden nur innerhalb einer Reihe – nie über zwei Blattetagen oder zwei Entnahmestellen hinweg.
+      <strong>Ein Punkt ist eine Messung, eine Linie ist eine Behauptung</strong> über alles, was dazwischen nicht gemessen wurde.</p>`;
+    if(vlEtage!=='beide')t+=`<p class="tiny muted">Gezeigt wird nur das ${vlEtage==='misch'?'Mischprobenmaterial':vlEtage+'e Blatt'}.
+      Bei mobilen Nährstoffen zeigt sich ein Mangel zuerst am <strong>Altblatt</strong>, bei immobilen am <strong>Jungblatt</strong> – wer nur eine Etage ansieht, sieht die Hälfte.</p>`;
     t+=`<p class="tiny muted">Blattsaft und Wasser haben getrennte Achsen und werden <strong>nicht</strong> ineinander umgerechnet.
       Zwischen beiden stehen Wurzel, Substrat und Transpiration; eine Umrechnung würde eine Bilanz vortäuschen, die es nicht gibt.</p>`;
     return t;
@@ -3030,6 +3095,8 @@ AKTION.vlPassend=()=>{
   w.forEach(k=>{if(!vlWasser.includes(k)&&vlWasser.length<VL_MAX_WASSER)vlWasser.push(k)});
   diagAus.clear();diagFrisch()};
 AKTION.vlSkala=d=>{vlSkala=d.v;diagFrisch()};
+AKTION.vlEtage=d=>{vlEtage=d.v;diagAus.clear();diagFrisch()};
+AKTION.vlLinien=d=>{vlLinien=d.v;diagFrisch()};
 AKTION.vlTank=()=>{vlTank=!vlTank;diagFrisch()};
 AKTION.vlLog=()=>{vlLog=!vlLog;diagFrisch()};
 AKTION.vlZeit=d=>{
@@ -3478,6 +3545,171 @@ const gwRichtVon=k=>{
 const gwProben=()=>db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum)
   .slice().sort((a,b)=>b.datum.localeCompare(a.datum)||String(a.stelle||'').localeCompare(String(b.stelle||'')));
 const gwStelle=a=>a.stelle||'ohne Namen';
+/* ── Entnahmestellen zusammenfassen ────────────────────────────────────────
+   gwStelle() liefert weiterhin die Bezeichnung, die im Bericht steht - sie
+   wird nirgends ueberschrieben, in Tabellen und Infokaestchen erscheint immer
+   das Original. Fuer alles, was Reihen bildet, tritt die zugeordnete Stelle
+   an ihre Stelle. Ist nichts zugeordnet, bleibt die Bezeichnung ihre eigene
+   Stelle - so aendert sich ohne Zutun nichts. */
+const stellenDb=()=>{
+  if(!db.stellen||!Array.isArray(db.stellen.gruppen))db.stellen=STELLEN_VORGABE();
+  if(!db.stellen.zu)db.stellen.zu={};
+  return db.stellen;
+};
+const stelleDef=id=>stellenDb().gruppen.find(g=>g.id===id)||null;
+/* Zustand einer Bezeichnung: zugeordnet, ausdruecklich draussen, oder offen. */
+function stelleVon(a){
+  const roh=gwStelle(a),zu=stellenDb().zu;
+  if(Object.prototype.hasOwnProperty.call(zu,roh)){
+    if(zu[roh]===null)return {roh,id:null,name:roh,aus:true,offen:false};
+    const g=stelleDef(zu[roh]);
+    if(g)return {roh,id:g.id,name:g.name,aus:false,offen:false};
+  }
+  return {roh,id:'roh:'+roh,name:roh,aus:false,offen:true};
+}
+const stelleSchluessel=a=>stelleVon(a).id||'';
+/* Aus einem Schluessel wieder einen lesbaren Namen machen. */
+const stelleTitel=id=>{
+  if(!id)return 'ohne Stelle';
+  if(String(id).indexOf('roh:')===0)return String(id).slice(4);
+  const g=stelleDef(id);
+  return g?g.name:String(id);
+};
+const stelleName=a=>stelleVon(a).name;
+const gwSichtbar=a=>!stelleVon(a).aus;
+/* Alle Bezeichnungen, die je vorgekommen sind, mit Anzahl und Zeitraum. */
+function stellenListe(){
+  const m=new Map();
+  for(const a of gwProben()){
+    const r=gwStelle(a);
+    if(!m.has(r))m.set(r,{roh:r,n:0,von:a.datum,bis:a.datum});
+    const e=m.get(r);e.n++;
+    if(a.datum<e.von)e.von=a.datum;
+    if(a.datum>e.bis)e.bis=a.datum;
+  }
+  return [...m.values()].map(e=>Object.assign(e,{zustand:stelleVon({stelle:e.roh}),vorschlag:stellenVorschlag(e.roh)}))
+    .sort((a,b)=>b.n-a.n||a.roh.localeCompare(b.roh));
+}
+/* Ein Vorschlag, mehr nicht: er wird nie von selbst angewandt. «vorne» und
+   «RV» deuten auf dasselbe Reservoir, aber nur ein Mensch weiss, ob eine
+   Probe «mit H2O2» noch als dieselbe Stelle gelten soll. */
+function stellenVorschlag(roh){
+  const t=' '+String(roh).toLowerCase().replace(/[^a-zäöü0-9]+/g,' ')+' ';
+  const vorne=/ (vorne|vorn|vorderes?|rv|v) /.test(t),hinten=/ (hinten|hinter|hinteres?|rh|h) /.test(t);
+  if(vorne===hinten)return null;                       /* beides oder keines: nichts vorschlagen */
+  const id=vorne?'v':'h';
+  const g=stelleDef(id);
+  if(!g)return null;
+  /* Eine behandelte Probe ist nicht dieselbe Stelle wie eine unbehandelte,
+     auch wenn dasselbe Reservoir draufsteht. Der Vorschlag bleibt, aber mit
+     Vorbehalt - entscheiden muss ihn ein Mensch. */
+  const behandelt=/ (mit|mitt|m)\s*h2o2 | h2o2 /.test(t)&&!/ ohne /.test(t);
+  return {id,name:g.name,
+    grund:vorne?'enthält «vorne» oder «RV»':'enthält «hinten» oder «RH»',
+    vorbehalt:behandelt?'Diese Bezeichnung nennt eine Behandlung mit Wasserstoffperoxid. Das ist derselbe Ort, aber nicht derselbe Zustand – überleg, ob sie in dieselbe Reihe gehört.':null};
+}
+/* ── Der Zuordnungsdialog ──────────────────────────────────────────────────
+   Eine Zeile je Bezeichnung, die im Bestand vorkommt, und je Zeile eine
+   Knopfreihe: zu welcher Stelle gehoert sie, oder ausdruecklich zu keiner.
+   Kein Ziehen und Fallenlassen - ein Klick je Zeile genuegt, und er
+   funktioniert auch mit der Tastatur. */
+function stellenDialog(){
+  const liste=stellenListe(),gr=stellenDb().gruppen;
+  const offen=liste.filter(x=>x.zustand.offen);
+  const machbar=offen.filter(x=>x.vorschlag);
+  /* Ein zusammenhängender Schalter statt einzelner Knöpfe: es ist EINE Wahl,
+     und so sieht man das auch. */
+  const knopf=(x,id,text,titel)=>{
+    const an=id===null?x.zustand.aus:(!x.zustand.offen&&x.zustand.id===id);
+    return `<button class="${an?'on':''}" data-tun="stelleZu" data-roh="${esc(x.roh)}" data-id="${id===null?'':esc(id)}"${
+      titel?` title="${esc(titel)}"`:''}>${esc(text)}</button>`;
+  };
+  let t=`<p class="small">Das Labor schreibt auf jeden Bericht eine eigene Bezeichnung – «Reservoir Vorne», «RV Basilikum», «Vorne, mitt H2O2».
+    Die Anwendung fasst das <strong>nicht</strong> von sich aus zusammen: «mit H2O2» ist derselbe Ort, aber nicht derselbe Zustand,
+    und ob das in dieselbe Reihe gehört, weisst nur du. Hier ordnest du es einmal zu; alle Diagramme folgen danach dieser Zuordnung.</p>`;
+  if(machbar.length)t+=`<div class="note neutral" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <span>Für ${machbar.length} noch offene Bezeichnung${machbar.length>1?'en gibt es einen Vorschlag':' gibt es einen Vorschlag'} aus dem Wortlaut.</span>
+    <button data-tun="stelleVorschlagAlle">Vorschläge übernehmen</button>
+    <span class="tiny muted">Ändert nur, was noch offen ist.</span></div>`;
+  t+=`<div class="scroll"><table><thead><tr><th>Bezeichnung auf dem Bericht</th><th>Proben</th><th>Zeitraum</th><th>gehört zu</th></tr></thead><tbody>
+    ${liste.map(x=>`<tr>
+      <td><strong>${esc(x.roh)}</strong>${x.vorschlag&&x.zustand.offen?`<div class="tiny muted">Vorschlag: ${esc(x.vorschlag.name)} – ${esc(x.vorschlag.grund)}</div>`:''}
+        ${x.vorschlag&&x.vorschlag.vorbehalt?`<div class="tiny" style="color:var(--rand)">${esc(x.vorschlag.vorbehalt)}</div>`:''}</td>
+      <td class="mono">${x.n}</td>
+      <td class="tiny mono">${x.von===x.bis?fmtK(x.von):fmtK(x.von)+'–'+fmtK(x.bis)}</td>
+      <td style="white-space:nowrap"><span class="seg">
+        ${gr.map(g=>knopf(x,g.id,g.name)).join('')}
+        ${knopf(x,null,'nicht verwenden','Diese Proben bleiben im Bestand und in den Tabellen, erscheinen aber in keinem Verlauf.')}
+        </span>
+        ${x.zustand.offen?' <span class="tiny muted">noch offen</span>'
+          :` <button class="ghost" data-tun="stelleZu" data-roh="${esc(x.roh)}" data-id="offen" title="Zuordnung wieder aufheben">↺</button>`}
+      </td></tr>`).join('')}
+    </tbody></table></div>`;
+  t+=`<div class="hd" style="margin-top:18px"><div><h2 style="font-size:15px">Stellen</h2>
+      <p class="sub">So heissen die Reihen in den Diagrammen. Es sind zwei Reservoirs – aber wenn ihr mehr braucht, leg sie hier an.</p></div></div>
+    <div class="scroll"><table><tbody>
+    ${gr.map(g=>{const n=liste.filter(x=>!x.zustand.offen&&x.zustand.id===g.id);
+      return `<tr><td style="width:60%"><input value="${esc(g.name)}" data-aend="stelleName" data-id="${esc(g.id)}" style="width:100%"></td>
+      <td class="tiny muted">${n.length?esc(n.map(x=>x.roh).join(', ')):'noch nichts zugeordnet'}</td>
+      <td><button class="ghost" data-tun="stelleWeg" data-id="${esc(g.id)}">entfernen</button></td></tr>`}).join('')}
+    <tr><td><input id="stNeu" placeholder="Name einer weiteren Stelle" style="width:100%"></td>
+      <td colspan="2"><button data-tun="stelleNeu">Anlegen</button></td></tr>
+    </tbody></table></div>`;
+  const aus=liste.filter(x=>x.zustand.aus);
+  if(aus.length)t+=`<div class="note neutral" style="margin-top:14px"><strong>Nicht verwendet:</strong> ${esc(aus.map(x=>x.roh+' ('+x.n+')').join(', '))}.
+    Diese Proben bleiben vollständig im Bestand, in den Tabellen und in der Sicherungsdatei – sie bilden nur keine Reihe im Verlauf.</div>`;
+  if(offen.length)t+=`<div class="note">${offen.length} Bezeichnung${offen.length>1?'en sind':' ist'} noch nicht zugeordnet.
+    Solange bleibt jede eine eigene Reihe – es geht nichts verloren, aber der Verlauf zerfällt in mehr Reihen als es Stellen gibt.</div>`;
+  dialog('Entnahmestellen zuordnen',t,`<button class="primary" data-tun="dlgZu">Fertig</button>`);
+}
+AKTION.stellen=()=>stellenDialog();
+AKTION.stelleZu=d=>{
+  const zu=stellenDb().zu;
+  if(d.id==='offen')delete zu[d.roh];               /* Zuordnung aufheben */
+  else if(d.id==='')zu[d.roh]=null;                 /* ausdrücklich zu keiner Stelle */
+  else if(zu[d.roh]===d.id)delete zu[d.roh];        /* derselbe Knopf noch einmal: wieder offen */
+  else zu[d.roh]=d.id;
+  aend();stellenDialog();render();
+};
+AKTION.stelleVorschlagAlle=()=>{
+  const zu=stellenDb().zu;let n=0;
+  for(const x of stellenListe())if(x.zustand.offen&&x.vorschlag){zu[x.roh]=x.vorschlag.id;n++}
+  if(!n)return toast('Es gibt nichts, wofür sich ein Vorschlag ableiten liesse.');
+  aend();stellenDialog();render();
+  toast(`${n} Bezeichnung${n>1?'en zugeordnet':' zugeordnet'} – bitte kurz durchsehen, besonders die behandelten Proben.`);
+};
+AKTION.stelleNeu=()=>{
+  const e=el('stNeu'),name=(e&&e.value||'').trim();
+  if(!name)return toast('Bitte einen Namen eintragen.');
+  const gr=stellenDb().gruppen;
+  if(gr.some(g=>g.name===name))return toast('Diese Stelle gibt es schon.');
+  gr.push({id:'s'+Date.now().toString(36),name});
+  aend();stellenDialog();render();
+};
+AKTION.stelleName=(d,ev)=>{
+  const g=stelleDef(d.id);if(!g)return;
+  const n=(ev.target.value||'').trim();
+  if(!n)return toast('Eine Stelle braucht einen Namen.');
+  g.name=n;aend();render();
+};
+AKTION.stelleWeg=d=>{
+  const zu=stellenDb().zu;
+  const betroffen=Object.keys(zu).filter(k=>zu[k]===d.id);
+  if(betroffen.length&&!confirm(`${betroffen.length} Bezeichnung${betroffen.length>1?'en zeigen':' zeigt'} auf diese Stelle. Sie werden wieder offen. Fortfahren?`))return;
+  betroffen.forEach(k=>delete zu[k]);
+  db.stellen.gruppen=stellenDb().gruppen.filter(g=>g.id!==d.id);
+  aend();stellenDialog();render();
+};
+/* Ein Knopf, der zeigt, ob noch etwas offen ist – überall gleich. */
+function stellenChip(){
+  const liste=stellenListe();
+  if(liste.length<2)return '';
+  const offen=liste.filter(x=>x.zustand.offen).length;
+  const stellen=new Set(liste.filter(x=>!x.zustand.offen&&!x.zustand.aus).map(x=>x.zustand.id));
+  return `<button class="klein" data-tun="stellen" title="${esc(liste.length+' Bezeichnungen im Bestand')}">Stellen zuordnen${
+    offen?` <span class="pill rand" style="margin-left:4px">${offen} offen</span>`:` <span class="tiny muted">· ${stellen.size} Stelle${stellen.size===1?'':'n'}</span>`}</button>`;
+}
+
 /* Kurzname eines Wasserparameters – der Zusatz «(Wasser)» steht in jeder
    Überschrift des Reiters schon im Zusammenhang. */
 const gwName=k=>String(NAME[k]||k).replace(' (Wasser)','').replace(' (Giesswasser)','');
@@ -3485,15 +3717,23 @@ const gwName=k=>String(NAME[k]||k).replace(' (Wasser)','').replace(' (Giesswasse
    Im Diagramm steht die Farbe für den Parameter und die Form für die Stelle –
    in den Karten und Tabellen bleibt die Farbe die Kennung der Stelle. */
 function gwFarben(){
-  const st=[...new Set(gwProben().map(gwStelle))].sort();
+  /* Die Farbe kennzeichnet die Stelle, nicht die Schreibweise: zwei
+     Bezeichnungen derselben Stelle bekommen dieselbe Farbe. Nachgeschlagen
+     wird ueber beides, damit alte Aufrufstellen weiter funktionieren. */
+  const st=[...new Set(gwProben().map(stelleSchluessel))].sort();
   const m={};st.forEach((x,i)=>m[x]=FARBEN[i%FARBEN.length]);
+  for(const a of gwProben())if(m[stelleSchluessel(a)])m[gwStelle(a)]=m[stelleSchluessel(a)];
   return m;
 }
 let gwWahl=null,gwSkala='auto',gwLinien='aus',gwLog=true;
 function vGiess(){
   const alle=gwProben();
   const farbe=gwFarben();
-  const stellen=[...new Set(alle.map(gwStelle))].sort();
+  /* Nach zugeordneter Stelle, nicht nach Schreibweise. Ausgeschlossene
+     Bezeichnungen bleiben in den Tabellen sichtbar, aber aus den Reihen
+     draussen - sie würden den Verlauf verfälschen. */
+  const sicht=alle.filter(gwSichtbar);
+  const stellen=[...new Set(sicht.map(stelleSchluessel))].sort((a,b)=>stelleTitel(a).localeCompare(stelleTitel(b)));
   const messungen=[...db.messungen].sort((a,b)=>b.datum.localeCompare(a.datum));
   const rel=db.ereignisse.filter(e=>EVTYPEN[e.typ]&&EVTYPEN[e.typ].kreis).sort((a,b)=>b.datum.localeCompare(a.datum));
   const altFormat=alle.filter(a=>a.einheitAlt);
@@ -3532,14 +3772,15 @@ function vGiess(){
     const out=[];
     for(const k of gwWahl)for(const st of stellen){
       const punkte=[];
-      for(const a of alle.filter(x=>gwStelle(x)===st)){
+      for(const a of sicht.filter(x=>stelleSchluessel(x)===st)){
         const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
         const y=gwSk==='rel'?(gwMax[k]?w.wert/gwMax[k]*100:null):w.wert;
         if(y==null)continue;
         const r=gwRichtVon(k),mg=inMgL(k,w.wert);
         punkte.push({x:+new Date(a.datum),y,xtext:fmtK(a.datum),gruppe:gwLinien==='alle'?null:st,kennung:a.id,
           tipp:tippBau(gwName(k),gwWahl.length>1?gwFarbe[k]:(farbe[st]||gwFarbe[k]),[
-            ['Entnahmestelle',st],
+            ['Entnahmestelle',stelleName(a)],
+            stelleVon(a).roh!==stelleName(a)?['auf dem Bericht',stelleVon(a).roh]:null,
             ['Probe',fmt(a.datum)],
             a.laborId?['Probennummer',a.laborId]:null,
             a.kultur?['Anbau',a.kultur]:null,
@@ -3549,7 +3790,7 @@ function vGiess(){
             (r&&w.wert>r.bis)?['Beurteilung','über dem Richtwert']:null],
             'Anklicken öffnet alle Werte dieser Probe.')});
       }
-      if(punkte.length)out.push({id:k+'|'+st,name:(gwWahl.length>1?gwName(k)+' · ':'')+st,
+      if(punkte.length)out.push({id:k+'|'+st,name:(gwWahl.length>1?gwName(k)+' · ':'')+stelleTitel(st),
         farbe:gwWahl.length>1?gwFarbe[k]:(farbe[st]||gwFarbe[k]),form:gwForm[st]||'kreis',punkte});
     }
     return out;
@@ -3599,6 +3840,7 @@ function vGiess(){
           <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
           <span class="seg">${[['aus','keine'],['stelle','je Stelle'],['alle','durchgehend']].map(([v,l])=>`<button class="${gwLinien===v?'on':''}" data-tun="gwLinien" data-v="${v}">${l}</button>`).join('')}</span>
           <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>${fotoChip()}
+          ${stellenChip()}
         </div></div>
       <div id="cGw" class="diagramm"></div><div class="legend" id="legGw"></div>`;
     if(gwErzwungen)t+=`<div class="note">${gwAchse.grund==='einheit'
@@ -3616,12 +3858,20 @@ function vGiess(){
   if(altFormat.length)s+=`<div class="note warn">${altFormat.length} Wasseranalyse${altFormat.length>1?'n wurden':' wurde'} vor der Umstellung von Hand erfasst.
     Damals waren die Felder als mg/l beschriftet, das Labor liefert aber mmol/l und µmol/l. Bitte diese Werte kontrollieren.</div>`;
 
+  const stListe=stellenListe(),stOffen=stListe.filter(x=>x.zustand.offen);
+  if(stOffen.length&&stListe.length>1)
+    s+=`<div class="note"><strong>${stListe.length} verschiedene Bezeichnungen</strong> für Entnahmestellen stehen im Bestand,
+      ${stOffen.length===stListe.length?'keine davon ist':stOffen.length+' davon '+(stOffen.length>1?'sind':'ist')+' noch nicht'} zugeordnet
+      (${esc(stOffen.map(x=>x.roh).join(', '))}).
+      Jede bildet solange ihre eigene Reihe – was derselbe Ort ist, sieht dann aus wie zwei verschiedene.
+      <button data-tun="stellen" style="margin-left:8px">Jetzt zuordnen</button></div>`;
+
   /* Das Diagramm zuoberst, sobald es mehr als eine Probe gibt. */
   if(alle.length>1)s+=`<div class="card" id="gwKarte">${gwKopf()}</div>`;
 
   s+=`<div class="kpis">
-    <div class="kpi"><h4>Entnahmestellen</h4><b>${stellen.length}</b><span class="tiny muted">${alle.length} Proben insgesamt</span></div>
-    <div class="kpi"><h4>Neueste Probe</h4><b>${alle.length?fmtK(alle[0].datum):'–'}</b><span class="tiny muted">${alle.length?esc(gwStelle(alle[0])):'noch keine'}</span></div>
+    <div class="kpi"><h4>Entnahmestellen</h4><b>${stellen.length}</b><span class="tiny muted">aus ${stellenListe().length} Bezeichnung${stellenListe().length===1?'':'en'} · ${alle.length} Proben</span></div>
+    <div class="kpi"><h4>Neueste Probe</h4><b>${alle.length?fmtK(alle[0].datum):'–'}</b><span class="tiny muted">${alle.length?esc(stelleName(alle[0])):'noch keine'}</span></div>
     <div class="kpi"><h4>Messungen am Tank</h4><b>${messungen.length}</b><span class="tiny muted">pH und EC im Rücklauf</span></div>
   </div>`;
 
@@ -3630,7 +3880,7 @@ function vGiess(){
     s+=`<div class="hd" style="margin:20px 0 12px"><div><h2>Neueste Probe je Entnahmestelle</h2>
       <p class="sub">Jede Entnahmestelle ist eine eigene Reihe. Proben vom selben Tag aus verschiedenen Stellen stehen nebeneinander und tragen jeweils ihren Namen.</p></div></div>`;
     for(const st of stellen){
-      const p=alle.find(a=>gwStelle(a)===st);
+      const p=sicht.find(a=>stelleSchluessel(a)===st);
       const leit=['gw_EC','gw_pH','gw_HCO3','gw_Na','gw_Cl','gw_NO3','gw_NH4'].filter(k=>p.werte[k]);
       const hin=[];
       for(const k of Object.keys(GW_RICHT_VORGABE)){
@@ -3642,9 +3892,10 @@ function vGiess(){
       const naehr=['gw_NO3','gw_NH4','gw_K','gw_Ca','gw_Mg','gw_S','gw_P']
         .filter(k=>p.werte[k]&&p.werte[k].wert!=null&&!p.werte[k].unter&&p.werte[k].wert>0);
       s+=`<div class="card"><div class="hd">
-        <div><h2 style="display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:50%;background:${farbe[st]};flex:none"></span>${esc(st)}</h2>
+        <div><h2 style="display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:50%;background:${farbe[st]};flex:none"></span>${esc(stelleTitel(st))}</h2>
           <p class="sub">${fmt(p.datum)}${p.kultur?' · '+esc(p.kultur):''}${p.laborId?' · Probe '+esc(p.laborId):''}
-          ${alle.filter(a=>gwStelle(a)===st).length>1?` · ${alle.filter(a=>gwStelle(a)===st).length} Proben insgesamt`:''}</p></div>
+          ${sicht.filter(a=>stelleSchluessel(a)===st).length>1?` · ${sicht.filter(a=>stelleSchluessel(a)===st).length} Proben insgesamt`:''}
+          ${stelleVon(p).offen?'':`<span class="tiny muted">· zugeordnet: ${esc([...new Set(sicht.filter(a=>stelleSchluessel(a)===st).map(a=>gwStelle(a)))].join(', '))}</span>`}</p></div>
         <button data-tun="detail" data-id="${esc(p.id)}">Alle Werte ansehen</button></div>
         <div class="row" style="gap:20px">
           ${leit.map(k=>`<div><div class="tiny muted">${esc(NAME[k].replace(' (Wasser)','').replace(' (Giesswasser)',''))}</div>

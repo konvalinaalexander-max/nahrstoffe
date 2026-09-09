@@ -24,7 +24,7 @@ const alt3={schema:3,version:7,gespeichert:'2026-08-01T10:00:00.000Z',
 const erg=A.migriere(JSON.parse(JSON.stringify(alt3)));
 console.log('   von Format',erg.von,'nach',erg.db.schema);
 erg.notizen.forEach(n=>console.log('   ·',n));
-ok(erg.db.schema===7,'Schema auf 7 gehoben');
+ok(erg.db.schema===8,'Schema auf 8 gehoben');
 ok(Array.isArray(erg.db.fotos)&&!erg.db.fotos.length,'Fotoablage leer angelegt');
 ok(erg.db.produkte&&erg.db.produkte.biovin&&erg.db.produkte.biovin.gehalt.Fe===0.22,'Produktstammdaten mit den Etikettwerten angelegt');
 ok(erg.db.analysen.length===2,'Beide Analysen übernommen');
@@ -49,7 +49,7 @@ console.log('\n════ 14 · Sicherung schreiben und wieder laden ═══
 ok(erg.db.analysen.every(a=>a.typ!=='giesswasser'||!a.einheitAlt),'Ohne Wasseranalysen keine Einheitenwarnung');
 const rund=JSON.parse(JSON.stringify(erg.db));
 const erg2=A.migriere(rund);
-ok(erg2.von===7&&!erg2.notizen.length,'Eine Datei im aktuellen Format wird ohne Umbau geladen');
+ok(erg2.von===8&&!erg2.notizen.length,'Eine Datei im aktuellen Format wird ohne Umbau geladen');
 ok(JSON.stringify(erg2.db.analysen)===JSON.stringify(erg.db.analysen),'Analysen bleiben beim Rundlauf identisch');
 A.setDb(erg2.db);
 let render=true;try{A.vLage();A.vSubstrat();A.vSaetze();A.nachRenderRun()}catch(e){render=false;console.log('   FEHLER',e.message)}
