@@ -40,6 +40,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
  'vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
  'chartPunkte','chartIndex','chartStapel','chartSaetze','zeitMarken','PAARE_VOR','render','sichern','laden','felderText',
+ 'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',
@@ -49,5 +50,5 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
 
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
-  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
 module.exports=fn(module,{},require,global.document,global.window,global);

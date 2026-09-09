@@ -34,6 +34,8 @@ button.primary{background:var(--ink);border-color:var(--ink);color:#fff;font-wei
 button.primary:hover{background:#25352B}
 button.ghost{border-color:transparent;background:none;color:var(--muted);padding:5px 8px}
 button.ghost:hover{color:var(--ink);background:var(--line2)}
+button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--muted)}
+button.klein:hover{color:var(--ink)}
 button:disabled{opacity:.4;cursor:not-allowed}
 button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:var(--rs);background:#fff;color:var(--ink);max-width:100%}
@@ -207,7 +209,7 @@ details[open]>summary:before{content:'▾ '}
     <div style="flex:1"></div>
     <span id="stand" class="tiny muted"></span>
     <button data-tun="dateiOeffnen">Datei öffnen</button>
-    <button data-tun="sichern" class="primary">Sichern</button>
+    <button data-tun="sichern" class="primary" title="Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.">Sichern</button>
   </div>
   <nav id="nav"></nav>
 </header>
@@ -217,10 +219,17 @@ details[open]>summary:before{content:'▾ '}
   <div class="dlg-b" id="dlgBody"></div>
   <div class="dlg-f" id="dlgFoot" hidden></div>
 </dialog>
-<input type="file" id="fileJson" accept=".json" hidden>
+<input type="file" id="fileJson" accept=".json,.html,.htm" hidden>
 <input type="file" id="filePdf" accept="application/pdf" multiple hidden>
 <input type="file" id="fileFoto" accept="image/*" multiple hidden>
 <input type="file" id="fileTab" accept=".xlsx,.xlsm,.xls,.csv" hidden>
+
+<!-- Hier legt die Anwendung ihre Daten ab, wenn du sie als HTML sicherst.
+     Im ausgelieferten Werkzeug steht hier bewusst nur «null»: eine frische
+     Datei ist leer. Beim Sichern schreibt sich die Seite selbst neu und
+     setzt an dieser Stelle den ganzen Bestand ein. Nicht von Hand
+     bearbeiten - eine kaputte Zeile hier macht die Datei unlesbar. -->
+<script type="application/json" id="datenblock">null</script>
 
 <script>
 "use strict";
@@ -2636,7 +2645,24 @@ const PAARE_VOR=[
   erwartung:'Steigender pH, im Blatt fallendes Eisen und Zink.',
   widerlegt:'Fallender oder gleichbleibender pH bei gleichzeitig fallenden Spurenelementen.'}];
 
-let vlPaar='n',vlSkala='lage',vlTank=true,vlLog=true,vlZeit='alles';
+/* Die fünf Fragen sind Startpunkte, keine Grenze. Sobald etwas dazu- oder
+   weggenommen wird, gilt die eigene Auswahl – dieselbe Ansicht, nur ohne
+   vorformulierte Erwartung. */
+const VL_MAX_BLATT=8,VL_MAX_WASSER=6;
+let vlPaar='n',vlBlatt=null,vlWasser=null,vlSkala='lage',vlTank=true,vlLog=true,vlZeit='alles';
+/* Welche Wassergrössen mussten mangels Platz auf eine fremde Achse? */
+let vlGedraengt=[];
+/* Von einer Voreinstellung auf die eigene Auswahl umschalten, ohne dabei die
+   bisher gezeigten Grössen zu verlieren: sie werden übernommen. */
+function vlEigen(){
+  if(vlPaar!=='eigen'){
+    const p=PAARE_VOR.find(x=>x.id===vlPaar)||PAARE_VOR[0];
+    vlBlatt=p.blatt.slice();vlWasser=p.wasser.slice();vlPaar='eigen';
+  }
+  if(!vlBlatt)vlBlatt=[];
+  if(!vlWasser)vlWasser=[];
+}
+const vlKurz=(namen,n)=>namen.length<=n?namen.join(', '):namen.slice(0,n).join(', ')+' +'+(namen.length-n);
 function vVerlauf(){
   const erh=erhebungen();
   const gw=gwProben();
@@ -2645,14 +2671,39 @@ function vVerlauf(){
     '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
   const gwStellen=[...new Set(gw.map(gwStelle))].sort();
   const gwForm={};gwStellen.forEach((st,i)=>gwForm[st]=FORMEN[i%FORMEN.length]);
+  /* Zur Wahl steht, was gemessen wurde: im Blatt alles, was in irgendeiner
+     Probe vorkommt, im Wasser der ganze Berichtsumfang – auch das, was nie
+     gemessen wurde, denn genau diese Lücke soll sichtbar bleiben. */
+  const blattParams=STOFFREIHE.concat([...new Set(erh.flatMap(e=>alleProben(e).flatMap(p=>Object.keys(p.werte))))])
+    .filter((k,i,a)=>a.indexOf(k)===i)
+    .filter(k=>k!=='K/Ca'&&NAME[k]&&erh.some(e=>alleProben(e).some(p=>p.werte[k])));
+  const wasserParams=GW_PARAM.map(k=>'gw_'+k).filter(k=>k!=='gw_KCa');
 
   /* Alles, was von der gewählten Frage abhängt, wird bei JEDEM Neuzeichnen
      frisch bestimmt. Läge es im äusseren Gültigkeitsbereich, wechselte die
      Schaltfläche, aber nicht der Inhalt – genau dieser Fehler ist beim Bauen
      passiert und von der Browserprüfung gefunden worden. */
   function vlAb(){
-    const paar=PAARE_VOR.find(p=>p.id===vlPaar)||PAARE_VOR[0];
-    return {paar,farbe:farbenFuer(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))};
+    let paar;
+    if(vlPaar==='eigen'){
+      vlEigen();
+      const bn=vlBlatt.map(k=>NAME[k]||k),wn=vlWasser.map(k=>gwName(k));
+      paar={id:'eigen',blatt:vlBlatt.slice(),wasser:vlWasser.slice(),
+        name:bn.length&&wn.length?'Eigene Auswahl'
+            :bn.length?'Nur die Pflanze'
+            :wn.length?'Nur das Wasser'
+            :'Nichts ausgewählt',
+        frage:bn.length&&wn.length?'Oben '+bn.join(', ')+' · unten '+wn.join(', ')+'.'
+            :bn.length?'Oben '+bn.join(', ')+'. Nimm unten eine Wassergrösse dazu, um beide Seiten zu sehen.'
+            :wn.length?'Unten '+wn.join(', ')+'. Nimm oben einen Nährstoff dazu, um beide Seiten zu sehen.'
+            :'Wähle oben einen Nährstoff und unten eine Wassergrösse.',
+        erwartung:null,widerlegt:null};
+    }else paar=PAARE_VOR.find(p=>p.id===vlPaar)||PAARE_VOR[0];
+    /* Doppelte Schlüssel würden in farbenFuer eine Farbe verbrauchen und die
+       Wunschfarbe verlieren. Nitrat oben und Nitrat unten ist derselbe Stoff
+       und muss dieselbe Farbe tragen – das ist der ganze Sinn der Kopplung. */
+    const keys=[...new Set(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))];
+    return {paar,farbe:farbenFuer(keys)};
   }
 
   function blattSerien(paar,farbe){
@@ -2725,22 +2776,60 @@ function vVerlauf(){
       return !gw.some(a=>a.werte[k]&&a.werte[k].wert!=null&&!a.werte[k].unter);
     });
   }
-  /* Nach Einheit gruppieren – je Einheit eine eigene Spur mit eigener Achse. */
+  /* Erst nach Einheit, dann nach Grössenordnung gruppieren – je Gruppe eine
+     eigene Spur mit eigener Achse. Dieselbe Regel wie im Reiter Nährstoffe
+     (Faktor 25): Ammonium bei 4 mmol/l und Nitrit bei 0,02 mmol/l teilen die
+     Einheit, aber auf einer gemeinsamen Achse wäre Nitrit eine Linie auf
+     null – und die Frage, ob Nitrit da ist, bleibt unbeantwortet. */
+  const VL_WASSER_SPUREN=3;
   function wasserSpuren(paar,ws){
-    const gruppen=new Map();
+    const nachEinheit=new Map();
     for(const se of ws){
       const e=se.einh==null?'':se.einh;
-      if(!gruppen.has(e))gruppen.set(e,[]);
-      gruppen.get(e).push(se);
+      if(!nachEinheit.has(e))nachEinheit.set(e,[]);
+      nachEinheit.get(e).push(se);
     }
-    const n=gruppen.size||1;
-    return [...gruppen.entries()].map(([e,serien],i)=>{
-      const params=[...new Set(serien.map(x=>x.param).filter(Boolean))];
+    let gruppen=[];
+    for(const [e,serien] of nachEinheit){
+      /* Zusammengehalten wird nach Parameter, nicht nach Einzelreihe: Nitrat
+         vorne und Nitrat hinten gehören auf dieselbe Achse, auch wenn die
+         eine Entnahmestelle dreimal so hoch liegt wie die andere. Sonst
+         stünde derselbe Stoff in zwei Spuren und wäre nicht vergleichbar. */
+      const nachParam=new Map();
+      for(const se of serien){
+        const k=se.param||se.id;
+        if(!nachParam.has(k))nachParam.set(k,[]);
+        nachParam.get(k).push(se);
+      }
+      const mitG=[...nachParam.values()].map(gr=>({gr,
+        g:groessenordnung(gr.flatMap(se=>se.punkte.map(q=>Math.abs(q.y))))}))
+        .sort((a,b)=>(a.g==null?Infinity:a.g)-(b.g==null?Infinity:b.g));
+      let akt=null;
+      for(const x of mitG){
+        if(!akt||(x.g!=null&&akt.klein!=null&&x.g/akt.klein>SPANNE_MAX)){
+          akt={einh:e,serien:[],klein:x.g};gruppen.push(akt);
+        }
+        x.gr.forEach(se=>akt.serien.push(se));
+        if(akt.klein==null)akt.klein=x.g;
+      }
+    }
+    /* Mehr als drei Wasserspuren macht die Zeichnung höher als den Bildschirm.
+       Was dann zusammengelegt wird, steht im Hinweis über dem Diagramm. */
+    vlGedraengt=[];
+    while(gruppen.length>VL_WASSER_SPUREN){
+      const letzt=gruppen.pop(),ziel=gruppen[gruppen.length-1];
+      letzt.serien.forEach(x=>ziel.serien.push(x));
+      vlGedraengt=vlGedraengt.concat([...new Set(letzt.serien.map(x=>x.param).filter(Boolean))]);
+    }
+    const n=gruppen.length||1;
+    const h=n>=3?140:n===2?160:200;
+    return gruppen.map(gr=>{
+      const params=[...new Set(gr.serien.map(x=>x.param).filter(Boolean))];
       const einWert=params.length===1?gwRichtVon(params[0]):null;
-      return {titel:'Wasser · '+(params.map(k=>gwName(k)).join(', ')||'Giesswasser')
-              +((vlTank&&e===''&&serien.some(x=>x.klein))?' und Tank':''),
-        serien,yTyp:'wert',band:einWert?[null,einWert.bis]:null,bandLabel:'Richtwert (Annahme)',
-        yLabel:e||'ohne Einheit',hoehe:n>1?(i===0?170:150):200,
+      return {titel:'Wasser · '+(vlKurz(params.map(k=>gwName(k)),4)||'Giesswasser')
+              +((vlTank&&gr.einh===''&&gr.serien.some(x=>x.klein))?' und Tank':''),
+        serien:gr.serien,yTyp:'wert',band:einWert?[null,einWert.bis]:null,bandLabel:'Richtwert (Annahme)',
+        yLabel:gr.einh||'ohne Einheit',hoehe:h,
         leerText:'keine Wasseranalyse in diesem Zeitraum'};
     });
   }
@@ -2752,7 +2841,7 @@ function vVerlauf(){
        leere, die sagt warum. Verschwaende sie stillschweigend, sähe die
        Frage beantwortet aus, obwohl die halbe Antwort fehlt. */
     const wSpuren=wasserSpuren(paar,ws),fehlt=wasserFehlt(paar);
-    if(fehlt.length)wSpuren.push({titel:'Wasser · '+fehlt.map(k=>gwName(k)).join(', '),
+    if(fehlt.length)wSpuren.push({titel:'Wasser · '+vlKurz(fehlt.map(k=>gwName(k)),4),
       serien:[],yTyp:'wert',yLabel:'',hoehe:fehlt.length&&wSpuren.length?86:150,
       leerText:'in keiner Wasserprobe gemessen – diese Hälfte der Frage bleibt offen'});
     const einBlatt=paar.blatt.length===1&&vlSkala!=='lage';
@@ -2762,7 +2851,7 @@ function vVerlauf(){
       spuren:[
         {titel:'Pflanze · Blattsaft',serien:bs,yTyp:vlSkala==='lage'?'lage':'wert',band,
          yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
-         hoehe:200,leerText:'keine Blattsaftprobe in diesem Zeitraum'}
+         hoehe:wSpuren.length>=3?150:200,leerText:paar.blatt.length?'keine Blattsaftprobe in diesem Zeitraum':'kein Nährstoff ausgewählt – wähle oben einen aus'}
       ].concat(wSpuren),
       ereignisse:vlLog?db.ereignisse.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({
         x:+new Date(e.datum),farbe:evFarbe(e.typ),
@@ -2773,18 +2862,50 @@ function vVerlauf(){
       fotos:fotoSpur?fotoGruppen():[]});
     el('legVl').innerHTML=legende(bs.concat(ws.filter(x=>!x.klein)),diagAus,
       vlSkala==='lage'?'oben Lage 0–3 · unten Messwerte des Labors':'oben und unten je eigene Achse');
+    /* Erst hier, nicht im Kopf: welche Grössen zusammengelegt werden mussten,
+       steht erst nach dem Gruppieren fest. */
+    const hw=el('vlHinweis');
+    if(hw)hw.innerHTML=vlGedraengt.length
+      ? `<div class="note warn">Es sind mehr Wassergrössen gewählt, als getrennte Achsen Platz haben.
+          <strong>${esc(vlKurz(vlGedraengt.map(k=>gwName(k)),4))}</strong> teilt sich jetzt eine Achse mit deutlich grösseren Werten
+          und ist dort kaum abzulesen. Nimm eine Grösse weg, dann bekommt sie ihre eigene Achse zurück.</div>`
+      : '';
   }
 
   function vlKopf(){
-    const {paar}=vlAb();
+    const {paar,farbe}=vlAb();
+    const punkt=(an,c)=>`<span class="dot" style="background:${an?c:'#C3CDBF'}"></span>`;
+    const blattChips=blattParams.map(k=>{
+      const an=paar.blatt.includes(k);
+      return `<span class="chip stoff ${an?'on':''}" data-tun="vlStoff" data-k="${esc(k)}">${punkt(an,farbe[k])}${esc(NAME[k]||k)}</span>`;
+    }).join('');
+    /* Auch nie gemessene Wassergrössen stehen zur Wahl – sie erscheinen dann
+       als leere Spur mit dem Hinweis, dass sie nachzubestellen sind. Sie ganz
+       zu verstecken hiesse, eine Lücke unsichtbar zu machen. */
+    const hatWert=k=>gw.some(a=>a.werte[k]&&a.werte[k].wert!=null&&!a.werte[k].unter);
+    /* Gemessenes zuerst, nie Gemessenes ans Ende – sonst sucht man zwischen
+       lauter blassen Knöpfen nach den brauchbaren. */
+    const wasserChips=wasserParams.slice().sort((a,b)=>(hatWert(b)?1:0)-(hatWert(a)?1:0)).map(k=>{
+      const an=paar.wasser.includes(k),hat=hatWert(k);
+      return `<span class="chip stoff ${an?'on':''}${hat?'':' aus'}" data-tun="vlWass" data-k="${esc(k)}"${
+        hat?'':' title="In keiner Wasserprobe gemessen – erscheint als leere Spur mit Hinweis."'}>${
+        punkt(an,farbe[k.slice(3)])}${esc(gwName(k))}${hat?'':' <span class="tiny muted">·nie</span>'}</span>`;
+    }).join('');
+    const passend=paar.blatt.filter(k=>GW_PARAM.indexOf(k)>=0);
     let t=`<div class="hd"><div><h2>${esc(paar.name)}</h2>
       <p class="sub">${esc(paar.frage)}</p></div></div>
       <div class="werkzeug">
         <div class="wz"><span class="lab">Frage</span>
           ${PAARE_VOR.map(p=>`<span class="chip ${vlPaar===p.id?'on':''}" data-tun="vlPaar" data-v="${p.id}">${esc(p.name)}</span>`).join('')}
+          <span class="chip ${vlPaar==='eigen'?'on':''}" data-tun="vlPaar" data-v="eigen" title="Selbst zusammenstellen – die Auswahl unten bleibt erhalten.">eigene Auswahl</span>
+        </div>
+        <div class="wz"><span class="lab">Pflanze <span class="tiny muted" style="font-weight:400">oben</span></span>${blattChips}</div>
+        <div class="wz"><span class="lab">Wasser <span class="tiny muted" style="font-weight:400">unten</span></span>${wasserChips}
+          ${passend.length&&!passend.every(k=>paar.wasser.includes('gw_'+k))
+            ? `<button class="klein" data-tun="vlPassend" title="Nimmt zu jedem gewählten Nährstoff die gleichnamige Wassergrösse dazu.">passend zur Pflanze</button>`:''}
         </div>
         <div class="wz">
-          <span class="lab">Pflanze</span>
+          <span class="lab">Anzeige</span>
           <span class="seg">${[['lage','Lage 0–3'],['wert','Messwert',paar.blatt.length>1]].map(([v,l,aus])=>
             `<button class="${vlSkala===v?'on':''}"${aus?' disabled title="Mehrere Nährstoffe mit verschiedenen Grössenordnungen – nur die Lage 0–3 ist gemeinsam lesbar."':''} data-tun="vlSkala" data-v="${v}">${l}</button>`).join('')}</span>
           <span class="lab" style="min-width:0;margin-left:8px">Zeitraum</span>
@@ -2793,8 +2914,16 @@ function vVerlauf(){
           <span class="chip ${vlLog?'on':''}" data-tun="vlLog">Logbuch</span>${fotoChip()}
         </div></div>
       <div id="cVl" class="diagramm"></div><div class="legend" id="legVl"></div>
-      <div class="note neutral"><strong>Was zu sehen sein sollte:</strong> ${esc(paar.erwartung)}<br>
+      <div id="vlHinweis"></div>`;
+    const doppelt=paar.blatt.filter(k=>paar.wasser.includes('gw_'+k)).map(k=>NAME[k]||k);
+    if(paar.erwartung)t+=`<div class="note neutral"><strong>Was zu sehen sein sollte:</strong> ${esc(paar.erwartung)}<br>
         <strong>Was die Erwartung widerlegen würde:</strong> ${esc(paar.widerlegt)}</div>`;
+    else t+=`<div class="note neutral">Eigene Zusammenstellung – hier steht <strong>keine</strong> vorformulierte Erwartung.
+        Was zu sehen sein sollte, weisst du; die Anwendung behauptet es nicht.
+        ${doppelt.length?`Gleiche Farbe heisst gleicher Stoff: <strong>${esc(vlKurz(doppelt,4))}</strong> ${doppelt.length>1?'stehen':'steht'} oben und unten in derselben Farbe.`
+          :'Wähle eine Grösse, die oben und unten vorkommt – sie trägt dann in beiden Spuren dieselbe Farbe.'}</div>`;
+    if(!paar.blatt.length&&!paar.wasser.length)
+      t+=`<div class="note warn">Es ist nichts ausgewählt. Nimm oben einen Nährstoff und unten eine Wassergrösse dazu.</div>`;
     if(!gw.length)t+=`<div class="note warn">Es ist noch keine Wasseranalyse erfasst – die untere Spur bleibt leer. Ohne sie lässt sich die Frage «was war im Wasser» nicht beantworten.</div>`;
     else{
       const fehlt=wasserFehlt(paar);
@@ -2866,10 +2995,40 @@ function vVerlauf(){
   nachRender=vlZeichnen;
   return `<div class="card" id="vlKarte">${vlKopf()}</div><div id="vlUnten">${vlUnten()}</div>`;
 }
-AKTION.vlPaar=d=>{vlPaar=d.v;diagAus.clear();
-  const p=PAARE_VOR.find(x=>x.id===d.v);
-  if(p&&p.blatt.length>1)vlSkala='lage';
+AKTION.vlPaar=d=>{
+  diagAus.clear();
+  if(d.v==='eigen')vlEigen();
+  else{vlPaar=d.v;const p=PAARE_VOR.find(x=>x.id===d.v);if(p&&p.blatt.length>1)vlSkala='lage'}
   diagFrisch()};
+/* Ein Nährstoff dazu oder weg: das ist bereits die eigene Auswahl. Die
+   Voreinstellung wird dabei nicht verändert, sie bleibt jederzeit abrufbar. */
+AKTION.vlStoff=d=>{
+  vlEigen();
+  const i=vlBlatt.indexOf(d.k);
+  if(i>=0)vlBlatt.splice(i,1);
+  else{
+    if(vlBlatt.length>=VL_MAX_BLATT)return toast(`Mehr als ${VL_MAX_BLATT} Nährstoffe werden in einer Spur unübersichtlich – nimm zuerst einen weg.`);
+    vlBlatt.push(d.k);
+  }
+  if(vlBlatt.length>1)vlSkala='lage';
+  diagAus.clear();diagFrisch()};
+AKTION.vlWass=d=>{
+  vlEigen();
+  const i=vlWasser.indexOf(d.k);
+  if(i>=0)vlWasser.splice(i,1);
+  else{
+    if(vlWasser.length>=VL_MAX_WASSER)return toast(`Mehr als ${VL_MAX_WASSER} Wassergrössen ergeben zu viele Spuren – nimm zuerst eine weg.`);
+    vlWasser.push(d.k);
+  }
+  diagAus.clear();diagFrisch()};
+/* Zu jedem gewählten Nährstoff die gleichnamige Wassergrösse: dieselbe Farbe
+   oben und unten, ein Klick. */
+AKTION.vlPassend=()=>{
+  vlEigen();
+  const w=vlBlatt.filter(k=>GW_PARAM.indexOf(k)>=0).map(k=>'gw_'+k);
+  if(!w.length)return toast('Zu diesen Nährstoffen gibt es im Wasserbericht keine gleichnamige Grösse.');
+  w.forEach(k=>{if(!vlWasser.includes(k)&&vlWasser.length<VL_MAX_WASSER)vlWasser.push(k)});
+  diagAus.clear();diagFrisch()};
 AKTION.vlSkala=d=>{vlSkala=d.v;diagFrisch()};
 AKTION.vlTank=()=>{vlTank=!vlTank;diagFrisch()};
 AKTION.vlLog=()=>{vlLog=!vlLog;diagFrisch()};
@@ -5378,9 +5537,18 @@ function vSaetze(){
 
   <div class="card"><h2>Datenstand</h2>
     <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Einträge im Logbuch · ${db.messungen.length} Messungen · ${db.fotos.length} Fotos · ${db.rundgaenge.length} Rundgänge · ${alleSaetze().length} Sätze · Schema ${db.schema}</p>
-    <p class="small">Sicherungsdatei rund ${mb(dbBytes())}.</p>
-    <p class="small muted" style="max-width:70ch">Alle Angaben liegen in der Sicherungsdatei; die Original-PDFs werden nicht mehr gebraucht. Beim Sichern entsteht jedes Mal eine neue Datei mit Datum und Uhrzeit, ältere Stände bleiben erhalten. Es gibt bewusst keine automatische Speicherung – der Speicherschritt ist eure Kontrolle darüber, was in den gemeinsamen Ordner wandert.</p>
-    <div class="row"><button class="primary" data-tun="sichern">Jetzt sichern</button><button data-tun="dateiOeffnen">Datei öffnen</button>
+    <p class="small">Gesicherte Datei rund ${mb(dbBytes()+(SEITE_ROH?SEITE_ROH.length:0))} – davon ${mb(dbBytes())} Daten und ${mb(SEITE_ROH?SEITE_ROH.length:0)} Werkzeug.</p>
+    <p class="small muted" style="max-width:70ch"><strong>Sichern schreibt diese Seite neu.</strong> Es entsteht <em>eine</em> HTML-Datei:
+      dasselbe Werkzeug, mit allen Daten darin. Wer sie bekommt, öffnet sie mit einem Doppelklick und arbeitet weiter – keine zweite Datei,
+      kein Hochladeschritt. Die Original-PDFs werden nicht mehr gebraucht.
+      Jedes Sichern legt eine neue Datei mit Datum und Uhrzeit an, ältere Stände bleiben liegen. Es gibt bewusst keine automatische Speicherung –
+      der Speicherschritt ist eure Kontrolle darüber, was in den gemeinsamen Ordner wandert.</p>
+    <div class="note neutral" style="max-width:70ch"><strong>Zwei Dinge, die dazugehören.</strong>
+      Erstens: Wer die Datei bekommt, hat <em>alles</em> – Analysen, Logbuch, Notizen, Fotos. Es gibt darin nichts, was sich zurückhalten liesse.
+      Zweitens: Die Datei friert den Stand des Werkzeugs ein. Kommt später eine neuere Fassung, öffne diese und lade die alte Datei über
+      «Datei öffnen» – das nimmt auch HTML-Dateien und holt nur die Daten heraus, nie fremden Programmcode.</div>
+    <div class="row"><button class="primary" data-tun="sichern">Jetzt sichern (HTML mit Daten)</button><button data-tun="dateiOeffnen">Datei öffnen</button>
+      <button data-tun="sichernDaten" title="Nur der Bestand, ohne Werkzeug – zum Archivieren oder für andere Programme.">Nur die Daten (JSON)</button>
       <button data-tun="zuruecksetzen">Alles zurücksetzen</button></div>
     ${dirty?'<div class="note">Es gibt ungesicherte Änderungen.</div>':''}</div>`;
 }
@@ -5455,22 +5623,89 @@ AKTION.zuruecksetzen=()=>{
   db=leer();ueParams=null;dirty=false;render();
 };
 
-/* ══════════ 17 · Sichern und Laden ══════════ */
+/* ══════════ 17 · Sichern und Laden ══════════
+   Die Anwendung schreibt sich selbst neu. Beim Sichern entsteht keine
+   getrennte Datenablage, sondern eine vollständige HTML-Datei: dasselbe
+   Werkzeug, mit dem Bestand darin. Wer sie bekommt, öffnet sie doppelt und
+   arbeitet weiter - ohne zweite Datei, ohne Hochladeschritt.
+
+   Warum als Selbstabbild und nicht durch Nachlesen der eigenen Datei: aus
+   einer lokal geöffneten Seite heraus darf keine Datei gelesen werden
+   (fetch auf file:// ist in Firefox seit Jahren gesperrt), und ein Server
+   ist ausdrücklich nicht gewünscht. Das Abbild wird beim Start genommen,
+   bevor irgendetwas gezeichnet ist - so enthält es nur das Gerüst und nicht
+   den halb aufgebauten Bildschirm des Augenblicks. */
+let SEITE_ROH=null;
+function seiteMerken(){
+  const b=el('datenblock');
+  /* Der Block wird geleert, bevor das Abbild entsteht: sonst schleppte jede
+     Sicherung den vorigen Bestand ein zweites Mal mit. */
+  if(b)b.textContent='null';
+  try{SEITE_ROH='<!doctype html>\n'+document.documentElement.outerHTML}catch(e){SEITE_ROH=null}
+}
+function datenAusSeite(){
+  const b=el('datenblock');
+  if(!b)return null;
+  const t=(b.textContent||'').trim();
+  if(!t||t==='null')return null;
+  try{return JSON.parse(t)}catch(e){return {__kaputt:String(e&&e.message||e)}}
+}
+/* Der eingesetzte Text darf die Seite nicht sprengen: ein «<» in einem
+   Satznamen könnte sonst das Skript-Ende vortäuschen. \u003c ist im JSON
+   dasselbe Zeichen und beim Einlesen wieder ein «<». */
+function seiteMitDaten(){
+  if(!SEITE_ROH)return null;
+  const j=JSON.stringify(db).replace(/</g,'\\u003c');
+  let getroffen=false;
+  const raus=SEITE_ROH.replace(/(<script[^>]*id="datenblock"[^>]*>)[\s\S]*?(<\/script>)/,
+    (m,a,b)=>{getroffen=true;return a+j+b});
+  return getroffen?raus:null;
+}
 AKTION.sichern=()=>sichern();
+AKTION.sichernDaten=()=>sichernJson();
 AKTION.dateiOeffnen=()=>el('fileJson').click();
-function sichern(){
-  db.version++;db.gespeichert=new Date().toISOString();
-  const st=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+function stempel(){return new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}
+function herunterladen(text,name,typ){
+  const blob=new Blob([text],{type:typ});
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));
-  a.download=`basilikum-daten_${st}.json`;a.click();
+  a.href=URL.createObjectURL(blob);
+  a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-  dirty=false;render();toast('Datei gesichert – im gemeinsamen Ordner ablegen.');
+  return blob.size;
+}
+function sichern(){
+  const html=seiteMitDaten();
+  if(!html){
+    toast('Die Seite konnte sich selbst nicht schreiben – ich sichere stattdessen die Daten als JSON.');
+    return sichernJson();
+  }
+  db.version++;db.gespeichert=new Date().toISOString();
+  const gr=herunterladen(html,`basilikum_${stempel()}.html`,'text/html');
+  dirty=false;render();
+  toast(`Gesichert: eine HTML-Datei mit allem darin (rund ${mb(gr)}). Diese eine Datei genügt.`);
+}
+function sichernJson(){
+  db.version++;db.gespeichert=new Date().toISOString();
+  herunterladen(JSON.stringify(db,null,1),`basilikum-daten_${stempel()}.json`,'application/json');
+  dirty=false;render();
+  toast('Nur die Daten gesichert. Zum Weitergeben ist die HTML-Datei der bequemere Weg.');
+}
+/* Beim Öffnen wird beides angenommen: eine reine Datendatei und eine
+   gesicherte HTML-Datei. Aus der HTML wird nur der Datenblock gelesen, nicht
+   das Skript - fremder Programmcode wird nie ausgeführt. */
+function datenAusText(text,name){
+  if(/^\s*[{[]/.test(text)){
+    try{return JSON.parse(text)}catch(e){return {__fehler:'Diese Datei ist kein gültiges JSON.'}}
+  }
+  const m=text.match(/<script[^>]*id="datenblock"[^>]*>([\s\S]*?)<\/script>/);
+  if(!m)return {__fehler:'In dieser HTML-Datei steckt kein Datenblock. Stammt sie aus einer älteren Fassung, die nur JSON gesichert hat?'};
+  const t=m[1].trim();
+  if(!t||t==='null')return {__fehler:'Diese HTML-Datei ist das leere Werkzeug – es sind keine Daten darin gesichert.'};
+  try{return JSON.parse(t)}catch(e){return {__fehler:'Der Datenblock in dieser Datei ist beschädigt: '+(e&&e.message||e)}}
 }
 async function laden(file){
-  let roh;
-  try{roh=JSON.parse(await file.text())}
-  catch(e){return toast('Diese Datei ist kein gültiges JSON.')}
+  const roh=datenAusText(await file.text(),file.name);
+  if(roh&&roh.__fehler)return toast(roh.__fehler);
   if(!roh||!Array.isArray(roh.analysen))return toast('Diese Datei sieht nicht nach einer Sicherung dieses Werkzeugs aus.');
   if(dirty&&!confirm('Es gibt ungesicherte Änderungen. Trotzdem laden?'))return;
   let erg;
@@ -5479,7 +5714,7 @@ async function laden(file){
   db=erg.db;ueParams=null;dirty=erg.von<4;render();
   if(erg.von<4&&erg.notizen.length){
     dialog('Ältere Sicherung übernommen',
-      `<p>Die Datei war im Format ${erg.von}, dieses Werkzeug arbeitet mit Format 4. Alles wurde übernommen. Was dabei angepasst wurde:</p>
+      `<p>Die Datei war im Format ${erg.von}, dieses Werkzeug arbeitet mit Format ${leer().schema}. Alles wurde übernommen. Was dabei angepasst wurde:</p>
        <ul style="margin:0 0 12px;padding-left:20px">${erg.notizen.map(n=>`<li style="margin-bottom:6px">${esc(n)}</li>`).join('')}</ul>
        <div class="note neutral">Deine alte Datei bleibt unverändert liegen. Erst wenn du hier sicherst, entsteht eine neue Datei im neuen Format – die alte kannst du als Sicherheitskopie behalten.</div>
        <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Logbucheinträge · ${alleSaetze().length} Sätze geladen.</p>`,
@@ -5537,12 +5772,41 @@ async function pdfVorbereiten(){
   return true;
 }
 (async()=>{
+  /* Reihenfolge zählt gleich doppelt. Das Abbild entsteht als Allererstes –
+     vor jedem Zeichnen und vor allem, was von aussen nachgeladen wird –,
+     damit nur das ausgelieferte Gerüst darin steht. Und der Datenblock wird
+     davor ausgelesen und danach geleert, sonst trüge jede Sicherung den
+     vorigen Bestand ein zweites Mal mit sich. */
+  let eingebettet=null;
+  try{eingebettet=datenAusSeite()}catch(e){eingebettet=null}
+  seiteMerken();
   try{pdfBereit=await pdfVorbereiten()}catch(e){pdfBereit=false}
+  let startNotiz=null;
+  if(eingebettet&&eingebettet.__kaputt)
+    startNotiz={warn:true,text:'In dieser Datei stecken Daten, die sich nicht lesen lassen ('+eingebettet.__kaputt+'). Das Werkzeug startet leer – die Datei selbst ist unverändert, gib sie weiter, wer sie geschrieben hat.'};
+  else if(eingebettet&&Array.isArray(eingebettet.analysen)){
+    try{
+      const erg=migriere(eingebettet);
+      db=erg.db;dirty=false;
+      startNotiz={warn:false,text:`Aus dieser Datei geladen: ${db.analysen.length} Analysen, ${db.ereignisse.length} Logbucheinträge, ${db.fotos.length} Fotos.`,
+        notizen:erg.von<leer().schema?erg.notizen:[]};
+    }catch(e){startNotiz={warn:true,text:'Die eingebetteten Daten liessen sich nicht übernehmen: '+(e&&e.message||e)}}
+  }
   try{render()}
   catch(e){
     document.getElementById('view').innerHTML='<div class="card"><h2>Die App liess sich nicht starten</h2>'+
       '<p class="muted">Bitte die Seite neu laden. Bleibt es dabei, hilft die Meldung unten weiter.</p>'+
       '<pre class="tiny mono" style="white-space:pre-wrap">'+esc(e&&e.stack||e)+'</pre></div>';
+  }
+  if(startNotiz){
+    if(startNotiz.warn||((startNotiz.notizen||[]).length))
+      dialog(startNotiz.warn?'Daten in dieser Datei':'Datei mit Daten geöffnet',
+        `<p>${esc(startNotiz.text)}</p>`+
+        ((startNotiz.notizen||[]).length?`<p>Beim Übernehmen angepasst:</p><ul style="margin:0 0 12px;padding-left:20px">${
+          startNotiz.notizen.map(n=>`<li style="margin-bottom:6px">${esc(n)}</li>`).join('')}</ul>`:'')+
+        `<div class="note neutral">Diese Datei bleibt liegen, wie sie ist. Erst wenn du hier sicherst, entsteht eine neue Datei – die alte kannst du als Stand behalten.</div>`,
+        `<button class="primary" data-tun="dlgZu">Verstanden</button>`);
+    else toast(startNotiz.text);
   }
 })();
 </script>

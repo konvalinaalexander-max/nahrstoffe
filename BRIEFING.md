@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: September 2026 · Schema 7 · rund 375 KB, 5200 Zeilen, eine Datei.
+Stand: September 2026 · Schema 7 · rund 385 KB, 5300 Zeilen, eine Datei.
 
 ---
 
@@ -166,10 +166,40 @@ Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
 - `einst.systemLiter` wird von 20 000 auf **19 200 l** berichtigt (2 × 9 600).
   Die Migration sagt das in ihrem Bericht.
 
-**Persistenz:** ausschliesslich JSON-Datei herunterladen und hochladen.
+**Persistenz: die Datei schreibt sich selbst.** Beim Sichern entsteht *eine*
+HTML-Datei — dasselbe Werkzeug, mit dem ganzen Bestand darin. Wer sie bekommt,
+öffnet sie doppelt und arbeitet weiter; es gibt keine zweite Datei und keinen
+Hochladeschritt. Der Mechanismus ist bewusst klein gehalten:
+
+```html
+<script type="application/json" id="datenblock">null</script>
+```
+
+- `seiteMerken()` nimmt beim Start ein Abbild von `document.documentElement`
+  — **als Allererstes**, vor jedem Zeichnen und vor allem, was von aussen
+  nachgeladen wird, und **nachdem** der Datenblock geleert wurde. Beides ist
+  nötig: sonst stünde entweder der halb aufgebaute Bildschirm im Abbild, oder
+  jede Sicherung trüge den vorigen Bestand ein zweites Mal mit sich und die
+  Datei wüchse bei jedem Speichern.
+- `seiteMitDaten()` setzt `JSON.stringify(db)` in den Block. Jedes `<` wird zu
+  `\u003c` — im JSON dasselbe Zeichen, aber ein `</script>` in einem
+  Logbucheintrag kann die Datei nicht mehr zerreissen.
+- `datenAusText()` liest beides: eine reine JSON-Datei und eine gesicherte
+  HTML. Aus der HTML kommt **nur** der Datenblock, nie fremder Programmcode.
+- `sichernJson()` bleibt als zweiter Weg (Reiter Einstellungen) — zum
+  Archivieren und für andere Programme.
+
+Warum ein Selbstabbild und nicht Nachlesen der eigenen Datei: aus einer lokal
+geöffneten Seite darf keine Datei gelesen werden — `fetch` auf `file://` ist in
+Firefox seit Jahren gesperrt —, und ein Server ist ausdrücklich nicht
+gewünscht. Zwei Folgen, die in der Oberfläche stehen: wer die Datei bekommt,
+hat *alles* (auch die Fotos), und die Datei friert den Stand des Werkzeugs ein
+— beim Versionswechsel öffnet man die neue Fassung und lädt die alte Datei
+über «Datei öffnen».
+
 `migriere(roh)` hebt alte Dateien an und meldet in einem Dialog, was es geändert
-hat. Das ist bewusst so und darf nicht durch localStorage ersetzt werden
-(Abschnitt 9).
+hat — auch bei den eingebetteten Daten beim Start. Der Speicherschritt bleibt
+bewusst manuell, und localStorage ist weiterhin ausgeschlossen (Abschnitt 9).
 
 ---
 
@@ -317,12 +347,34 @@ werden sollten:
   20 µmol/l gegen gemessene 3 würde die Auflösung dorthin ziehen, wo nichts
   steht. Das Band wird stattdessen auf die sichtbare Fläche beschnitten und
   trägt dann den Zusatz «(reicht über den Ausschnitt hinaus)».
-- **Serien werden nach Einheit gruppiert** (`wasserSpuren`). µmol/l und pH
-  haben sich einmal eine Achse geteilt — sie lagen zufällig in derselben
-  Grössenordnung, sahen plausibel aus und waren falsch.
+- **Serien werden nach Einheit *und* Grössenordnung gruppiert**
+  (`wasserSpuren`). µmol/l und pH haben sich einmal eine Achse geteilt — sie
+  lagen zufällig in derselben Grössenordnung, sahen plausibel aus und waren
+  falsch. Dieselbe Einheit reicht aber nicht: Ammonium bei 4 mmol/l und Nitrit
+  bei 0,02 mmol/l gehören ebenfalls getrennt, sonst ist Nitrit eine Linie auf
+  null. Es gilt derselbe Faktor 25 wie im Reiter Nährstoffe. Zusammengehalten
+  wird dabei **nach Parameter**, nicht nach Einzelreihe: Nitrat vorne und
+  Nitrat hinten gehören auf dieselbe Achse, auch wenn die eine Entnahmestelle
+  dreimal so hoch liegt. Mehr als drei Wasserspuren werden zusammengelegt —
+  und das steht dann als Hinweis über dem Diagramm.
 - **Eine Grösse, die im Wasser nie gemessen wurde, bekommt trotzdem eine
   Spur** — eine leere, die sagt warum. Verschwände sie stillschweigend, sähe
   die Frage beantwortet aus, obwohl die halbe Antwort fehlt.
+
+**Die Farbe koppelt oben und unten.** `vlAb()` bildet die Farben über die
+*entdoppelten* Schlüssel aus Blatt und Wasser: Nitrat im Blatt und Nitrat im
+Wasser ist derselbe Stoff und trägt dieselbe Farbe. Ohne das Entdoppeln
+verbraucht `farbenFuer` für den zweiten Eintrag eine Ersatzfarbe und die
+Wunschfarbe geht verloren. Die Form bleibt für Blattetage bzw. Entnahmestelle
+reserviert.
+
+**Die fünf Fragen sind Startpunkte, keine Grenze.** Ein Klick auf einen
+Nährstoff oder eine Wassergrösse schaltet über `vlEigen()` auf `vlPaar='eigen'`
+und übernimmt dabei die bisherige Auswahl — die Voreinstellung selbst wird nie
+verändert. Bei eigener Auswahl steht **keine** vorformulierte Erwartung da; die
+Anwendung behauptet nichts, was sie nicht weiss (Leitplanke 5). Nie gemessene
+Wassergrössen bleiben wählbar und sind als «nie» markiert: eine Lücke zu
+verstecken wäre schlechter, als sie zu zeigen.
 
 Ziehen verschiebt, Rad zoomt, Doppelklick setzt zurück (`stapelBedienung`).
 Der Zustand des Ziehens liegt **ausserhalb** der Funktion: jede Verschiebung
@@ -363,7 +415,7 @@ Datumsachse.
 |---|---|
 | **Überblick** | Kennzahlen · Nährstofflage über die Zeit · **Rangliste der Mängel** · **Eingangsbilanz** · Befunde je Satz · was chronisch daneben liegt |
 | **Analysen** | PDFs einlesen, Kontrolldialog vor der Übernahme, alle Proben, Handeingabe |
-| **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse**, fünf benannte Fragen |
+| **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse** — fünf benannte Fragen als Startpunkt, darunter jeder Nährstoff und jede Wassergrösse einzeln wählbar |
 | **Nährstoffe** | Ein oder mehrere Nährstoffe über Zeit oder Kulturwoche, mit Tabellen darunter |
 | **Substrat** | Angebot im Substrat gegen Aufnahme im Blatt |
 | **Giesswasser** | Verlauf je Parameter und Entnahmestelle, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
@@ -420,7 +472,10 @@ weiter, auch wenn du eine bessere Lösung siehst — dann sag es, bevor du es tu
 1. **Eine einzige HTML-Datei bleibt das Lieferformat.** Kein Build, kein
    Bundler, keine Modulaufteilung.
 2. **Kein localStorage, kein Ordnerzugriff, kein Automatismus beim Speichern.**
-   Der bewusste Speicherschritt ist gewünscht.
+   Der bewusste Speicherschritt ist gewünscht. Seit September sichert die
+   Anwendung sich selbst als HTML mit den Daten darin (Abschnitt 4) — das
+   ändert nichts an dieser Leitplanke: gespeichert wird weiterhin nur auf
+   Knopfdruck, und es entsteht weiterhin jedes Mal eine neue Datei.
 3. **Firefox muss funktionieren.** Verwende nichts, was Firefox nicht seit
    Jahren unterstützt.
 4. **Sprache: Deutsch, Schweizer Rechtschreibung (ss statt ß).** Keine
@@ -457,8 +512,8 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (389 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (430 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
@@ -467,6 +522,7 @@ CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
                                     # Fotos, CSV-Import, Logbuch, Planer
 PDF=…/probe.pdf  node pruefung/upload.js     # echtes Blattsaft-PDF
 GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
+BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weiterarbeiten
 ```
 
 | Datei | Zweck |
@@ -478,10 +534,12 @@ GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 | `l1` | Logbuch: Umstellung auf strukturierte Mengen, Umbenennungen |
 | `x1` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen |
 | `b1` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken, Verdünnung |
-| `v1` | Reiter Verlauf: Schema 7, gemeinsame Zeitachse, getrennte Achsen je Einheit, Rangliste, Eingangsbilanz, Jung gegen Alt |
+| `v1` | Reiter Verlauf: Schema 7, gemeinsame Zeitachse, getrennte Achsen, freie Auswahl, Farbkopplung, Rangliste, Eingangsbilanz, Jung gegen Alt |
+| `d1` | Selbstsicherung: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
+| `rundreise.js` | Chromium: erfassen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
 gitignoriert. Wer die HTML-Datei ändert und die Prüfungen laufen lässt, ohne

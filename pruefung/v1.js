@@ -127,6 +127,105 @@ console.log('\n════ Wechsel der Frage wirkt auf den ganzen Reiter ══
   ok(/Zink wird mit dem Dünger|Dasselbe für Zink/.test(b),'Mit dem passenden Text');
 }
 
+console.log('\n════ Freie Auswahl statt fünf fester Fragen ════');
+{
+  const d=aufbau();
+  A.setDb(d);
+  A.AKTION.vlPaar({v:'n'});
+  A.vVerlauf();
+  /* Ein Nährstoff dazu: das ist bereits die eigene Auswahl. Die
+     Voreinstellung selbst darf davon nicht verändert werden. */
+  const vorher=JSON.stringify(A.PAARE_VOR.find(p=>p.id==='n'));
+  A.AKTION.vlStoff({k:'Fe'});
+  const h=A.vVerlauf();
+  ok(/Eigene Auswahl/.test(h),'Ein Klick auf einen Nährstoff schaltet auf die eigene Auswahl');
+  ok(JSON.stringify(A.PAARE_VOR.find(p=>p.id==='n'))===vorher,'Die Voreinstellung selbst bleibt unangetastet');
+  ok(/Oben Nitrat, Ammonium, Eisen/.test(h),'Die vorige Auswahl wird übernommen, nicht weggeworfen');
+  ok(/keine<\/strong> vorformulierte Erwartung/.test(h),
+     'Bei eigener Auswahl behauptet die App nicht, was zu sehen sein sollte');
+
+  /* Jeder Nährstoff und jede Wassergrösse steht zur Wahl. */
+  const chips=(h.match(/data-tun="vlStoff" data-k="([^"]+)"/g)||[]).length;
+  const wchips=(h.match(/data-tun="vlWass" data-k="([^"]+)"/g)||[]).length;
+  console.log('   wählbar:',chips,'Nährstoffe ·',wchips,'Wassergrössen');
+  ok(chips>=15,'Alle gemessenen Nährstoffe stehen zur Wahl, nicht nur die der Fragen');
+  ok(wchips>=15,'Und alle Grössen des Wasserberichts');
+  ok(/data-tun="vlWass" data-k="gw_NO2"/.test(h),'Auch nie gemessene – sonst wäre die Lücke unsichtbar');
+  ok(/·nie/.test(h),'Sie sind als «nie gemessen» gekennzeichnet');
+
+  /* Wieder zurück auf eine Voreinstellung */
+  A.AKTION.vlPaar({v:'k'});
+  ok(/Kalium/.test(A.vVerlauf().split('data-tun="vlPaar"')[0]),'Der Rückweg auf eine Frage funktioniert');
+}
+
+console.log('\n════ Gleiche Farbe oben wie unten ════');
+{
+  const d=aufbau();A.setDb(d);
+  A.AKTION.vlPaar({v:'n'});
+  A.vVerlauf();A.nachRenderRun();
+  const svg=global.document.getElementById('cVl').innerHTML;
+  /* Nitrat steht im Blatt und im Wasser. Beide Male dieselbe Farbe – sonst
+     ist die Kopplung nur behauptet. Die Farbe steht in der Legende. */
+  const leg=global.document.getElementById('legVl').innerHTML;
+  const farbeVon=n=>{const m=leg.match(new RegExp('fill="(#[0-9A-Fa-f]{6})"[^<]*(?:<[^>]+>)*[^<]{0,80}'+n));return m&&m[1]};
+  const f=[...leg.matchAll(/fill="(#[0-9A-Fa-f]{6})"[\s\S]{0,200}?>([^<]+)</g)].map(m=>({c:m[1],t:m[2].trim()}));
+  const nitrat=f.filter(x=>/^Nitrat/.test(x.t)).map(x=>x.c);
+  console.log('   Nitrat-Einträge in der Legende:',f.filter(x=>/^Nitrat/.test(x.t)).map(x=>x.t+' '+x.c).join(' | '));
+  ok(nitrat.length>=2&&new Set(nitrat).size===1,
+     'Nitrat trägt in der Pflanzenspur und in der Wasserspur dieselbe Farbe');
+  const ammon=f.filter(x=>/^Ammonium/.test(x.t)).map(x=>x.c);
+  ok(ammon.length>=2&&new Set(ammon).size===1,'Ammonium ebenso');
+  ok(nitrat[0]!==ammon[0],'Und die beiden Stoffe unterscheiden sich voneinander');
+}
+
+console.log('\n════ Getrennte Achsen auch bei gleicher Einheit ════');
+{
+  /* Ammonium bei rund 4 mmol/l und Nitrit bei 0,02 mmol/l teilen die Einheit.
+     Auf einer gemeinsamen Achse wäre Nitrit eine Linie auf null – dieselbe
+     Regel wie im Reiter Nährstoffe, Faktor 25. */
+  const d=aufbau();
+  d.analysen.filter(a=>a.typ==='giesswasser').forEach((a,i)=>{
+    a.werte.gw_NH4={wert:3.6+i*0.1};a.werte.gw_NO2={wert:0.02+i*0.002};
+  });
+  A.setDb(d);
+  A.AKTION.vlPaar({v:'n'});
+  A.vVerlauf();A.nachRenderRun();
+  const svg=global.document.getElementById('cVl').innerHTML;
+  const spuren=(svg.match(/Wasser · [^<]*/g)||[]);
+  console.log('   Wasserspuren:',spuren.join(' | '));
+  ok(spuren.length>=2,'Ammonium und Nitrit bekommen getrennte Achsen');
+  ok(spuren.some(x=>/Nitrit/.test(x))&&!spuren.some(x=>/Nitrit/.test(x)&&/Ammonium/.test(x)),
+     'Nitrit steht nicht auf derselben Achse wie Ammonium');
+}
+
+console.log('\n════ Zu viele Wassergrössen: Hinweis statt stiller Quetschung ════');
+{
+  const d=aufbau();A.setDb(d);
+  A.AKTION.vlPaar({v:'n'});
+  A.vVerlauf();
+  ['gw_pH','gw_HCO3','gw_Ca','gw_Na'].forEach(k=>A.AKTION.vlWass({k}));
+  A.vVerlauf();A.nachRenderRun();
+  const hw=global.document.getElementById('vlHinweis').innerHTML;
+  const svg=global.document.getElementById('cVl').innerHTML;
+  const spuren=(svg.match(/Wasser · [^<]*/g)||[]);
+  console.log('   Spuren:',spuren.length,'· Hinweis:',hw?hw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,110):'keiner');
+  ok(spuren.length<=3,'Es bleibt bei höchstens drei Wasserspuren – sonst wird die Zeichnung höher als der Bildschirm');
+  ok(!hw||/teilt sich jetzt eine Achse/.test(hw),'Und wenn zusammengelegt wird, steht es da');
+}
+
+console.log('\n════ Nichts ausgewählt ════');
+{
+  const d=aufbau();A.setDb(d);
+  A.AKTION.vlPaar({v:'fe'});
+  A.vVerlauf();
+  A.AKTION.vlStoff({k:'Fe'});              /* den einzigen Nährstoff wieder weg */
+  const h=A.vVerlauf();
+  ok(/Nur das Wasser/.test(h.split('data-tun="vlPaar"')[0]),'Ohne Nährstoff bleibt die Wasserseite bedienbar');
+  A.nachRenderRun();
+  ok(/kein Nährstoff ausgewählt/.test(global.document.getElementById('cVl').innerHTML),
+     'Die obere Spur sagt, dass nichts gewählt ist – statt leer dazustehen');
+}
+
 console.log('\n════ Zeitachse ════');
 {
   const kurz=A.zeitMarken(+new Date('2026-07-01'),+new Date('2026-08-15'));

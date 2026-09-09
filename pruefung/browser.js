@@ -225,11 +225,57 @@ require('fs').mkdirSync(shots,{recursive:true});
   if(!(m6.length&&m6.length<=7))fehler.push('Verlauf: Zeitraumknopf greift nicht');
   await p.click('#vlKarte [data-tun="vlZeit"]:text-is("alles")');await p.waitForTimeout(350);
 
+  /* Freie Auswahl: jeder Nährstoff und jede Wassergrösse einzeln. */
+  console.log('  ── freie Auswahl ──');
+  const nChips=await p.$$eval('#vlKarte [data-tun="vlStoff"]',e=>e.length);
+  const wChips=await p.$$eval('#vlKarte [data-tun="vlWass"]',e=>e.length);
+  console.log((nChips>=15&&wChips>=15?'  ✓ ':'  ✗ ')+'Alle Grössen stehen einzeln zur Wahl ('+nChips+' Nährstoffe, '+wChips+' Wassergrössen)');
+  if(nChips<15||wChips<15)fehler.push('Verlauf: Auswahl unvollstaendig');
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(150);
+  const vorFrei=await p.$eval('#vlKarte h2',e=>e.textContent);
+  await p.$eval('#vlKarte [data-tun="vlStoff"][data-k="K"]',e=>e.click());await p.waitForTimeout(400);
+  const nachFrei=await p.$eval('#vlKarte h2',e=>e.textContent);
+  const sub=await p.$eval('#vlKarte .sub',e=>e.textContent);
+  console.log('  '+(/Eigene Auswahl|Nur /.test(nachFrei)?'✓ ':'✗ ')+'Ein Klick auf «Kalium» schaltet auf die eigene Auswahl: «'+vorFrei+'» → «'+nachFrei+'»');
+  if(!/Eigene Auswahl|Nur /.test(nachFrei))fehler.push('Verlauf: freie Auswahl greift nicht');
+  console.log((/Kalium/.test(sub)?'  ✓ ':'  ✗ ')+'Die Unterzeile nennt beide Seiten: '+JSON.stringify(sub.slice(0,90)));
+  const eigenAktiv=await p.$eval('#vlKarte [data-v="eigen"]',e=>e.classList.contains('on'));
+  console.log((eigenAktiv?'  ✓ ':'  ✗ ')+'Und der Knopf «eigene Auswahl» ist gesetzt');
+  if(!eigenAktiv)fehler.push('Verlauf: eigene Auswahl nicht markiert');
+
+  /* Gleiche Farbe oben wie unten – das ist der Sinn der gemeinsamen Achse. */
+  const passBtn=await p.$('#vlKarte button:text-is("passend zur Pflanze")');
+  if(passBtn){await passBtn.click();await p.waitForTimeout(450)}
+  const legFarben=await p.$$eval('#legVl .pos',es=>es.map(e=>({
+    t:e.textContent.trim(),c:(e.querySelector('[fill]')||{}).getAttribute?e.querySelector('[fill]').getAttribute('fill'):null})));
+  const kal=legFarben.filter(x=>/^Kalium/.test(x.t));
+  console.log('   Kalium in der Legende:',kal.map(x=>x.t+' '+x.c).join(' | ')||'nicht vorhanden');
+  const gleich=kal.length>=2&&new Set(kal.map(x=>x.c)).size===1;
+  console.log((gleich?'  ✓ ':'  ✗ ')+'Kalium trägt oben und unten dieselbe Farbe');
+  if(!gleich)fehler.push('Verlauf: Farbe nicht gekoppelt');
+  const spurenFrei=await p.$$eval('#cVl text',es=>es.map(e=>e.textContent).filter(t=>/^(Pflanze|Wasser)/.test(t)));
+  console.log('   Spuren jetzt:',spurenFrei.join(' | '));
+  console.log((spurenFrei.length<=4?'  ✓ ':'  ✗ ')+'Nicht mehr als vier Spuren, sonst wird es höher als der Bildschirm');
+  if(spurenFrei.length>4)fehler.push('Verlauf: zu viele Spuren');
+  await p.screenshot({path:shots+'/verlauf_frei.png',fullPage:false});
+  /* zurueck auf eine Frage */
+  await p.$eval('#vlKarte .chip:text-is("Stickstoffform")',e=>e.click());await p.waitForTimeout(400);
+  const zurueckFrage=await p.$eval('#vlKarte h2',e=>e.textContent);
+  console.log((/Stickstoffform/.test(zurueckFrage)?'  ✓ ':'  ✗ ')+'Der Rückweg auf eine vorformulierte Frage funktioniert');
+  if(!/Stickstoffform/.test(zurueckFrage))fehler.push('Verlauf: Rueckweg auf Voreinstellung fehlt');
+
   /* Ein Punkt oeffnet die ganze Erhebung, wie im Reiter Nährstoffe. */
   const vlHits=await p.$$('#cVl .hit');
   if(vlHits.length){
-    const hb=await vlHits[vlHits.length-1].boundingBox();
-    await p.mouse.move(hb.x+hb.width/2,hb.y+hb.height/2);await p.waitForTimeout(140);
+    /* Die Zeichnung ist inzwischen hoeher als das Fenster – der Punkt muss
+       erst sichtbar sein, sonst zeigt die Maus ins Leere. */
+    const ziel=vlHits[vlHits.length-1];
+    await ziel.scrollIntoViewIfNeeded();await p.waitForTimeout(200);
+    const hb=await ziel.boundingBox();
+    /* Erst weg, dann hin: steht der Zeiger schon auf dem Punkt, gibt es
+       keine Bewegung mehr, und das Kaestchen bliebe zu. */
+    await p.mouse.move(4,4);await p.waitForTimeout(80);
+    await p.mouse.move(hb.x+hb.width/2,hb.y+hb.height/2);await p.waitForTimeout(200);
     const vt=await p.$eval('.tipp',e=>({an:e.classList.contains('an'),t:e.innerText}));
     console.log((vt.an?'  ✓ ':'  ✗ ')+'Infokästchen am Punkt: '+JSON.stringify(vt.t.replace(/\n/g,' · ').slice(0,80)));
     if(!vt.an)fehler.push('Verlauf: kein Tooltip am Punkt');
