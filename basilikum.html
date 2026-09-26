@@ -4682,6 +4682,9 @@ const REIN_MUSTER=[
   /* «kalbriert» steht so in den echten Bemerkungen – der Tippfehler muss
      mitgelesen werden, sonst geht der Eintrag verloren. */
   {re:/kal.{0,2}br/i,typ:'Gerätekalibrierung',titel:'Gerät neu kalibriert'},
+  /* «Wasser abgepumpt, Tanks neu gefüllt» ist ein Neuansatz, kein Umpumpen –
+     das Wort «neu gefüllt» / «geleert» entscheidet, darum steht es vor dem Pumpen. */
+  {re:/neu\s*(angesetzt|gefüllt|gefuellt|befüllt|befuellt|aufgesetzt)|(tanks?|reservoirs?)\s*(geleert|entleert)/i,typ:'Tank neu angesetzt',titel:'Tank neu angesetzt'},
   {re:/gepumpt|umgepumpt|umpumpen/i,typ:'Umpumpen',titel:'umgepumpt'},
   {re:/(dünger|duenger|reservoir|tank).{0,14}leer|leer.{0,14}(dünger|duenger)/i,typ:'Notiz',titel:'leer'}];
 const MENGE_RE=/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|lt?r?|liter|%)(?![a-zä])/gi;

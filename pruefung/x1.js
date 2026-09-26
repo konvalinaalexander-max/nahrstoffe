@@ -183,9 +183,6 @@ console.log('\n════ Robustheit ════');
   ok(A.tabDatum('10.6.',null)===null,'Ohne Bezug wird ein Datum ohne Jahr nicht geraten');
 }
 
-console.log('\n════ Ergebnis ════');
-console.log(fehler?`  ${fehler} FEHLER`:'  ✓ Alle Pruefungen bestanden.');
-
 console.log('\n════ Die echte Tabelle: April bis September 2026 ════');
 {
   /* pruefung/fixtures/tank-2026.tsv ist das Blatt «pH/EC Reservoir», so wie
@@ -248,6 +245,28 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   ok(txt.some(t=>/^Kalisulfat (seit )?26\.08\./.test(t))&&txt.some(t=>/^Zink (seit )?26\.08\./.test(t)),'Kalisulfat und Zink ab 26. August – in der Tabelle steht danach keine weitere Gabe, also kein «seit» ohne Beleg');
   ok(M.every(x=>x.tipp&&/Menge gesamt/.test(x.tipp)),'Im Kästchen die Summe – für den Admin, nicht für den Chef');
   ok(!/Versuch/.test(txt.join(' ')),'Kein Etikett «Versuch» – einfach die Daten');
+}
+
+console.log('\n════ Der Praxisbericht (31.08.–10.09.2026) als Tabelle ════');
+{
+  /* pruefung/fixtures/praxis-2026.tsv sind die Messreihen aus dem Bericht
+     «pH- und Säure-Praxisversuch», abgeschrieben ins Tabellenformat.
+     Mehrere Messungen am selben Tag, keine Uhrzeit (kennt das Modell nicht). */
+  const fs=require('fs');
+  A.setDb(A.leer());
+  const t=A.tabBlatt(A.csvZeilen(fs.readFileSync(__dirname+'/fixtures/praxis-2026.tsv','utf8')));
+  ok(t.mess.length===25,'25 pH-Messungen, mehrere je Tag, gehen nicht verloren: '+t.mess.length);
+  ok(t.mess.filter(m=>m.datum==='2026-09-09').length===12,'Der 9. September hat 12 Einzelwerte (6 vorne, 6 hinten)');
+  const o2=t.mess.filter(m=>m.o2!=null);
+  ok(o2.length===1&&o2[0].o2===0.2&&o2[0].stelle==='vorne','O₂ 0,2 mg/l am 9.9. steht vorne');
+  const zs=t.vorschlaege.filter(v=>v.typ==='Säurezugabe'&&v.mittel==='zitronensaeure');
+  ok(zs.length===7&&zs.reduce((s,v)=>s+v.menge,0)===6,'Sieben Zitronensäure-Gaben, zusammen 6 kg');
+  ok(zs.filter(v=>v.datum==='2026-09-09').length===3&&zs.filter(v=>v.datum==='2026-09-09'&&v.stelle==='hinten').length===2,'Am 9.9. drei Gaben: zwei hinten, eine vorne');
+  const neu=t.vorschlaege.filter(v=>v.typ==='Tank neu angesetzt');
+  ok(neu.length===1&&neu[0].datum==='2026-09-10','«Wasser abgepumpt, Tanks neu gefüllt» → Tank neu angesetzt am 10.9., kein Umpumpen');
+  ok(!t.vorschlaege.some(v=>v.typ==='Umpumpen'),'Kein Umpumpen daraus');
+  ok(!t.mess.some(m=>m.warnung),'Keine der pH-Zahlen gilt als unplausibel');
+  ok(!JSON.stringify(t).includes('Versuch'),'Nichts wird als «Versuch» ausgewiesen');
 }
 
 console.log('\n════ Ergebnis ════');

@@ -208,6 +208,16 @@ Zeile geprüft. Was daran gelernt wurde und jetzt im Parser steht:
   wird zu den Mengen der Stellen mitgetragen — zwei Gaben, keine Notiz.
 - pH ausserhalb 3–10 (der echte Tippfehler «1,36») wird rot markiert und
   angehakt gelassen: nicht verworfen, nicht geglaubt.
+- «Wasser abgepumpt, Tanks neu gefüllt» ist ein **Tank neu angesetzt**, kein
+  Umpumpen: `REIN_MUSTER` prüft «neu gefüllt / angesetzt / geleert» vor
+  «gepumpt».
+
+Die Messreihen aus dem Bericht «pH- und Säure-Praxisversuch» (31.08.–10.09.,
+Zitronensäure, O₂ 0,2 mg/l, Neufüllung am 10.09.) liegen abgeschrieben als
+`pruefung/fixtures/praxis-2026.tsv` im selben Tabellenformat – zum Einspielen
+über «Tabelle importieren» und als zweite Prüfreihe in `x1.js`. Uhrzeiten
+kennt das Modell nicht: mehrere Messungen am selben Tag bleiben getrennte
+Einträge in der Reihenfolge der Tabelle. Nichts davon heisst «Versuch».
 
 **Schema 9: Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
 `o2` (mg/l), `o2sat` (%) und `wer`; `ereignisse` haben `wer`; `einst.hoeheM`
@@ -636,7 +646,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (600 Einzelprüfungen, ohne Browser)
+# 2 · Fachliche Regressionsprüfungen (610 Einzelprüfungen, ohne Browser)
 for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser

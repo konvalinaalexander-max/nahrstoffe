@@ -52,7 +52,7 @@ Jedes Skript endet mit Exitcode 1, sobald eine Prüfung fehlschlägt.
 | `upload.js` | Der Weg «PDF hochladen und verstehen» in Chromium: echtes PDF einlesen, Kontrolldialog, Übernehmen, die Erhebungsansicht, Reihenfolge im Überblick, Wiedereinstieg. pdf.js wird aus der lokalen Installation umgeleitet, damit der Test ohne Netz läuft |
 | `f1.js` | Fotos: Migration, Fotospur, Escaping, Grössenwarnung |
 | `l1.js` | Logbuch: strukturierte Mengen, Umbenennungen |
-| `x1.js` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen – und das echte Blatt April–September 2026 (`fixtures/tank-2026.tsv`) Zeile für Zeile |
+| `x1.js` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen – und die echten Blätter April–September 2026 (`fixtures/tank-2026.tsv`) und Praxisbericht 31.08.–10.09. (`fixtures/praxis-2026.tsv`) Zeile für Zeile |
 | `b1.js` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken, Verdünnung |
 | `v1.js` | Reiter Verlauf: Schema, gemeinsame Zeitachse, getrennte Achsen, freie Auswahl, Farbkopplung, Rangliste, Eingangsbilanz, Jung gegen Alt |
 | `d1.js` | Selbstsicherung als HTML: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
