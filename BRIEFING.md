@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: September 2026 · Schema 8 · rund 395 KB, 5400 Zeilen, eine Datei.
+Stand: 26. September 2026 · Schema 9 · rund 415 KB, 5600 Zeilen – plus `erfassen.html` (Handy) und `server.js` (Online). Konzept dazu: `KONZEPT-ONLINE.md`, Hosting: `ONLINE.md`.
 
 ---
 
@@ -112,15 +112,15 @@ Wichtige Eigenheiten, die im Parser abgebildet sind:
 Ein einziges globales Objekt `db`. `leer()` definiert die Form:
 
 ```js
-{schema:8, version:0, gespeichert:null,
+{schema:9, version:0, gespeichert:null,
  analysen:[],      // jede Probe eine Zeile: typ, datum, satz, blattalter,
                    // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle,
                    // herkunft ('ruecklauf'|'zulauf'|'tank'|'unbekannt'),
                    // symptom ('symptomatisch'|'gesund'|'unbekannt'), gewaschen
  ereignisse:[],    // Logbuch: typ, datum, mittel, menge, einheit, stelle,
                    // jeReservoir, felder{}, geltung, saetze[], quelle
- messungen:[],     // pH/EC am Tank: datum, stelle, ph, ec, ecFrisch, temp,
-                   // notiz, quelle ('hand' | 'excel')
+ messungen:[],     // am Tank: datum, stelle, ph, ec, ecFrisch, temp, o2, o2sat,
+                   // wer (Kürzel), notiz, quelle ('hand' | 'excel' | 'erfassen')
  fotos:[],         // id, datum, titel, notiz, satz, etage, analyseId,
                    // herkunftDatum, breite, hoehe, daten (Data-URL, JPEG)
  produkte:{},      // Stammdaten: name, form, dichte, gehalt{Element:%}, quelle
@@ -128,9 +128,9 @@ Ein einziges globales Objekt `db`. `leer()` definiert die Form:
  rundgaenge:[],    // wöchentliche Bonitur, Schadbilder in Stufen 0–3
  saetze:{},        // je Satz: eingetragenes Aussaatdatum, Notizen
  eigeneOptima:{},  // eigene Sollbereiche, schlagen die des Labors — je Grenze
- plan:{zielwochen:[2,4,6], begleitet:[], geplant:[]},   // geplant: +typ, +analyseId
+ plan:{zielwochen:[2,4], begleitet:[], geplant:[]},     // Satzpaare; geplant: +typ, +analyseId
  einst:{verlagerung:1.3, kMg:8, kCa:3, nh4no3:0.5, toleranz:5,
-        dauerSommer:7, dauerWinter:10, systemLiter:19200,
+        dauerSommer:7, dauerWinter:10, systemLiter:19200, hoeheM:440,
         kern:[…], schaeden:[…], gwRicht:{}}}
 ```
 
@@ -152,7 +152,15 @@ Tages sind **eine** Erhebung mit zwei Proben. Fast alle Auswertungen arbeiten au
 Erhebungen, nicht auf Analysen. `e.proben` ist `{jung, alt, misch}`, `e.bew` die
 Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
 
-**Schema 8 (neu): Entnahmestellen zuordnen.** Das Labor schreibt auf jeden
+**Schema 9 (neu): Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
+`o2` (mg/l), `o2sat` (%) und `wer`; `ereignisse` haben `wer`; `einst.hoeheM`
+(440 m) für die Sättigungsgrenze; neue Bestände starten mit Zielwochen
+`[2,4]`, bestehende behalten ihre. `o2Saettigung(temp, hoehe)` ist die
+Löslichkeitstabelle für Süsswasser (Benson & Krause) mit barometrischer
+Höhenkorrektur — eine **physikalische Obergrenze**, kein Sollwert, und so
+beschriftet.
+
+**Schema 8: Entnahmestellen zuordnen.** Das Labor schreibt auf jeden
 Bericht eine eigene Bezeichnung — «Reservoir Vorne», «Basilikum RV», «Hinter,
 Ohne H2O2», «Vorne, mitt H2O2» — und der Betrieb wird das weiter tun. Vier
 Bezeichnungen für zwei Reservoirs zerlegen jeden Verlauf in vier Reihen.
@@ -200,6 +208,24 @@ Ausgeschlossenes aus den Diagrammen.
   Ursache der Ammoniumlage unentscheidbar.
 - `einst.systemLiter` wird von 20 000 auf **19 200 l** berichtigt (2 × 9 600).
   Die Migration sagt das in ihrem Bericht.
+
+**Online (seit 26. September).** Läuft die Seite von `server.js` (http statt
+file), holt sie den Bestand von `/api/bestand`, schreibt Änderungen nach
+1,5 s Ruhe zurück (`aend()` → `onlinePlanen()` → `sichernOnline()`) und
+fragt alle 30 s `/api/version`. Vom Ordner geöffnet ändert sich **nichts** —
+dieselbe Datei läuft in beiden Modi, `onlineStart()` entscheidet beim Start.
+
+Gleichzeitigkeit in drei Sätzen: jeder `PUT` trägt `basisVersion`; bei 409
+holt die App den fremden Stand, `vereinigen()` bildet je Liste die
+Vereinigung nach `id` und schreibt noch einmal. Messungen und Beigaben von
+der Handy-Seite (`erfassen.html`, Rolle `hinten`) werden serverseitig nur
+*angehängt* — sie kollidieren nie. Was dabei zurückkommen kann, ist ein
+Eintrag, den man gerade gelöscht hatte; das wird gezählt und gesagt.
+
+Die Rolle `hinten` sieht **nicht** den Bestand, nur `/api/kontext` (Stellen,
+Produkte, letzte Werte). Der Server (`server.js`, reines Node, keine
+Abhängigkeiten) prüft jeden Eintrag von hinten auf erlaubte Felder, Zahlen
+und Datum; Kennung und Herkunft vergibt er selbst.
 
 **Persistenz: die Datei schreibt sich selbst.** Beim Sichern entsteht *eine*
 HTML-Datei — dasselbe Werkzeug, mit dem ganzen Bestand darin. Wer sie bekommt,
@@ -453,11 +479,11 @@ Datumsachse.
 | **Verlauf** | **Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse** — fünf benannte Fragen als Startpunkt, darunter jeder Nährstoff und jede Wassergrösse einzeln wählbar; Blattetage und Linien filterbar |
 | **Nährstoffe** | Ein oder mehrere Nährstoffe über Zeit oder Kulturwoche, mit Tabellen darunter |
 | **Substrat** | Angebot im Substrat gegen Aufnahme im Blatt |
-| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, **Entnahmestellen zuordnen**, Richtwerte, **Soll-Ist-Bilanz**, der Kreislauf selbst, Excel-Import |
+| **Giesswasser** | Verlauf je Parameter und Entnahmestelle, **Entnahmestellen zuordnen**, Richtwerte, **Soll-Ist-Bilanz**, **Am Tank: pH · EC · O₂ als drei Spuren** mit Kacheln, Excel-Import |
 | **Logbuch** | Schnellerfassung in einer Zeile, Zeitstrahl nach Monaten, nach Art filterbar, «wieder so» zum Duplizieren, **«Wirkung prüfen» je Eintrag** |
 | **Fotos** | Galerie je Tag; jedes Foto erscheint als Kamerasymbol unter den Zeitdiagrammen |
 | **Rundgang** | Wöchentliche Bonitur, Schadbilder in Stufen 0–3 |
-| **Planer** | Geplante Proben von Hand; die automatischen Vorschläge stehen zugeklappt darunter |
+| **Planer** | **Satzpaare** (Woche 2 und 4 je Satz, nächste Einsendung, Einplanen), geplante Proben von Hand; die automatischen Vorschläge zugeklappt darunter |
 | **Sätze & Einstellungen** | Aussaatdaten, eigene Optima, alle Schwellen, Kernnährstoffe |
 
 Der **Kontrolldialog** vor der Übernahme ist wichtig: nichts wandert
@@ -504,13 +530,19 @@ danach, bevor du Grosses am Datenmodell änderst.
 Diese Punkte stammen vom Nutzer, nicht aus einer Stilvorliebe. Sie gelten
 weiter, auch wenn du eine bessere Lösung siehst — dann sag es, bevor du es tust.
 
-1. **Eine einzige HTML-Datei bleibt das Lieferformat.** Kein Build, kein
-   Bundler, keine Modulaufteilung.
+1. **Eine einzige HTML-Datei bleibt das Lieferformat** der Admin-Ansicht.
+   Kein Build, kein Bundler, keine Modulaufteilung. Seit dem 26. September
+   kommen `erfassen.html` (eine zweite, eigenständige Seite fürs Handy)
+   und `server.js` dazu — beide ebenfalls je eine Datei ohne
+   Abhängigkeiten. Vom Ordner geöffnet läuft `basilikum.html` weiter
+   genau wie zuvor.
 2. **Kein localStorage, kein Ordnerzugriff, kein Automatismus beim Speichern.**
-   Der bewusste Speicherschritt ist gewünscht. Seit September sichert die
-   Anwendung sich selbst als HTML mit den Daten darin (Abschnitt 4) — das
-   ändert nichts an dieser Leitplanke: gespeichert wird weiterhin nur auf
-   Knopfdruck, und es entsteht weiterhin jedes Mal eine neue Datei.
+   Der bewusste Speicherschritt ist gewünscht — **im Datei-Modus.** Online
+   (Abschnitt 4) wird laufend gesichert, weil bei mehreren Menschen der
+   ungesicherte Stand in einem Browserfenster genau das ist, was verloren
+   geht; der Knopf heisst dort «Jetzt sichern» und «Kopie herunterladen».
+   localStorage bleibt für den Bestand ausgeschlossen; die Handy-Seite
+   nutzt ihn nur für das Kürzel und die Warteschlange ohne Netz.
 3. **Firefox muss funktionieren.** Verwende nichts, was Firefox nicht seit
    Jahren unterstützt.
 4. **Sprache: Deutsch, Schweizer Rechtschreibung (ss statt ß).** Keine
@@ -547,8 +579,8 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (478 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (556 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
@@ -558,6 +590,8 @@ CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
 PDF=…/probe.pdf  node pruefung/upload.js     # echtes Blattsaft-PDF
 GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weiterarbeiten
+node pruefung/tank.js                        # Handy-Seite gegen den echten Server
+node pruefung/online.js                      # Admin-Seite vom Server: laufend sichern, Konflikt, Auffrischen
 ```
 
 | Datei | Zweck |
@@ -572,10 +606,14 @@ BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weitera
 | `v1` | Reiter Verlauf: Schema 7, gemeinsame Zeitachse, getrennte Achsen, freie Auswahl, Farbkopplung, Rangliste, Eingangsbilanz, Jung gegen Alt |
 | `d1` | Selbstsicherung: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
 | `st1` | Entnahmestellen zuordnen — gegen die vier echten Berichte mit ihren vier Schreibweisen |
+| `o1` | Schema 9, Sättigungsgrenze, `vereinigen`, Satzpaare, Stand in der Kopfzeile |
+| `server1` | `server.js` als eigener Prozess: Rollen, Anhängen, 409 bei veralteter Version, Sicherungskopien, Neustart |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
 | `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
+| `tank.js` | Chromium (Handy-Format) gegen `server.js`: messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da |
+| `online.js` | Chromium gegen `server.js`: Admin-Seite lädt, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
 gitignoriert. Wer die HTML-Datei ändert und die Prüfungen laufen lässt, ohne
@@ -597,6 +635,8 @@ Chromium zur Verfügung.
 | `AUFTRAG-ERWEITERUNG.md` | der Auftrag für Fotos, Logbuch, Excel-Import, Bilanz und Planer — umgesetzt |
 | `PROMPT-DATENMODELL.md` | Auftrag für die statistische Prüfung |
 | `ENTWURF-KREISLAUF.md` | Entwurf zum Problembriefing: was am Briefing falsch ist, das Datenmodell Schema 7, welche Reiter wegfallen — **vier Fragen darin sind offen** |
+| `KONZEPT-ONLINE.md` | Konzept für den Betrieb online: Teile, Rollen, Gleichzeitigkeit, Satzpaare, Am Tank, Hosting — **fünf Fragen darin sind offen** |
+| `ONLINE.md` | Schritt für Schritt: die Anwendung online stellen (Railway, eigener Server, nur im Netz) |
 | `pruefung/LIESMICH.md` | wie die Prüfungen aufgebaut sind |
 
 ---

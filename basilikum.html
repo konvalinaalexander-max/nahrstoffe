@@ -208,8 +208,10 @@ details[open]>summary:before{content:'▾ '}
     </div>
     <div style="flex:1"></div>
     <span id="stand" class="tiny muted"></span>
-    <button data-tun="dateiOeffnen">Datei öffnen</button>
-    <button data-tun="sichern" class="primary" title="Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.">Sichern</button>
+    <a id="erfassenLink" href="/erfassen" hidden title="Die Handy-Seite für Messungen und Beigaben am Tank" style="font-size:13px;margin-right:6px">Erfassen ↗</a>
+    <button data-tun="dateiOeffnen" id="knopfOeffnen">Datei öffnen</button>
+    <button data-tun="kopie" id="knopfKopie" hidden title="Diese Seite mit allen Daten als eine HTML-Datei herunterladen – zum Mitnehmen oder als Sicherung.">Kopie herunterladen</button>
+    <button data-tun="sichern" id="knopfSichern" class="primary" title="Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.">Sichern</button>
   </div>
   <nav id="nav"></nav>
 </header>
@@ -688,12 +690,16 @@ const PRODUKTE_VORGABE={
    zu[<Bezeichnung>] ist die Kennung der Stelle, null heisst ausdruecklich
    «gehoert zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
 const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
-const leer=()=>({schema:8,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+const leer=()=>({schema:9,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   stellen:STELLEN_VORGABE(),
-  saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4,6],begleitet:[],geplant:[]},
+  /* Zielwochen 2 und 4: das Satzpaar-Schema. Alle zwei Wochen ein Satz in
+     Woche 2 und einer in Woche 4 – so bekommt jeder Satz zwei Proben, und
+     alle Woche-2-Proben sind untereinander vergleichbar. */
+  saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4],begleitet:[],geplant:[]},
   einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
     systemLiter:19200,
+    hoeheM:440,          /* Schwerzenbach – für die Sauerstoff-Sättigungsgrenze */
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
 let db=leer(),tab='lage',dirty=false,nachRender=null;
 /* Registrierung des aktiven Diagramms: erlaubt es, nur das Diagramm samt
@@ -810,7 +816,20 @@ function migriere(roh){
     else if(namen.length)
       notizen.push('Entnahmestellen lassen sich neu zu Stellen zusammenfassen, falls das Labor dieselbe Stelle unterschiedlich benennt («Stellen zuordnen» im Reiter Giesswasser).');
   }
-  d.schema=8;
+  if(von<9){
+    /* Sauerstoff am Tank und ein Kürzel, wer gemessen hat. Alte Einträge
+       bekommen null – nichts wird geraten. */
+    let n=0;
+    for(const m of (d.messungen||[])){
+      if(m.o2===undefined){m.o2=null;n++}
+      if(m.o2sat===undefined)m.o2sat=null;
+      if(m.wer===undefined)m.wer=null;
+    }
+    for(const e of (d.ereignisse||[]))if(e.wer===undefined)e.wer=null;
+    if(n)notizen.push(`Messungen am Tank haben zwei neue Felder: Sauerstoff (mg/l, dazu die Sättigung in %) und ein Kürzel, wer gemessen hat. Für die ${n} bisherigen Einträge stehen sie auf «unbekannt».`);
+    notizen.push('Neu gibt es eine Handy-Seite für die Erfassung am Tank (erfassen.html) – Messungen und Beigaben von dort tragen das Kürzel und die Herkunft «erfassen».');
+  }
+  d.schema=9;
   return {db:d,notizen,von};
 }
 
@@ -1773,6 +1792,12 @@ function zeitMarken(x0,x1){
 /* Ziehen, Zoomen, Zuruecksetzen – wirkt auf alle Spuren gleichzeitig, weil
    sie sich denselben x-Bereich teilen. */
 let koVon=null,koBis=null;
+/* Wer die gemeinsame Zeitachse gerade benutzt, meldet hier an, was bei
+   Zoom («zoom») und Zurücksetzen («reset») mit seinem Zeitraum-Knopf
+   geschehen soll. Vorher stand hier fest der Reiter Verlauf drin – die
+   Karte «Am Tank» braucht dasselbe. */
+let zoomHaken=null;
+const zoomMelden=art=>{if(zoomHaken)try{zoomHaken(art)}catch(e){}};
 /* Der Zustand des Ziehens liegt bewusst AUSSERHALB der Funktion. Jede
    Verschiebung zeichnet das Diagramm neu, dabei werden die Ereignisbehandler
    ersetzt – laege der Zustand in ihrer Umgebung, waere das Ziehen nach dem
@@ -1801,7 +1826,7 @@ function stapelBedienung(box,g){
     if(Math.abs(px-ziehStart)<2)return;
     ziehBewegt=true;
     const d=(ziehStart-px)/((g.W-g.ml-g.mr)||1)*(ziehBis-ziehVon);
-    koVon=ziehVon+d;koBis=ziehBis+d;vlZeit=null;
+    koVon=ziehVon+d;koBis=ziehBis+d;zoomMelden('zoom');
     /* Waehrend des Ziehens wird nur die Zeichnung erneuert, nicht die Tabellen
        darunter – sonst ruckelt es. Der Rest folgt beim Loslassen. */
     if(DIAG&&DIAG.zeichnen){tippWeg();DIAG.zeichnen()}else diagFrisch();
@@ -1820,9 +1845,9 @@ function stapelBedienung(box,g){
     const f=ev.deltaY>0?1.25:0.8;
     const nv=mitte-(mitte-g.x0)*f,nb=mitte+(g.x1-mitte)*f;
     if(nb-nv<3*864e5)return;                        /* nicht enger als drei Tage */
-    koVon=nv;koBis=nb;vlZeit=null;diagFrisch();
+    koVon=nv;koBis=nb;zoomMelden('zoom');diagFrisch();
   },{passive:false});
-  box.ondblclick=()=>{koVon=koBis=null;vlZeit='alles';diagFrisch()};
+  box.ondblclick=()=>{koVon=koBis=null;zoomMelden('reset');diagFrisch()};
 }
 
 /* Baustein fuer den Inhalt des Infokaestchens. Alles wird hier maskiert,
@@ -1953,9 +1978,9 @@ function render(){
   const yVor=window.scrollY||window.pageYOffset||0;
   tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
   el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
-  el('stand').textContent=dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
+  kopfStand();
   const f=ANSICHT[tab]||ANSICHT.lage;
-  DIAG=null;
+  DIAG=null;zoomHaken=null;
   if(letzterTab!==tab){diagAus.clear();koVon=koBis=null}
   try{el('view').innerHTML=f()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
@@ -1992,7 +2017,7 @@ function diagFrisch(){
 AKTION.reiter=d=>{const dg=el('dlg');if(dg.open)dg.close();tab=d.reiter;render()};
 function setTab(t){tab=t;render()}
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),4200)}
-function aend(){dirty=true}
+function aend(){dirty=true;if(ONLINE.an)onlinePlanen()}
 function dialog(t,h,f){el('dlgTitel').textContent=t;el('dlgBody').innerHTML=h;
   const ft=el('dlgFoot');if(f){ft.innerHTML=f;ft.hidden=false}else{ft.innerHTML='';ft.hidden=true}el('dlg').showModal()}
 AKTION.dlgZu=()=>el('dlg').close();
@@ -2884,6 +2909,7 @@ function vVerlauf(){
   }
 
   function vlZeichnen(){
+    zoomHaken=art=>{vlZeit=art==='reset'?'alles':null};
     const {paar,farbe}=vlAb();
     const bs=blattSerien(paar,farbe),ws=wasserSerien(paar,farbe);
     /* Was im Wasser nie gemessen wurde, bekommt trotzdem eine Spur – eine
@@ -3518,9 +3544,25 @@ function vSubstrat(){
 AKTION.messung=()=>{
   const d=el('mDatum').value;if(!d)return toast('Datum fehlt.');
   const ph=toNum(el('mPh').value),ec=toNum(el('mEc').value),ecF=toNum(el('mEcF').value),tp=toNum(el('mTemp').value);
-  if(ph==null&&ec==null&&ecF==null&&tp==null)return toast('Bitte mindestens einen Wert eintragen.');
-  db.messungen.push({id:uid(),datum:d,ph,ec,ecFrisch:ecF,temp:tp,notiz:el('mNotiz').value||null});
+  const o2=el('mO2')?toNum(el('mO2').value):null,o2s=el('mO2s')?toNum(el('mO2s').value):null;
+  if(ph==null&&ec==null&&ecF==null&&tp==null&&o2==null)return toast('Bitte mindestens einen Wert eintragen.');
+  if(ph!=null&&(ph<0||ph>14))return toast('Der pH liegt ausserhalb 0–14 – Tippfehler?');
+  db.messungen.push({id:uid(),datum:d,stelle:(el('mStelle')&&el('mStelle').value)||null,ph,ec,ecFrisch:ecF,temp:tp,o2,o2sat:o2s,
+    wer:(el('mWer')&&el('mWer').value.trim().toUpperCase())||null,notiz:el('mNotiz').value||null,quelle:'hand'});
   aend();render();toast('Messung eingetragen.');
+};
+AKTION.tkStelle=d=>{tkStelle=d.v;diagAus.clear();diagFrisch()};
+AKTION.tkLinien=d=>{tkLinien=d.v;diagFrisch()};
+AKTION.tkBeigaben=()=>{tkBeigaben=!tkBeigaben;diagFrisch()};
+AKTION.tkZeit=d=>{
+  tkZeit=d.v;
+  if(d.v==='alles'){koVon=koBis=null}
+  else{
+    const alle=db.messungen.filter(m=>m.datum).map(m=>+new Date(m.datum));
+    const bis=alle.length?Math.max(...alle):Date.now();
+    koBis=bis+2*864e5;koVon=bis-(+d.v)*864e5;
+  }
+  diagFrisch();
 };
 AKTION.messungWeg=d=>{db.messungen=db.messungen.filter(y=>y.id!==d.id);aend();render()};
 
@@ -3544,6 +3586,21 @@ const gwRichtVon=k=>{
 };
 const gwProben=()=>db.analysen.filter(a=>a.typ==='giesswasser'&&a.datum)
   .slice().sort((a,b)=>b.datum.localeCompare(a.datum)||String(a.stelle||'').localeCompare(String(b.stelle||'')));
+/* Löslichkeit von Sauerstoff in Süsswasser bei 1013 hPa, in mg/l – die
+   Standardtabelle (Benson und Krause 1984, wie sie USGS und jedes
+   Gewässerkunde-Lehrbuch führen). Zwischen den Stützstellen wird linear
+   gerechnet; der Luftdruck der Höhenlage senkt die Grenze (barometrische
+   Höhenformel). Das ist eine physikalische Obergrenze, kein Sollwert. */
+const O2_LOESLICH=[[0,14.62],[5,12.77],[10,11.29],[15,10.08],[20,9.09],[25,8.26],[30,7.56],[35,6.95],[40,6.41]];
+function o2Saettigung(temp,hoeheM){
+  if(temp==null||!isFinite(temp))return null;
+  const t=Math.max(0,Math.min(40,+temp));
+  let a=O2_LOESLICH[0],b=O2_LOESLICH[O2_LOESLICH.length-1];
+  for(let i=0;i<O2_LOESLICH.length-1;i++)if(t>=O2_LOESLICH[i][0]&&t<=O2_LOESLICH[i+1][0]){a=O2_LOESLICH[i];b=O2_LOESLICH[i+1];break}
+  const mg=a[1]+(b[1]-a[1])*((t-a[0])/((b[0]-a[0])||1));
+  const h=hoeheM==null?0:+hoeheM;
+  return mg*Math.exp(-h/8434);
+}
 const gwStelle=a=>a.stelle||'ohne Namen';
 /* ── Entnahmestellen zusammenfassen ────────────────────────────────────────
    gwStelle() liefert weiterhin die Bezeichnung, die im Bericht steht - sie
@@ -3726,6 +3783,22 @@ function gwFarben(){
   return m;
 }
 let gwWahl=null,gwSkala='auto',gwLinien='aus',gwLog=true;
+/* Die Karte «Am Tank»: drei Grössen, drei Achsen, eine Zeitachse. */
+let tkStelle='alle',tkZeit='alles',tkLinien='keine',tkBeigaben=true;
+/* Aus dem, was bei einer Messung als Stelle steht – vom Handy der Name der
+   Stelle, aus Excel «vorne»/«hinten», von früher gar nichts –, die Stelle,
+   wie sie im Bestand heisst. */
+function messStelle(m){
+  const st=(m&&m.stelle)?String(m.stelle):'';
+  if(!st)return 'ohne Stelle';
+  const g=stellenDb().gruppen.find(x=>x.name===st);
+  if(g)return g.name;
+  const t=st.toLowerCase();
+  const v=stellenDb().gruppen.find(x=>/vorne/.test(x.name.toLowerCase())),h=stellenDb().gruppen.find(x=>/hinten/.test(x.name.toLowerCase()));
+  if(/vorn|\brv\b/.test(t)&&v)return v.name;
+  if(/hint|\brh\b/.test(t)&&h)return h.name;
+  return st;
+}
 function vGiess(){
   const alle=gwProben();
   const farbe=gwFarben();
@@ -3807,17 +3880,84 @@ function vGiess(){
         gwSk==='rel'?'100 % = höchster gemessener Wert des jeweiligen Parameters':'Einheit '+esc(gwEinheiten.join(' · ')))
         +(gwBand?`<span class="muted">grünes Band: bis ${nz(gwBand[1])} <span class="tag schaetz">Annahme</span></span>`:'');
     }
-    if(messungen.length){
-      const ms=[
-        {id:'m|ph',name:'pH Rücklauf',farbe:FARBSTOFF[0],form:'kreis',punkte:db.messungen.filter(x=>x.ph!=null).map(x=>({x:+new Date(x.datum),y:x.ph,xtext:fmtK(x.datum),tipp:tippBau('pH Rücklauf',FARBSTOFF[0],[['Datum',fmt(x.datum)],['pH',nz(x.ph,2)]],x.notiz||'')}))},
-        {id:'m|ec',name:'EC Rücklauf',farbe:FARBSTOFF[1],form:'raute',punkte:db.messungen.filter(x=>x.ec!=null).map(x=>({x:+new Date(x.datum),y:x.ec,xtext:fmtK(x.datum),tipp:tippBau('EC Rücklauf',FARBSTOFF[1],[['Datum',fmt(x.datum)],['EC',nz(x.ec,2)+' mS/cm'],x.temp!=null?['Substrattemperatur',nz(x.temp,1)+' °C']:null],x.notiz||'')}))},
-        {id:'m|ecf',name:'EC frisch angesetzt',farbe:FARBSTOFF[2],form:'ring',punkte:db.messungen.filter(x=>x.ecFrisch!=null).map(x=>({x:+new Date(x.datum),y:x.ecFrisch,xtext:fmtK(x.datum),tipp:tippBau('EC frisch angesetzt',FARBSTOFF[2],[['Datum',fmt(x.datum)],['EC',nz(x.ecFrisch,2)+' mS/cm'],x.ec!=null?['Aufnahme bis zum Rücklauf',nz(x.ecFrisch-x.ec,2)+' mS/cm']:null])}))}
-      ].filter(x=>x.punkte.length);
-      chartPunkte(el('cKreis'),{serien:ms,yTyp:'wert',xTyp:'datum',xLabel:'Datum',linien:true,hoehe:290,
-        yLabel:'pH und mS/cm auf derselben Achse',
-        ereignisse:rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ}))});
-      el('legKreis').innerHTML=legende(ms,diagAus,'pH und EC teilen sich die Achse – vergleiche jede Reihe mit sich selbst, nicht mit der anderen.');
-    }
+    if(messungen.length&&el('cTank'))tkZeichnen();
+  }
+
+  /* ── Am Tank: pH, EC und Sauerstoff übereinander ──
+     Drei Grössen mit drei Skalen. Bisher teilten sich pH und EC eine Achse –
+     zufällig ähnlich gross, und damit eine Vergleichbarkeit, die es nicht
+     gibt. Jetzt hat jede ihre eigene Spur; gemeinsam ist nur die Zeit. */
+  const tkStellen=()=>[...new Set(db.messungen.map(messStelle))].sort();
+  const tkMess=()=>db.messungen.filter(m=>m.datum&&(tkStelle==='alle'||messStelle(m)===tkStelle));
+  function tkZeichnen(){
+    zoomHaken=art=>{tkZeit=art==='reset'?'alles':null};
+    const stellen=tkStellen(),form={};stellen.forEach((st,i)=>form[st]=FORMEN[i%FORMEN.length]);
+    const ms=tkMess();
+    const reihe=(k,name,farbe,extra)=>stellen.map(st=>{
+      const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+      return {id:'t|'+k+'|'+st,name:name+(stellen.length>1?' · '+st:''),farbe,form:form[st],
+        punkte:pk.map(m=>({x:+new Date(m.datum),y:m[k],kennung:null,
+          tipp:tippBau(name,farbe,[['Stelle',st],['Datum',fmt(m.datum)],[name,nz(m[k],k==='ph'?2:k==='o2'?1:2)+(k==='ph'?'':k==='o2'?' mg/l':' mS/cm')],
+            (k==='o2'&&m.temp!=null)?['Sättigungsgrenze bei '+nz(m.temp,1)+' °C',nz(o2Saettigung(m.temp,db.einst.hoeheM),1)+' mg/l (Annahme)']:null,
+            (k==='o2'&&m.o2sat!=null)?['Sättigung laut Gerät',nz(m.o2sat,0)+' %']:null,
+            m.temp!=null&&k!=='o2'?['Temperatur',nz(m.temp,1)+' °C']:null,
+            m.wer?['gemessen von',m.wer]:null],m.notiz||'')}))};
+    }).concat(extra||[]).filter(x=>x.punkte.length);
+    const ecFrisch=stellen.map(st=>{
+      const pk=ms.filter(m=>messStelle(m)===st&&m.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+      return {id:'t|ecf|'+st,name:'EC frisch angesetzt'+(stellen.length>1?' · '+st:''),farbe:FARBSTOFF[2],form:'ring',
+        punkte:pk.map(m=>({x:+new Date(m.datum),y:m.ecFrisch,tipp:tippBau('EC frisch angesetzt',FARBSTOFF[2],[['Stelle',st],['Datum',fmt(m.datum)],['EC frisch',nz(m.ecFrisch,2)+' mS/cm'],
+          m.ec!=null?['Aufnahme bis zum Rücklauf',nz(m.ecFrisch-m.ec,2)+' mS/cm']:null])}))};
+    });
+    const ph=reihe('ph','pH',FARBSTOFF[0]),ec=reihe('ec','EC',FARBSTOFF[1],ecFrisch),o2=reihe('o2','Sauerstoff',FARBSTOFF[3]);
+    /* Die Sättigungsgrenze als Band in der O₂-Spur: aus der zuletzt
+       gemessenen Temperatur, als physikalische Obergrenze gekennzeichnet. */
+    const mitTemp=ms.filter(m=>m.o2!=null&&m.temp!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
+    const grenze=mitTemp?o2Saettigung(mitTemp.temp,db.einst.hoeheM):null;
+    const spuren=[
+      {titel:'pH im Rücklauf',serien:ph,yTyp:'wert',yLabel:'pH',hoehe:150,leerText:'kein pH in diesem Zeitraum'},
+      {titel:'EC im Rücklauf'+(ecFrisch.some(x=>x.punkte.length)?' und frisch angesetzt':''),serien:ec,yTyp:'wert',yLabel:'mS/cm',hoehe:150,leerText:'kein EC in diesem Zeitraum'},
+      {titel:'Sauerstoff',serien:o2,yTyp:'wert',yLabel:'mg/l',hoehe:150,band:grenze?[null,grenze]:null,
+       bandLabel:grenze?`Sättigungsgrenze bei ${nz(mitTemp.temp,1)} °C, ${nz(db.einst.hoeheM,0)} m (Annahme)`:'',
+       leerText:o2.length?'kein Sauerstoff in diesem Zeitraum':'noch nie gemessen – neu am Tank erfassbar'}];
+    chartStapel(el('cTank'),{von:koVon,bis:koBis,linien:tkLinien==='reihe',spuren,
+      ereignisse:tkBeigaben?rel.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),farbe:evFarbe(e.typ),
+        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmt(e.datum)],e.mittel?['Mittel',evMittelName(e.mittel)]:null,
+          e.menge!=null?['Menge',evMenge(e)]:null,e.stelle&&e.stelle!=='beide'?['Wohin',e.stelle]:null,e.wer?['eingetragen von',e.wer]:null],e.notiz||'')})):[]});
+    el('legTank').innerHTML=legende(ph.concat(ec,o2),diagAus,stellen.length>1?'Form = Stelle · jede Grösse hat ihre eigene Achse':'jede Grösse hat ihre eigene Achse');
+  }
+  /* Drei Kacheln: der letzte Wert, daneben der von vor einer Woche. Kein
+     Ampelurteil – für den Rücklauf-pH gibt es keinen vereinbarten Sollbereich,
+     und die App erfindet keinen. */
+  function tkKachel(k,name,einheit,dez){
+    const ms=tkMess().filter(m=>m[k]!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+    if(!ms.length)return `<div class="kpi"><h4>${esc(name)}</h4><b class="muted">–</b><span class="tiny muted">noch nicht gemessen</span></div>`;
+    const l=ms[ms.length-1];
+    const vor=ms.filter(m=>tage(m.datum,l.datum)>=6).slice(-1)[0];
+    const d=vor?l[k]-vor[k]:null;
+    return `<div class="kpi"><h4>${esc(name)}</h4><b>${nz(l[k],dez)}<span class="tiny muted" style="font-weight:400;margin-left:4px">${esc(einheit)}</span></b>
+      <span class="tiny muted">${fmt(l.datum)}${tkStelle==='alle'?' · '+esc(messStelle(l)):''}${l.wer?' · '+esc(l.wer):''}${
+        vor?`<br>vor ${tage(vor.datum,l.datum)} Tagen ${nz(vor[k],dez)} ${d>0.05*Math.max(1,Math.abs(vor[k]))?'↗':d<-0.05*Math.max(1,Math.abs(vor[k]))?'↘':'→'}`:''}</span></div>`;
+  }
+  function tkKopf(){
+    const stellen=tkStellen();
+    if(tkStelle!=='alle'&&!stellen.includes(tkStelle))tkStelle='alle';
+    const hatO2=db.messungen.some(m=>m.o2!=null);
+    let t=`<div class="hd"><div><h2>Am Tank</h2>
+      <p class="sub">pH, EC und Sauerstoff im Rücklauf, gemessen vor der neuen Düngergabe – von Hand hier oder vom Handy hinten. Alle Tische hängen am selben Kreislauf.</p></div></div>
+      <div class="kpis">${tkKachel('ph','pH','',2)}${tkKachel('ec','EC Rücklauf','mS/cm',2)}${tkKachel('o2','Sauerstoff','mg/l',1)}${tkKachel('temp','Temperatur','°C',1)}</div>
+      <div class="werkzeug"><div class="wz">
+        ${stellen.length>1?`<span class="lab">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace('Reservoir ','')])).map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</span>`:''}
+        <span class="lab" style="min-width:0;margin-left:${stellen.length>1?8:0}px">Zeitraum</span>
+        <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${tkZeit===v?'on':''}" data-tun="tkZeit" data-v="${v}">${l}</button>`).join('')}</span>
+        <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
+        <span class="seg">${[['keine','keine'],['reihe','je Reihe']].map(([v,l])=>`<button class="${tkLinien===v?'on':''}" data-tun="tkLinien" data-v="${v}">${l}</button>`).join('')}</span>
+        <span class="chip ${tkBeigaben?'on':''}" data-tun="tkBeigaben" style="margin-left:8px">Beigaben</span>
+      </div></div>
+      <div id="cTank" class="diagramm"></div><div class="legend" id="legTank"></div>`;
+    if(!hatO2)t+=`<p class="tiny muted">Sauerstoff wurde noch nie gemessen. Die Spur bleibt leer, bis der erste Wert vom Tank kommt.</p>`;
+    else t+=`<p class="tiny muted">Das Band in der Sauerstoffspur ist die <strong>physikalische Sättigungsgrenze</strong> bei der zuletzt gemessenen Temperatur, aus der Löslichkeitstabelle für Süsswasser und der Höhenlage (${nz(db.einst.hoeheM,0)} m, einstellbar) <span class="tag schaetz">Annahme</span>. Sie ist eine Obergrenze, kein Sollwert – was darunter liegt, sagt, wieviel Sauerstoff die Wurzeln und die Mikrobiologie gerade zehren.</p>`;
+    return t;
   }
   function gwKopf(){
     const Z=gwAb(),gwFarbe=Z.farbe,gwSk=Z.sk,gwEinheiten=Z.einheiten,gwGleich=Z.gleich,gwAchse=Z.achse,gwErzwungen=Z.erzwungen;
@@ -3851,7 +3991,8 @@ function vGiess(){
     if(gwLinien==='alle')t+=`<p class="tiny muted">Die Linien laufen durchgehend über alle Entnahmestellen hinweg. Zwischen zwei Stellen liegt kein Verlauf, sondern ein Ortswechsel.</p>`;
     return t;
   }
-  if(alle.length>1)DIAG={teile:[['gwKarte',gwKopf]],zeichnen:gwZeichnen,klick:id=>detail(id)};
+  const teile=[];if(alle.length>1)teile.push(['gwKarte',gwKopf]);if(messungen.length)teile.push(['tkKarte',tkKopf]);
+  if(teile.length)DIAG={teile,zeichnen:gwZeichnen,klick:id=>detail(id)};
   nachRender=gwZeichnen;
 
   let s='';
@@ -3955,14 +4096,19 @@ function vGiess(){
     if(d>0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gestiegen. Steigt er bei gleicher Düngung, ist das Ballast und kein Nährstoff – dann hilft Ablassen, nicht weniger düngen.`;
     else if(d<-0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gefallen. Das spricht für stärkere Aufnahme oder eine geringere Zufuhr.`;
   }
-  s+=`<div class="card"><div class="hd"><div><h2>Der Kreislauf selbst</h2>
-    <p class="sub">pH und EC im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.</p></div></div>
+  if(messungen.length)s+=`<div class="card" id="tkKarte">${tkKopf()}</div>`;
+  s+=`<div class="card"><div class="hd"><div><h2>${messungen.length?'Messung von Hand eintragen':'Der Kreislauf selbst'}</h2>
+    <p class="sub">${messungen.length?'Hinten am Tank geht das bequemer über die Handy-Seite «erfassen» – hier für Nachträge und den Import.':'pH, EC und Sauerstoff im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.'}</p></div></div>
     <div class="row">
       <div><label class="lab">Datum</label><input type="date" id="mDatum" value="${heute()}"></div>
+      <div><label class="lab">Stelle</label><select id="mStelle">${stellenDb().gruppen.map(g=>`<option>${esc(g.name)}</option>`).join('')}<option value="">ohne</option></select></div>
       <div><label class="lab">pH</label><input id="mPh" class="mono" size="5" inputmode="decimal"></div>
       <div><label class="lab">EC Rücklauf</label><input id="mEc" class="mono" size="5" inputmode="decimal"></div>
       <div><label class="lab">EC frisch <span class="muted">(freiwillig)</span></label><input id="mEcF" class="mono" size="5" inputmode="decimal"></div>
-      <div><label class="lab">Substrattemperatur °C <span class="muted">(freiwillig)</span></label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">O₂ mg/l</label><input id="mO2" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">Sättigung % <span class="muted">(falls angezeigt)</span></label><input id="mO2s" class="mono" size="4" inputmode="decimal"></div>
+      <div><label class="lab">Temperatur °C</label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
+      <div><label class="lab">Kürzel</label><input id="mWer" class="mono" size="4" maxlength="6"></div>
       <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
       <button class="primary" data-tun="messung">Eintragen</button>
       <button data-tun="tabWaehlen">Excel oder CSV einlesen</button></div>
@@ -3970,7 +4116,6 @@ function vGiess(){
     Aus den Bemerkungen entstehen Vorschläge für das Logbuch – kontrolliert und bestätigt wird alles, wie bei den PDFs.
     Ohne Internet fehlt die Excel-Bibliothek; ein als CSV gespeichertes Blatt liest die App auch dann.</p>
     <p class="tiny muted" style="margin-top:6px">Die Temperatur ist freiwillig, aber sie erklärt viel: dieselbe organische Grunddüngung liefert bei 15 °C deutlich weniger Stickstoff als bei 25 °C.</p>
-    ${messungen.length?`<div id="cKreis" class="diagramm" style="margin-top:16px"></div><div class="legend" id="legKreis"></div>`:''}
     <div class="note neutral" style="margin-top:12px">Notiert ihr zusätzlich den EC direkt nach dem Ansetzen, ist die Differenz zum Rücklauf die beste Verbrauchsmessung ohne Labor.${letzt?` Zuletzt am ${fmt(letzt.datum)}: ${nz(letzt.ecFrisch,2)} frisch gegen ${nz(letzt.ec,2)} zurück, also ${nz(letzt.ecFrisch-letzt.ec,2)} mS/cm aufgenommen.`:''} ${esc(trend)}
     ${alle.length?` Zum Vergleich: das Giesswasser der Stelle «${esc(gwStelle(alle[0]))}» hatte am ${fmt(alle[0].datum)} einen EC von ${alle[0].werte.gw_EC?nz(alle[0].werte.gw_EC.wert,2):'–'} mS/cm – die Differenz zum Rücklauf ist das, was Düngung und Anreicherung zusammen ausmachen.`:''}</div></div>`;
 
@@ -3984,10 +4129,12 @@ function vGiess(){
     </tbody></table></div>`:'<p class="muted small">Noch keine Eingriffe erfasst.</p>'}</div>`;
 
   if(messungen.length)s+=`<div class="card"><h2>Messungen (${messungen.length})</h2>
-    <div class="scroll"><table><thead><tr><th>Datum</th><th>pH</th><th>EC Rücklauf</th><th>EC frisch</th><th>Aufnahme</th><th>Temp</th><th>Notiz</th><th></th></tr></thead><tbody>
-    ${messungen.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
+    <div class="scroll"><table><thead><tr><th>Datum</th><th>Stelle</th><th>pH</th><th>EC Rücklauf</th><th>EC frisch</th><th>Aufnahme</th><th>O₂</th><th>Temp</th><th>wer</th><th>Notiz</th><th></th></tr></thead><tbody>
+    ${messungen.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td class="tiny">${esc(messStelle(x))}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
       <td class="mono">${nz(x.ecFrisch,2)}</td><td class="mono">${x.ec!=null&&x.ecFrisch!=null?nz(x.ecFrisch-x.ec,2):'–'}</td>
+      <td class="mono">${x.o2!=null?nz(x.o2,1)+(x.o2sat!=null?' <span class="tiny muted">'+nz(x.o2sat,0)+' %</span>':''):'–'}</td>
       <td class="mono">${x.temp!=null?nz(x.temp,1)+' °C':'–'}</td>
+      <td class="mono tiny">${esc(x.wer||'')}${x.quelle==='erfassen'?' <span class="tag" title="vom Handy hinten">Tank</span>':x.quelle==='excel'?' <span class="tag">Excel</span>':''}</td>
       <td class="small muted">${esc(x.notiz||'')}</td>
       <td><button class="ghost" data-tun="messungWeg" data-id="${esc(x.id)}">entfernen</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
@@ -5554,6 +5701,65 @@ function vorschlaege(){
   return out.sort((a,b)=>(a.rang-b.rang)||a.datum.localeCompare(b.datum));
 }
 const ARTNAME={wirkung:'Wirkung prüfen',gruppe:'Vergleichsgruppe',begleiten:'Satz begleiten',alter:'gleiches Alter'};
+
+/* ── Satzpaare ────────────────────────────────────────────────────────────
+   Das Beprobungsschema: alle zwei Wochen zwei Proben, ein Satz in Woche 2
+   und einer in Woche 4. Je Satz entsteht ein Paar (Veränderung innerhalb
+   eines Bestands), und alle Woche-2-Proben sind untereinander vergleichbar
+   (gleiches Alter, das Alter fällt als Störgrösse weg). Die Zielwochen
+   stehen in den Einstellungen; genommen werden die ersten beiden. */
+const PAAR_TOLERANZ=4;   /* Tage: eine Probe gilt als «in Woche w», wenn sie so nah am Stichtag liegt */
+function satzpaare(){
+  const zw=(db.plan.zielwochen||[2,4]).slice().sort((a,b)=>a-b);
+  const wochen=zw.length>=2?zw.slice(0,2):[2,4];
+  const h=heute(),erh=erhebungen();
+  const zeilen=saetzeListe().filter(s=>s.aussaat).map(s=>{
+    const zellen=wochen.map(w=>{
+      const stichtag=plus(s.aussaat,Math.round(w*7));
+      const kand=erh.filter(e=>e.satz===s.id&&Math.abs(tage(e.datum,stichtag))<=PAAR_TOLERANZ)
+        .sort((a,b)=>Math.abs(tage(a.datum,stichtag))-Math.abs(tage(b.datum,stichtag)));
+      const e=kand[0]||null;
+      const geplant=(db.plan.geplant||[]).find(g=>g.satz===s.id&&!g.erledigt&&Math.abs(tage(g.datum,stichtag))<=PAAR_TOLERANZ)||null;
+      const zustand=e?'da':geplant?'geplant':stichtag<plus(h,-PAAR_TOLERANZ)?'verpasst':stichtag<=plus(h,PAAR_TOLERANZ)?'jetzt':'kommt';
+      return {woche:w,stichtag,erhebung:e,geplant,zustand,abstand:e?tage(stichtag,e.datum):null};
+    });
+    return {satz:s.id,aussaat:s.aussaat,quelle:s.quelle,laufend:s.laufend,kuenftig:s.kuenftig,zellen,
+      vollstaendig:zellen.every(z=>z.zustand==='da')};
+  });
+  /* Die nächste Einsendung: der nächste Stichtag ab heute, und dazu alles,
+     was innerhalb weniger Tage denselben Termin hat. Bei einem Aussaat-
+     rhythmus von zwei Wochen fallen Woche 2 des einen und Woche 4 des
+     anderen Satzes auf denselben Tag. */
+  const offen=[];
+  for(const z of zeilen)for(const c of z.zellen)if(c.zustand==='jetzt'||c.zustand==='kommt'||c.zustand==='geplant')offen.push({satz:z.satz,woche:c.woche,stichtag:c.stichtag,geplant:!!c.geplant});
+  offen.sort((a,b)=>a.stichtag.localeCompare(b.stichtag)||a.woche-b.woche);
+  let naechste=null;
+  if(offen.length){
+    const erst=offen[0];
+    const gruppe=offen.filter(o=>Math.abs(tage(o.stichtag,erst.stichtag))<=PAAR_TOLERANZ);
+    /* je Woche nur ein Satz – der nächstliegende */
+    const jeWoche=new Map();
+    for(const o of gruppe)if(!jeWoche.has(o.woche))jeWoche.set(o.woche,o);
+    naechste={datum:erst.stichtag,proben:[...jeWoche.values()].sort((a,b)=>a.woche-b.woche),
+      vollstaendig:wochen.every(w=>jeWoche.has(w))};
+  }
+  return {wochen,zeilen,naechste};
+}
+AKTION.paarPlanen=()=>{
+  const sp=satzpaare();
+  if(!sp.naechste)return toast('Es steht kein Stichtag an – fehlen Aussaatdaten?');
+  db.plan.geplant=db.plan.geplant||[];
+  let n=0;
+  for(const p of sp.naechste.proben){
+    if(p.geplant)continue;
+    db.plan.geplant.push({id:uid(),datum:p.stichtag,typ:'blattsaft',satz:p.satz,zweck:`Satzpaar: Woche ${p.woche}`,erledigt:false,analyseId:null});n++;
+  }
+  aend();render();
+  toast(n?`${n} Probe${n>1?'n':''} eingeplant – ${fmt(sp.naechste.datum)}.`:'Beide sind schon eingeplant.');
+};
+/* Der Paarvergleich selbst ist eine Ansicht, die es schon gibt: Nährstoffe
+   über die Kulturwoche, Linien je Satz. Hier nur der Sprung dorthin. */
+AKTION.paarVergleich=()=>{nsAchse='woche';nsLinien='satz';setTab('naehrstoff')};
 let plNeu=null;
 const plFrisch=()=>({datum:heute(),typ:'blattsaft',satz:'',zweck:''});
 function vPlaner(){
@@ -5627,6 +5833,42 @@ function vPlaner(){
         <input value="${esc(db.plan.zielwochen.join(', '))}" size="14" data-aend="zielwochen" class="mono"></div>
       <div class="tiny muted" style="max-width:430px;padding-bottom:6px">Bei sechs bis acht Wochen Kulturzeit sind zwei bis drei Termine sinnvoll: einer früh, einer in der Mitte, einer kurz vor der Ernte. Die mittlere Zielwoche dient zugleich als Vergleichsalter zwischen den Sätzen.</div>
     </div></details></div>`;
+
+  /* ── Satzpaare ── */
+  {
+    const sp=satzpaare();
+    const [w1,w2]=sp.wochen;
+    const ZUST={da:['ok','beprobt'],geplant:['na','geplant'],jetzt:['rand','jetzt fällig'],verpasst:['off','verpasst'],kommt:['na','kommt']};
+    const zelle=c=>{
+      const [cls,txt]=ZUST[c.zustand];
+      if(c.erhebung){const e=c.erhebung;const idx=(e.index&&e.index.anteil!=null)?Math.round(e.index.anteil*100)+' %':'–';
+        return `<td class="klick" data-tun="erhebung" data-id="${esc(e.id)}" title="Erhebung öffnen"><span class="pill ${cls}">${fmt(e.datum)}</span> <span class="mono tiny">${idx}</span>${
+          c.abstand?`<span class="tiny muted"> (${c.abstand>0?'+':''}${c.abstand} T)</span>`:''}</td>`}
+      return `<td><span class="pill ${cls}">${txt}</span> <span class="tiny muted mono">${fmt(c.stichtag)}</span></td>`;
+    };
+    /* Gezeigt wird, was läuft oder kommt, was eine Probe hat – und was in den
+       letzten vier Monaten lief, damit ein «verpasst» nicht stillschweigend
+       verschwindet. */
+    const sichtbar=sp.zeilen.filter(z=>z.laufend||z.kuenftig||z.zellen.some(c=>c.erhebung)||z.aussaat>=plus(h,-120)).slice(0,12);
+    s+=`<div class="card" id="paare"><div class="hd"><div><h2>Satzpaare · Woche ${w1} und Woche ${w2}</h2>
+      <p class="sub">Alle zwei Wochen zwei Proben: ein Satz in Woche ${w1}, einer in Woche ${w2}. So bekommt jeder Satz ein Paar – und alle Woche-${w1}-Proben
+      sind untereinander vergleichbar, weil das Alter gleich ist. Der Prozentwert ist die Kennzahl der Erhebung.</p></div>
+      ${sp.zeilen.some(z=>z.vollstaendig)?`<button data-tun="paarVergleich" title="Nährstoffe über die Kulturwoche, Linien je Satz">Woche ${w1} gegen Woche ${w2}</button>`:''}</div>
+      ${sp.naechste?`<div class="note ${sp.naechste.vollstaendig?'neutral':''}" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div><strong>Nächste Einsendung: ${fmt(sp.naechste.datum)}</strong> –
+          ${sp.naechste.proben.map(p=>`Satz ${esc(p.satz)} in Woche ${p.woche}${p.geplant?' (eingeplant)':''}`).join(' und ')}.
+          ${sp.naechste.vollstaendig?'':`<span class="muted">Nur eine der beiden Wochen – für die andere fehlt ein passender Satz oder sein Aussaatdatum.</span>`}</div>
+        ${sp.naechste.proben.some(p=>!p.geplant)?`<button class="primary" data-tun="paarPlanen">Einplanen</button>`:''}</div>`
+      :`<p class="muted small">${sp.zeilen.length?'Kein Stichtag in Sicht: die bekannten Sätze sind abgeschlossen. Sobald ein neuer Satz mit Aussaatdatum angelegt ist, steht hier die nächste Einsendung.'
+        :`Kein Stichtag in Sicht – ohne Aussaatdatum lässt sich keine Woche ${w1} und keine Woche ${w2} berechnen.`}</p>`}
+      ${sichtbar.length?`<div class="scroll"><table><thead><tr><th>Satz</th><th>Aussaat</th><th>Woche ${w1}</th><th>Woche ${w2}</th></tr></thead><tbody>
+        ${sichtbar.map(z=>`<tr><td class="mono"><strong>${esc(z.satz)}</strong>${z.laufend?'':z.kuenftig?' <span class="tiny muted">kommt</span>':' <span class="tiny muted">vorbei</span>'}</td>
+          <td class="mono tiny">${fmt(z.aussaat)}${z.quelle==='abgeleitet'?' <span class="tag schaetz">geschätzt</span>':''}</td>${z.zellen.map(zelle).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <p class="tiny muted" style="margin-top:8px">Eine Probe zählt zu einer Woche, wenn sie höchstens ${PAAR_TOLERANZ} Tage vom Stichtag entfernt liegt; der Abstand steht in Klammern.
+      Die Zielwochen stehen unter «Sätze &amp; Einstellungen» (${esc((db.plan.zielwochen||[]).join(', '))}).</p>`
+      :`<p class="muted small">${sp.zeilen.length?'Alle Sätze mit Aussaatdatum liegen länger zurück, und keiner hatte eine Probe nahe an Woche '+w1+' oder '+w2+'.':'Noch kein Satz mit Aussaatdatum.'}</p>`}</div>`;
+  }
 
   s+=`<div class="card"><div class="hd"><div><h2>Was gerade im Haus steht</h2>
       <p class="sub">Gefüllte Punkte sind erfolgte Beprobungen, offene sind geplante. Gestrichelte Linien sind Einträge aus dem Logbuch.</p></div>
@@ -5800,7 +6042,8 @@ function vSaetze(){
       «Datei öffnen» – das nimmt auch HTML-Dateien und holt nur die Daten heraus, nie fremden Programmcode.</div>
     <div class="row"><button class="primary" data-tun="sichern">Jetzt sichern (HTML mit Daten)</button><button data-tun="dateiOeffnen">Datei öffnen</button>
       <button data-tun="sichernDaten" title="Nur der Bestand, ohne Werkzeug – zum Archivieren oder für andere Programme.">Nur die Daten (JSON)</button>
-      <button data-tun="zuruecksetzen">Alles zurücksetzen</button></div>
+      ${ONLINE.an?'':'<button data-tun="zuruecksetzen">Alles zurücksetzen</button>'}</div>
+    ${ONLINE.an?`<p class="tiny muted" style="margin-top:8px">Online gibt es kein «Alles zurücksetzen»: der Bestand gehört allen. Einträge lassen sich einzeln entfernen, oder eine Sicherungskopie wird über «Datei öffnen» eingespielt – sie ersetzt dann den Stand auf dem Server.</p>`:''}
     ${dirty?'<div class="note">Es gibt ungesicherte Änderungen.</div>':''}</div>`;
 }
 AKTION.einst=(d,ev)=>{const n=toNum(ev.target.value);if(n!=null){db.einst[d.k]=n;aend();render()}else toast('Bitte eine Zahl eintragen.')};
@@ -5912,7 +6155,8 @@ function seiteMitDaten(){
     (m,a,b)=>{getroffen=true;return a+j+b});
   return getroffen?raus:null;
 }
-AKTION.sichern=()=>sichern();
+AKTION.sichern=()=>{if(ONLINE.an){if(dirty)sichernOnline();else toast('Alles ist gesichert – der Stand liegt auf dem Server.')}else sichern()};
+AKTION.kopie=()=>sichern();
 AKTION.sichernDaten=()=>sichernJson();
 AKTION.dateiOeffnen=()=>el('fileJson').click();
 function stempel(){return new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}
@@ -5962,7 +6206,9 @@ async function laden(file){
   let erg;
   try{erg=migriere(roh)}
   catch(e){return toast('Die Datei liess sich nicht übernehmen: '+e.message)}
-  db=erg.db;ueParams=null;dirty=erg.von<4;render();
+  db=erg.db;ueParams=null;dirty=erg.von<4;
+  if(ONLINE.an){aend();toast('Eingelesen – wird gleich auf den Server geschrieben.')}
+  render();
   if(erg.von<4&&erg.notizen.length){
     dialog('Ältere Sicherung übernommen',
       `<p>Die Datei war im Format ${erg.von}, dieses Werkzeug arbeitet mit Format ${leer().schema}. Alles wurde übernommen. Was dabei angepasst wurde:</p>
@@ -5971,6 +6217,127 @@ async function laden(file){
        <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Logbucheinträge · ${alleSaetze().length} Sätze geladen.</p>`,
       `<button class="primary" data-tun="dlgZu">Verstanden</button>`);
   }else toast(`Geladen: ${db.analysen.length} Analysen, ${alleSaetze().length} Sätze.`);
+}
+
+/* ══════════ 17b · Online ══════════
+   Läuft die Seite von einem Server (http oder https statt file), holt sie
+   den Bestand von dort und schreibt Änderungen nach kurzer Ruhe zurück.
+   Vom Ordner geöffnet ändert sich nichts – dann gilt weiter der Datei-Modus.
+
+   Gleichzeitigkeit: jeder Schreibvorgang trägt die Version, die er geladen
+   hat. Stimmt sie nicht mehr – jemand anders war schneller –, holt die App
+   den fremden Stand, vereinigt die Listen nach Kennung und schreibt noch
+   einmal. Messungen und Beigaben vom Handy kommen dabei immer mit, weil sie
+   nur angehängt, nie ersetzt werden. */
+const ONLINE={an:false,version:0,geaendert:null,von:null,zustand:'aus',fehler:null,laeuft:false,nochmal:false,zeitgeber:null,abfrage:null};
+const LISTEN=['analysen','ereignisse','messungen','fotos','rundgaenge'];
+function onlineStand(){
+  if(!ONLINE.an)return dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
+  const wann=ONLINE.geaendert?new Date(ONLINE.geaendert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  if(ONLINE.zustand==='sichert')return 'wird gesichert …';
+  if(ONLINE.zustand==='wartet')return 'Änderung – wird gleich gesichert';
+  if(ONLINE.zustand==='fehler')return 'nicht erreichbar – Änderungen warten'+(ONLINE.fehler?' ('+ONLINE.fehler+')':'');
+  return 'online · gesichert '+wann+(ONLINE.von&&ONLINE.von!=='admin'?' · zuletzt von «'+ONLINE.von+'»':'');
+}
+function kopfStand(){
+  const st=el('stand');if(st)st.textContent=onlineStand();
+  const link=el('erfassenLink'),kopie=el('knopfKopie'),sich=el('knopfSichern'),oeff=el('knopfOeffnen');
+  if(link)link.hidden=!ONLINE.an;
+  if(kopie)kopie.hidden=!ONLINE.an;
+  if(sich){sich.textContent=ONLINE.an?'Jetzt sichern':'Sichern';sich.hidden=ONLINE.an&&!dirty;
+    sich.title=ONLINE.an?'Schreibt sofort auf den Server – sonst geschieht das von selbst nach kurzer Ruhe.':'Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.'}
+  if(oeff)oeff.title=ONLINE.an?'Eine Sicherung (JSON oder HTML) einlesen – sie ersetzt den Bestand auf dem Server.':'';
+}
+async function onlineStart(){
+  if(!/^https?:$/.test(location.protocol))return false;
+  let r;
+  try{r=await fetch('/api/bestand',{credentials:'same-origin',cache:'no-store'})}catch(e){return false}
+  if(!r.ok)return false;
+  let j;try{j=await r.json()}catch(e){return false}
+  if(!j||typeof j.version!=='number')return false;
+  ONLINE.an=true;ONLINE.version=j.version;ONLINE.geaendert=j.geaendert;ONLINE.von=j.von;ONLINE.zustand='gesichert';
+  let notizen=[];
+  if(j.db&&Array.isArray(j.db.analysen)){
+    try{const erg=migriere(j.db);db=erg.db;notizen=erg.von<leer().schema?erg.notizen:[]}
+    catch(e){ONLINE.an=false;return false}
+  }else db=leer();
+  dirty=false;
+  ONLINE.abfrage=setInterval(onlineAbfragen,30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)onlineAbfragen()});
+  return {notizen};
+}
+function onlinePlanen(){
+  clearTimeout(ONLINE.zeitgeber);
+  if(ONLINE.laeuft){ONLINE.nochmal=true;return}
+  ONLINE.zustand='wartet';kopfStand();
+  ONLINE.zeitgeber=setTimeout(sichernOnline,1500);
+}
+/* Zwei Stände vereinigen: die Listen nach Kennung, alles Übrige aus dem
+   eigenen Stand. Was der andere hat und ich nicht, kommt dazu – auch dann,
+   wenn ich es gerade gelöscht hatte. Das ist selten und wird gesagt. */
+function vereinigen(mein,fremd){
+  const out=mein;let dazu=0;
+  if(!fremd||typeof fremd!=='object')return {db:out,dazu};
+  for(const k of LISTEN){
+    const m=Array.isArray(out[k])?out[k]:(out[k]=[]),f=Array.isArray(fremd[k])?fremd[k]:[];
+    const ids=new Set(m.map(x=>x&&x.id));
+    for(const x of f)if(x&&x.id&&!ids.has(x.id)){m.push(x);ids.add(x.id);dazu++}
+  }
+  if(fremd.plan&&Array.isArray(fremd.plan.geplant)){
+    out.plan=out.plan||{};out.plan.geplant=out.plan.geplant||[];
+    const ids=new Set(out.plan.geplant.map(x=>x&&x.id));
+    for(const x of fremd.plan.geplant)if(x&&x.id&&!ids.has(x.id)){out.plan.geplant.push(x);dazu++}
+  }
+  return {db:out,dazu};
+}
+async function sichernOnline(){
+  if(!ONLINE.an||ONLINE.laeuft)return;
+  clearTimeout(ONLINE.zeitgeber);
+  ONLINE.laeuft=true;ONLINE.nochmal=false;ONLINE.zustand='sichert';kopfStand();
+  try{
+    const put=()=>fetch('/api/bestand',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({basisVersion:ONLINE.version,db})});
+    let r=await put();
+    if(r.status===409){
+      const j=await r.json();
+      const v=vereinigen(db,j.db);
+      db=v.db;ONLINE.version=j.version;
+      r=await put();
+      if(v.dazu)toast(`Gleichzeitig gespeichert${j.von?' von «'+j.von+'»':''}: ${v.dazu} Eintrag${v.dazu>1?'e':''} aus dem anderen Stand übernommen – was du gerade gelöscht hattest, könnte darunter sein.`);
+      if(r.ok)render();
+    }
+    if(!r.ok){let t='';try{t=(await r.json()).fehler||''}catch(e){}throw new Error(t||('Antwort '+r.status))}
+    const j=await r.json();
+    ONLINE.version=j.version;ONLINE.geaendert=j.geaendert;ONLINE.von='admin';
+    db.gespeichert=j.geaendert;
+    dirty=false;ONLINE.zustand='gesichert';ONLINE.fehler=null;
+  }catch(e){
+    ONLINE.zustand='fehler';ONLINE.fehler=e.message;
+    setTimeout(()=>{if(dirty&&!ONLINE.laeuft)sichernOnline()},30000);
+  }
+  ONLINE.laeuft=false;kopfStand();
+  if(ONLINE.nochmal)onlinePlanen();
+}
+/* Alle 30 Sekunden nachsehen, ob jemand anders etwas eingetragen hat. Nur
+   wenn hier nichts offen ist und niemand gerade in einem Feld tippt, wird
+   stillschweigend aufgefrischt – sonst holt der nächste Speichervorgang
+   den fremden Stand ohnehin herein. */
+async function onlineAbfragen(){
+  if(!ONLINE.an||dirty||ONLINE.laeuft)return;
+  let j;
+  try{const r=await fetch('/api/version',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;j=await r.json()}catch(e){return}
+  if(j.version===ONLINE.version)return;
+  const a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&el('view').contains(a))return;
+  if(el('dlg').open)return;
+  try{
+    const r=await fetch('/api/bestand',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;
+    const b=await r.json();
+    if(!b.db||!Array.isArray(b.db.analysen))return;
+    db=migriere(b.db).db;ONLINE.version=b.version;ONLINE.geaendert=b.geaendert;ONLINE.von=b.von;dirty=false;
+    render();
+    toast(`Aufgefrischt – ${b.von&&b.von!=='admin'?'von «'+b.von+'» ':''}neu eingetragen.`);
+  }catch(e){}
 }
 
 /* ══════════ 18 · Verdrahtung ══════════ */
@@ -6004,7 +6371,7 @@ let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>
   if(DIAG)return diagFrisch();
   if(['lage','verlauf','naehrstoff','substrat','giess','planer'].indexOf(tab)>=0)render()},250)});
 document.addEventListener('keydown',e=>{
-  if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sichern()}
+  if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();AKTION.sichern()}
 });
 /* Die App muss auch ohne Netz vollständig bedienbar sein: Daten ansehen,
    von Hand erfassen, sichern und laden. Nur das Einlesen von PDFs braucht
@@ -6033,6 +6400,16 @@ async function pdfVorbereiten(){
   seiteMerken();
   try{pdfBereit=await pdfVorbereiten()}catch(e){pdfBereit=false}
   let startNotiz=null;
+  /* Vom Server geladen? Dann ist der Server die Wahrheit, nicht der Datenblock. */
+  let online=null;
+  try{online=await onlineStart()}catch(e){online=null}
+  if(online){
+    eingebettet=null;
+    startNotiz=(online.notizen||[]).length
+      ? {warn:false,text:`Bestand vom Server geladen: ${db.analysen.length} Analysen, ${db.ereignisse.length} Logbucheinträge, ${db.messungen.length} Messungen.`,notizen:online.notizen}
+      : null;
+    if(!startNotiz&&ONLINE.version===0)startNotiz={warn:false,text:'Verbunden. Der Bestand auf dem Server ist noch leer – über «Datei öffnen» lässt sich eine bestehende Sicherung einspielen.'};
+  }
   if(eingebettet&&eingebettet.__kaputt)
     startNotiz={warn:true,text:'In dieser Datei stecken Daten, die sich nicht lesen lassen ('+eingebettet.__kaputt+'). Das Werkzeug startet leer – die Datei selbst ist unverändert, gib sie weiter, wer sie geschrieben hat.'};
   else if(eingebettet&&Array.isArray(eingebettet.analysen)){

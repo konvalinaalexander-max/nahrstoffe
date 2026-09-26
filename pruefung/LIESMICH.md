@@ -14,14 +14,17 @@ io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)
 node --check pruefung/app.js
 
 # 2 · Logikprüfungen (kein Netz nötig) – schlagen mit Exitcode 1 fehl
-for t in n1 n2 n3 n4 n5; do node pruefung/$t.js; done
+for t in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$t.js; done
 
 # 3 · Statistik-Nachweise (Belege für BEFUNDE-STATISTIK.md, kein Pass/Fail)
 for t in s1 s2 s3 s4; do node pruefung/$t.js; done
 
 # 4 · Browsertests (brauchen Chromium und playwright)
 npm install playwright
-node pruefung/browser.js
+node pruefung/browser.js                     # Datei-Modus, alle Reiter
+BILDER=…/bilder node pruefung/rundreise.js   # sichern → Datei öffnen → weiterarbeiten
+node pruefung/tank.js                        # Handy-Seite gegen den echten server.js
+node pruefung/online.js                      # Admin-Seite vom Server: laufend sichern, Konflikt, Auffrischen
 
 # 5 · Der Upload-Weg mit echten PDFs
 npm install pdfjs-dist@3.11.174
@@ -47,7 +50,20 @@ Jedes Skript endet mit Exitcode 1, sobald eine Prüfung fehlschlägt.
 | `s4.js` | Statistik: neun Befunde ausserhalb der Verdachtsliste (Referenzwechsel, Verhältnistoleranz, rückwirkende Bewertung, schwankender Nenner, Scheinpräzision beim Alter, fehlende Jahreszeit, Altblatt bei immobilen Nährstoffen, unbewertete Substratwerte, Tiefe) |
 | `g1.js` | Giesswasser: der koordinatenbasierte Parser gegen alle drei echten Berichte, Historie in einzelne Proben zerlegt, Proben vom selben Tag unterscheidbar, Einheiten, der Reiter, die Migration |
 | `upload.js` | Der Weg «PDF hochladen und verstehen» in Chromium: echtes PDF einlesen, Kontrolldialog, Übernehmen, die Erhebungsansicht, Reihenfolge im Überblick, Wiedereinstieg. pdf.js wird aus der lokalen Installation umgeleitet, damit der Test ohne Netz läuft |
-| `browser.js` | Echte App in Chromium: neun Reiter leer und gefüllt, Datei laden, Detaildialog, Nährstoff- und Achsenwechsel, Planer, Logbuch mit Apostroph und spitzen Klammern, Rundgang, Einstellungen, Offline-Verhalten, Escaping |
+| `f1.js` | Fotos: Migration, Fotospur, Escaping, Grössenwarnung |
+| `l1.js` | Logbuch: strukturierte Mengen, Umbenennungen |
+| `x1.js` | Tabellenimport: Datumsformate, doppelte Zeilen, Bemerkungen |
+| `b1.js` | Soll-Ist-Bilanz: Umrechnung, Zeitfenster, Verweigerung bei Lücken, Verdünnung |
+| `v1.js` | Reiter Verlauf: Schema, gemeinsame Zeitachse, getrennte Achsen, freie Auswahl, Farbkopplung, Rangliste, Eingangsbilanz, Jung gegen Alt |
+| `d1.js` | Selbstsicherung als HTML: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
+| `st1.js` | Entnahmestellen zuordnen, gegen die vier echten Wasserberichte |
+| `o1.js` | Schema 9, Sauerstoff-Sättigungsgrenze, `vereinigen` zweier Stände, Satzpaare, Stand in der Kopfzeile |
+| `server1.js` | `server.js` als eigener Prozess über HTTP: Rollen, Anhängen mit Prüfung, 409 bei veralteter Version, Sicherungskopien, Neustart |
+| `browser.js` | Echte App in Chromium: elf Reiter leer und gefüllt, Datei laden, Detaildialog, Nährstoff- und Achsenwechsel, Verlauf mit Ziehen und Zoomen, Stellen zuordnen, Planer, Logbuch, Rundgang, Einstellungen, Offline-Verhalten, Escaping |
+| `gwupload.js` | Drei echte Wasserberichte in Chromium einlesen, Proben vom selben Tag unterscheidbar |
+| `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
+| `tank.js` | Chromium im Handy-Format gegen `server.js`: messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da, Grenzen der Rolle |
+| `online.js` | Chromium gegen `server.js`: Admin-Seite lädt vom Server, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen, Server weg |
 
 ## Fixtures
 

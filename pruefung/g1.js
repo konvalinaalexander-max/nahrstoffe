@@ -105,7 +105,7 @@ console.log('\n════ Der Reiter Giesswasser ════');
   ok(/Annahme/.test(h)&&/Nicht vom Labor vorgegeben/.test(h),'Richtwerte als Annahme mit Herkunft gekennzeichnet');
   ok(/Was mit dem Wasser schon an Nährstoffen hereinkommt/.test(h),'Zeigt, was das Wasser schon mitbringt');
   ok(/Dosierungsrechnung baut die App bewusst nicht/.test(h),'Und verzichtet ausdrücklich auf eine Dosierungsrechnung');
-  ok(/Der Kreislauf selbst/.test(h),'Der Kreislauf ist in denselben Reiter gewandert');
+  ok(/Der Kreislauf selbst|Am Tank/.test(h),'Der Kreislauf ist in denselben Reiter gewandert');
 
   console.log('\n  Verlaufsdiagramm: Punkte je Entnahmestelle');
   const box={clientWidth:900,innerHTML:''};
