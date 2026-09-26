@@ -174,9 +174,16 @@ function pruefeEreignis(e){
     mittel:text(e.mittel,40),menge:zahl(e.menge),einheit:text(e.einheit,10),jeReservoir:!!e.jeReservoir,
     stelle:text(e.stelle,40)||'beide',felder:{},geltung:'alle',saetze:[],
     notiz:text(e.notiz,500),wer:text(e.wer,20),quelle:'erfassen',erfasst:new Date().toISOString()};
+  /* Wenige Zusatzfelder, kurz und als Text: «mit Dünger angesetzt» bei
+     Wasser, Ziel-pH bei Säure. Alles andere fällt weg. */
+  if(e.felder&&typeof e.felder==='object')for(const k of ['mitDuenger','zielPh','phVorher','phNachher','dosis'])
+    if(e.felder[k]!=null)out.felder[k]=text(e.felder[k],20);
   if(!out.datum)return {fehler:'Das Datum fehlt oder ist kein Datum (JJJJ-MM-TT).'};
   if(out.menge===undefined)return {fehler:'Die Menge ist keine Zahl.'};
-  if(!out.mittel&&!out.titel&&!out.notiz)return {fehler:'Weder Mittel noch Titel noch Notiz – was wurde gegeben?'};
+  /* Bei einer Düngung oder Säure muss dastehen, was gegeben wurde. Wasser
+     und Tankarbeiten sagen es mit der Art selbst. */
+  const brauchtMittel=/Dünger|Säure|Präparat|Desinfektion|Spurenelemente/i.test(out.typ);
+  if(brauchtMittel&&!out.mittel&&!out.titel&&!out.notiz)return {fehler:'Weder Mittel noch Titel noch Notiz – was wurde gegeben?'};
   return {ereignis:out};
 }
 function dbSicher(){
@@ -199,7 +206,7 @@ function kontext(){
   /* Säuren sind im Logbuch eine eigene Art – die Handy-Seite muss das nicht
      wissen, sie bekommt es hier mitgeliefert. */
   const produkte=Object.keys(pr).map(id=>({id,name:pr[id].name||id,form:pr[id].form||'fluessig',
-    einheit:pr[id].form==='fest'?'kg':'l',typ:/saeure|säure/i.test(id+' '+(pr[id].name||''))?'Säurezugabe':'Düngergabe'}));
+    einheit:pr[id].einheit||(pr[id].form==='fest'?'kg':'l'),typ:/saeure|säure/i.test(id+' '+(pr[id].name||''))?'Säurezugabe':'Düngergabe'}));
   const letzte={};
   const ms=db.messungen.filter(m=>m.datum).sort((a,b)=>b.datum.localeCompare(a.datum)||String(b.erfasst||'').localeCompare(String(a.erfasst||'')));
   for(const m of ms){

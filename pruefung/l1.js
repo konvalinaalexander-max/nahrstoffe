@@ -32,7 +32,12 @@ ok(r.db.ereignisse.every(x=>x.quelle==='hand'),'Alle Alteintraege gelten als von
 console.log('\n════ Feste Einheit je Art ════');
 A.setDb(r.db);
 ok(A.einheitVon('Düngergabe','biovin')==='l','Biovin ist fluessig → Liter');
-ok(A.einheitVon('Düngergabe','epsotop')==='kg','Epsotop ist fest → Kilogramm');
+ok(A.einheitVon('Düngergabe','epsotop')==='g','Epsotop wird in Gramm dosiert – die Einheit steht am Produkt');
+ok(A.einheitVon('Düngergabe','schwefelsaeure25')==='l','Schwefelsäure in Litern');
+/* Ein alter Eintrag behaelt seine Einheit: die 3 kg vom Mai waren Kilogramm */
+{const alt=A.migriere({schema:9,analysen:[],messungen:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},einst:{},
+   ereignisse:[{id:'e',datum:'2026-05-21',typ:'Düngergabe',mittel:'epsotop',menge:3}]});
+ ok(alt.db.ereignisse[0].einheit==='kg','Ein alter Epsotop-Eintrag ohne Einheit bleibt Kilogramm, wie er gemeint war');}
 ok(A.einheitVon('Säurezugabe','zitronensaeure')==='l','Die Saeurezugabe rechnet immer in Litern');
 ok(A.einheitVon('Desinfektion',null)==='ml','Desinfektion in Millilitern');
 ok(A.einheitVon('Gerätekalibrierung',null)==='','Eine Kalibrierung hat keine Menge');

@@ -13,7 +13,7 @@ console.log('════ Migration von Schema 5 auf 7 ════');
     messungen:[{id:'m1',datum:'2026-07-01',ph:6.4,ec:1.2}],rundgaenge:[],saetze:{},eigeneOptima:{}};
   const r=A.migriere(JSON.parse(JSON.stringify(alt)));
   r.notizen.forEach(n=>console.log('   ·',n));
-  ok(r.db.schema===9,'Schema auf 9 gehoben');
+  ok(r.db.schema===10,'Schema auf 10 gehoben');
   ok(Array.isArray(r.db.fotos)&&r.db.fotos.length===0,'Fotoablage leer angelegt');
   ok(r.db.produkte&&r.db.produkte.biovin&&r.db.produkte.epsotop,'Produktstammdaten angelegt');
   ok(r.db.produkte.biovin.gehalt.N_gesamt===9&&r.db.produkte.epsotop.gehalt.Mg===9.86,'Mit den Etikettwerten vorbelegt');

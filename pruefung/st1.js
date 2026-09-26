@@ -134,7 +134,7 @@ console.log('\n════ Migration ════');
     {id:'b',typ:'giesswasser',datum:'2026-08-18',stelle:'Reservoir Vorne',werte:{},optima:{}},
     {id:'c',typ:'giesswasser',datum:'2026-09-01',stelle:'Basilikum RV',werte:{},optima:{}}],
     ereignisse:[],messungen:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},einst:{}});
-  ok(r.db.schema===9,'Schema auf 9 gehoben');
+  ok(r.db.schema===10,'Schema auf 10 gehoben');
   ok(r.db.stellen&&r.db.stellen.gruppen.length===2,'Zwei Stellen sind angelegt – so viele Reservoirs gibt es');
   ok(Object.keys(r.db.stellen.zu).length===0,'Aber nichts ist zugeordnet: das entscheidet der Mensch');
   const n=r.notizen.filter(x=>/Bezeichnungen/.test(x));

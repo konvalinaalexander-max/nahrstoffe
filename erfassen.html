@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F3F6EF">
 <title>Am Tank · Basilikum</title>
-<!-- Die Handy-Seite hinten am Tank. Eine Aufgabe, ein Bildschirm: Messung
-     eintragen, Beigabe eintragen. Keine Diagramme, keine Reiter – wer
-     auswerten will, nimmt den grossen Bildschirm.
-     Sie lädt nichts von aussen (keine Schrift, keine Bibliothek), damit sie
-     auch bei schlechtem Empfang sofort da ist. -->
+<!-- Die Handy-Seite hinten am Tank. Zwei Aufgaben, ein Bildschirm: Messung
+     eintragen, Beigabe eintragen (Säure · Düngen · nur Wasser). Keine
+     Diagramme, keine Reiter – wer auswerten will, nimmt den grossen
+     Bildschirm. Sie lädt nichts von aussen, damit sie auch bei schlechtem
+     Empfang sofort da ist.
+     Wer einträgt, sagt vorher, wer er ist. Das Kürzel gilt eine Stunde;
+     danach fragt die Seite wieder – ausnahmslos, damit jeder Eintrag einen
+     Namen trägt. -->
 <style>
 :root{--bg:#F3F6EF;--card:#fff;--card2:#F8FAF5;--ink:#141D17;--muted:#697A6C;--line:#DCE3D5;--line2:#EDF1E9;
-  --ok:#2C7A4B;--ok-soft:#E3F0E1;--rand:#BE6F16;--rand-soft:#FBEEDC;--alarm:#A2432E;--alarm-soft:#F7E3DE;--blau:#3A6DA6;
+  --ok:#2C7A4B;--ok-soft:#E3F0E1;--rand:#BE6F16;--rand-soft:#FBEEDC;--alarm:#A2432E;--alarm-soft:#F7E3DE;--blau:#3A6DA6;--lila:#7A4E8C;
   --r:14px}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -21,8 +24,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,
 header{position:sticky;top:0;z-index:5;background:rgba(243,246,239,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
   padding:12px 16px;display:flex;align-items:center;gap:10px}
 header h1{font-size:18px;margin:0;font-weight:700;flex:1}
-header .wer{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-header .wer input{width:64px;padding:6px 8px;font:inherit;font-weight:600;text-transform:uppercase;border:1px solid var(--line);border-radius:8px;text-align:center}
+header .wer{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+header .wer b{color:var(--ink);font-size:15px}
+header .wer button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 9px;font-size:13px;color:var(--muted)}
 .stand{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}
 .stand.aus{background:var(--rand)}
 main{padding:14px 14px 40px;max-width:560px;margin:0 auto}
@@ -32,25 +36,31 @@ main{padding:14px 14px 40px;max-width:560px;margin:0 auto}
 .tiny{font-size:12px}.muted{color:var(--muted)}.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,"JetBrains Mono",Menlo,monospace}
 label.lab{display:block;font-size:12.5px;color:var(--muted);font-weight:500;margin:0 0 4px}
 input,select,textarea,button{font:inherit;color:inherit}
-input[type=text],input[type=date],input[type=number],textarea{width:100%;padding:12px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px;min-height:48px}
-input:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+input[type=text],input[type=date],select{width:100%;padding:12px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px;min-height:48px}
+input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 .zeile{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .feld{position:relative}
 .feld .letzt{font-size:12px;color:var(--muted);margin-top:4px;min-height:16px}
 .feld .einh{position:absolute;right:12px;top:37px;font-size:13px;color:var(--muted);pointer-events:none}
+.feld.mitEinh input{padding-right:64px}
 .seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:12px}
 .seg button{flex:1;border:0;background:none;padding:12px 8px;font-size:15px;color:var(--muted);border-right:1px solid var(--line2);min-height:48px}
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--ink);color:#fff}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.chip{border:1px solid var(--line);border-radius:22px;padding:10px 14px;background:#fff;font-size:15px;min-height:44px}
-.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.schalter{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:15px}
-.schalter input{width:22px;height:22px;accent-color:var(--ok)}
+.reiter{display:flex;gap:6px;margin-bottom:14px}
+.reiter button{flex:1;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 6px;font-size:15px;font-weight:600;color:var(--muted);min-height:50px}
+.reiter button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.reiter button.on.saeure{background:var(--lila);border-color:var(--lila)}
+.reiter button.on.duengen{background:var(--ok);border-color:var(--ok)}
+.reiter button.on.wasser{background:var(--blau);border-color:var(--blau)}
+.paar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.paar .feld label.lab{font-weight:600;color:var(--ink)}
+.gruppe{border:1px solid var(--line2);background:var(--card2);border-radius:10px;padding:12px 12px 2px;margin-bottom:12px}
+.gruppe .titel{font-size:12.5px;color:var(--muted);font-weight:500;margin-bottom:8px}
 button.gross{width:100%;padding:15px;border:0;border-radius:12px;background:var(--ok);color:#fff;font-size:17px;font-weight:600;min-height:52px}
 button.gross:disabled{opacity:.5}
-button.gross.zweit{background:var(--blau)}
-.meld{padding:12px 14px;border-radius:10px;margin:10px 0 0;font-size:14px;display:none}
+button.gross.saeure{background:var(--lila)}button.gross.wasser{background:var(--blau)}
+.meld{padding:12px 14px;border-radius:10px;margin:10px 0 0;font-size:14px;display:none;white-space:pre-line}
 .meld.ok{display:block;background:var(--ok-soft);color:var(--ok)}
 .meld.warn{display:block;background:var(--rand-soft);color:var(--rand)}
 .meld.alarm{display:block;background:var(--alarm-soft);color:var(--alarm)}
@@ -62,13 +72,27 @@ button.gross.zweit{background:var(--blau)}
 .warte.an{display:flex}
 .warte button{border:1px solid var(--rand);background:#fff;color:var(--rand);border-radius:8px;padding:6px 10px;font-size:14px}
 details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
+/* Die Namensschranke: liegt über allem, bis ein Kürzel da ist. */
+#schranke{position:fixed;inset:0;background:rgba(20,29,23,.55);z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
+#schranke[hidden]{display:none}
+#schranke .karte{width:100%;max-width:400px;margin:0}
+#schranke input{font-size:24px;text-align:center;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 </style>
 </head>
 <body>
+<div id="schranke" hidden>
+  <div class="karte">
+    <h2>Wer misst?</h2>
+    <p class="tiny muted" style="margin:0 0 10px">Kürzel eintippen. Es steht dann an jedem Eintrag, den du in der nächsten Stunde machst – danach fragt die Seite wieder.</p>
+    <input type="text" id="schrankeWer" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="z.B. MK">
+    <div class="meld" id="schrankeMeld"></div>
+    <button class="gross" data-tun="anmelden" style="margin-top:12px">Weiter</button>
+  </div>
+</div>
 <header>
   <span class="stand" id="stand" title="Verbindung"></span>
   <h1>Am Tank</h1>
-  <label class="wer">Kürzel <input id="wer" maxlength="6" autocomplete="off" placeholder="MK"></label>
+  <span class="wer"><b id="werAnzeige">–</b><span id="werBis" class="tiny"></span><button data-tun="abmelden" title="Anderes Kürzel">wechseln</button></span>
 </header>
 <main>
   <div class="warte" id="warte"><span id="warteText"></span><button data-tun="senden">Erneut senden</button></div>
@@ -77,17 +101,17 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
     <h2>Messung <span class="tiny muted" id="heute"></span></h2>
     <div class="zeile">
       <div class="feld"><label class="lab" for="mDatum">Datum</label><input type="date" id="mDatum"></div>
-      <div class="feld"><label class="lab" for="mTemp">Temperatur</label><input type="text" inputmode="decimal" id="mTemp" placeholder="–"><span class="einh">°C</span><div class="letzt" data-letzt="temp"></div></div>
+      <div class="feld mitEinh"><label class="lab" for="mTemp">Temperatur</label><input type="text" inputmode="decimal" id="mTemp" placeholder="–"><span class="einh">°C</span><div class="letzt" data-letzt="temp"></div></div>
     </div>
     <label class="lab">Stelle</label>
     <div class="seg" id="mStelle"></div>
     <div class="zeile">
       <div class="feld"><label class="lab" for="mPh">pH</label><input type="text" inputmode="decimal" id="mPh" placeholder="–"><div class="letzt" data-letzt="ph"></div></div>
-      <div class="feld"><label class="lab" for="mEc">EC</label><input type="text" inputmode="decimal" id="mEc" placeholder="–"><span class="einh">mS/cm</span><div class="letzt" data-letzt="ec"></div></div>
+      <div class="feld mitEinh"><label class="lab" for="mEc">EC</label><input type="text" inputmode="decimal" id="mEc" placeholder="–"><span class="einh">mS/cm</span><div class="letzt" data-letzt="ec"></div></div>
     </div>
-    <div class="zeile">
-      <div class="feld"><label class="lab" for="mO2">Sauerstoff</label><input type="text" inputmode="decimal" id="mO2" placeholder="–"><span class="einh">mg/l</span><div class="letzt" data-letzt="o2"></div></div>
-      <div class="feld"><label class="lab" for="mO2s">Sättigung <span class="muted">(falls das Gerät sie zeigt)</span></label><input type="text" inputmode="decimal" id="mO2s" placeholder="–"><span class="einh">%</span></div>
+    <div class="zeile" id="o2Zeile">
+      <div class="feld mitEinh"><label class="lab" for="mO2">Sauerstoff</label><input type="text" inputmode="decimal" id="mO2" placeholder="–"><span class="einh">mg/l</span><div class="letzt" data-letzt="o2"></div></div>
+      <div class="feld"><div class="tiny muted" style="margin-top:22px">Das Gerät hängt im Reservoir vorne – deshalb nur dort.</div></div>
     </div>
     <div class="feld" style="margin-bottom:12px"><label class="lab" for="mNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="mNotiz" placeholder="z.B. nach Nachfüllen"></div>
     <button class="gross" data-tun="messung">Messung eintragen</button>
@@ -95,23 +119,53 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
   </section>
 
   <section class="karte">
-    <h2>Beigabe</h2>
-    <label class="lab">Was</label>
-    <div class="chips" id="bMittel"></div>
-    <div class="zeile">
-      <div class="feld"><label class="lab" for="bMenge">Menge</label><input type="text" inputmode="decimal" id="bMenge" placeholder="–"><span class="einh" id="bEinh">l</span></div>
-      <div class="feld"><label class="lab" for="bDatum">Datum</label><input type="date" id="bDatum"></div>
+    <h2>Beigabe <span class="tiny muted" id="bHeute"></span></h2>
+    <div class="reiter">
+      <button class="saeure" data-tun="bReiter" data-v="saeure">Säure</button>
+      <button class="duengen" data-tun="bReiter" data-v="duengen">Düngen</button>
+      <button class="wasser" data-tun="bReiter" data-v="wasser">Nur Wasser</button>
     </div>
-    <label class="lab">Wohin</label>
-    <div class="seg" id="bStelle"></div>
-    <label class="schalter"><input type="checkbox" id="bJe"> <span>Menge gilt <strong>je Reservoir</strong> (also doppelt)</span></label>
-    <div class="feld" style="margin-bottom:12px"><label class="lab" for="bNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="bNotiz" placeholder="z.B. pH vorher 7,4"></div>
-    <button class="gross zweit" data-tun="beigabe">Beigabe eintragen</button>
+
+    <div id="rSaeure" hidden>
+      <div class="feld" style="margin-bottom:12px"><label class="lab" for="sMittel">Welche Säure</label><select id="sMittel"></select></div>
+      <div class="paar">
+        <div class="feld mitEinh"><label class="lab" for="sVorne">vorne</label><input type="text" inputmode="decimal" id="sVorne" placeholder="–"><span class="einh">Liter</span></div>
+        <div class="feld mitEinh"><label class="lab" for="sHinten">hinten</label><input type="text" inputmode="decimal" id="sHinten" placeholder="–"><span class="einh">Liter</span></div>
+      </div>
+      <div class="feld" style="margin-bottom:12px"><label class="lab" for="sNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="sNotiz" placeholder="z.B. pH vorher 7,4"></div>
+      <button class="gross saeure" data-tun="saeure">Säure eintragen</button>
+    </div>
+
+    <div id="rDuengen" hidden>
+      <div class="gruppe"><div class="titel">Wasser dazu</div>
+        <div class="paar">
+          <div class="feld mitEinh"><label class="lab" for="dWasserVorne">vorne</label><input type="text" inputmode="decimal" id="dWasserVorne" placeholder="–"><span class="einh">Liter</span></div>
+          <div class="feld mitEinh"><label class="lab" for="dWasserHinten">hinten</label><input type="text" inputmode="decimal" id="dWasserHinten" placeholder="–"><span class="einh">Liter</span></div>
+        </div></div>
+      <div class="gruppe"><div class="titel">Dünger, für beide zusammen</div>
+        <div class="feld mitEinh" style="margin-bottom:12px"><label class="lab" for="dBiovin">Biovin</label><input type="text" inputmode="decimal" id="dBiovin" placeholder="–"><span class="einh">Liter</span></div>
+        <div class="zeile" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="feld mitEinh"><label class="lab" for="dMg">Magnesium</label><input type="text" inputmode="decimal" id="dMg" placeholder="–"><span class="einh">Gramm</span></div>
+          <div class="feld mitEinh"><label class="lab" for="dKali">Kali</label><input type="text" inputmode="decimal" id="dKali" placeholder="–"><span class="einh">Gramm</span></div>
+          <div class="feld mitEinh"><label class="lab" for="dZink">Zink</label><input type="text" inputmode="decimal" id="dZink" placeholder="–"><span class="einh">Gramm</span></div>
+        </div></div>
+      <div class="feld" style="margin-bottom:12px"><label class="lab" for="dNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="dNotiz" placeholder="z.B. neuer Sack Epsotop"></div>
+      <button class="gross duengen" data-tun="duengen">Düngung eintragen</button>
+    </div>
+
+    <div id="rWasser" hidden>
+      <div class="paar">
+        <div class="feld mitEinh"><label class="lab" for="wVorne">vorne</label><input type="text" inputmode="decimal" id="wVorne" placeholder="–"><span class="einh">Liter</span></div>
+        <div class="feld mitEinh"><label class="lab" for="wHinten">hinten</label><input type="text" inputmode="decimal" id="wHinten" placeholder="–"><span class="einh">Liter</span></div>
+      </div>
+      <div class="feld" style="margin-bottom:12px"><label class="lab" for="wNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="wNotiz" placeholder="z.B. über das Wochenende"></div>
+      <button class="gross wasser" data-tun="wasser">Wasser eintragen</button>
+    </div>
     <div class="meld" id="bMeld"></div>
   </section>
 
   <section class="karte">
-    <h2>Zuletzt <span class="tiny muted">was hier und von anderen eingetragen wurde</span></h2>
+    <h2>Zuletzt <span class="tiny muted">hier und von anderen</span></h2>
     <ul class="liste" id="zuletzt"><li class="muted">wird geladen …</li></ul>
     <details><summary>Was diese Seite tut und was nicht</summary>
       <p class="tiny muted">Jeder Eintrag geht sofort an den gemeinsamen Bestand; das Büro sieht ihn im Reiter Giesswasser und im Logbuch, mit deinem Kürzel.
@@ -132,17 +186,54 @@ const heute=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOff
 const fmt=d=>d?d.slice(8,10)+'.'+d.slice(5,7)+'.':'';
 const zahl=v=>{if(v==null||String(v).trim()==='')return null;const n=+String(v).replace(',','.');return isFinite(n)?n:undefined};
 const nz=(v,d)=>v==null?'–':(+v).toLocaleString('de-CH',{minimumFractionDigits:0,maximumFractionDigits:d==null?2:d});
+const uhr=t=>new Date(t).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
 
 /* ── Was hier im Gerät liegt – und warum ──────────────────────────────────
-   Zwei Dinge, beide klein: das Kürzel, damit man es nicht jedes Mal tippt,
+   Zwei Dinge, beide klein: das Kürzel mit seiner Gültigkeit (eine Stunde),
    und die Warteschlange für Einträge, die ohne Netz nicht rauskonnten.
    Der Bestand selbst liegt nie hier; diese Seite kennt ihn gar nicht. */
 const merk={
   lies(k,vorgabe){try{const v=localStorage.getItem('tank.'+k);return v==null?vorgabe:JSON.parse(v)}catch(e){return vorgabe}},
-  schreib(k,v){try{localStorage.setItem('tank.'+k,JSON.stringify(v))}catch(e){}}
+  schreib(k,v){try{localStorage.setItem('tank.'+k,JSON.stringify(v))}catch(e){}},
+  weg(k){try{localStorage.removeItem('tank.'+k)}catch(e){}}
 };
+const KUERZEL_GILT=60*60*1000;
 let warteschlange=merk.lies('warteschlange',[]);
-let kontext=null,stelle=null,bStelle='beide',mittel=null,sitzung=[];
+let kontext=null,stelle=null,reiter=merk.lies('reiter','duengen'),sitzung=[];
+
+/* ── Wer misst? ────────────────────────────────────────────────────────── */
+function wer(){
+  const w=merk.lies('wer',null);
+  if(!w||!w.kuerzel||!w.bis||Date.now()>w.bis)return null;
+  return w;
+}
+function schrankeZeigen(grund){
+  el('schranke').hidden=false;
+  el('schrankeWer').value='';
+  const m=el('schrankeMeld');
+  if(grund){m.className='meld warn';m.textContent=grund}else m.className='meld';
+  setTimeout(()=>el('schrankeWer').focus(),50);
+}
+function werZeigen(){
+  const w=wer();
+  el('werAnzeige').textContent=w?w.kuerzel:'–';
+  el('werBis').textContent=w?'bis '+uhr(w.bis):'';
+}
+/* Vor jedem Eintrag: gilt das Kürzel noch? Sonst zuerst die Schranke. */
+function werNoetig(){
+  const w=wer();
+  if(w)return w.kuerzel;
+  schrankeZeigen('Die Stunde ist um – bitte Kürzel noch einmal eintippen, dann geht der Eintrag raus.');
+  return null;
+}
+AKTION.anmelden=()=>{
+  const k=el('schrankeWer').value.trim().toUpperCase().slice(0,6);
+  if(k.length<2){el('schrankeMeld').className='meld warn';el('schrankeMeld').textContent='Mindestens zwei Zeichen.';return}
+  merk.schreib('wer',{kuerzel:k,bis:Date.now()+KUERZEL_GILT});
+  el('schranke').hidden=true;werZeigen();
+};
+AKTION.abmelden=()=>{merk.weg('wer');werZeigen();schrankeZeigen(null)};
+setInterval(()=>{werZeigen();if(!wer()&&el('schranke').hidden)schrankeZeigen('Die Stunde ist um – bitte Kürzel noch einmal eintippen.')},60*1000);
 
 /* ── Netz ───────────────────────────────────────────────────────────────── */
 async function api(pfad,methode,body){
@@ -166,31 +257,30 @@ async function laden(){
     aufbauen();
     zeigeWarte();
   }
+  werZeigen();
+  if(!wer())schrankeZeigen(null);
 }
+const produkt=id=>(kontext.produkte||[]).find(x=>x.id===id)||null;
+const istVorne=name=>/vorn|\brv\b/i.test(name||'');
 function aufbauen(){
-  el('heute').textContent=fmt(heute());
+  el('heute').textContent=fmt(heute());el('bHeute').textContent=fmt(heute());
   if(!el('mDatum').value)el('mDatum').value=heute();
-  if(!el('bDatum').value)el('bDatum').value=heute();
-  el('wer').value=merk.lies('wer','');
-  /* Stellen: die zugeordneten Reservoirs aus dem Bestand. Ohne Zuordnung
-     die zwei, die es im Betrieb gibt. */
   const st=(kontext.stellen&&kontext.stellen.length)?kontext.stellen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}];
   if(!stelle||!st.some(x=>x.name===stelle))stelle=st[0].name;
   el('mStelle').innerHTML=st.map(x=>`<button class="${stelle===x.name?'on':''}" data-tun="stelle" data-v="${esc(x.name)}">${esc(x.name.replace('Reservoir ',''))}</button>`).join('');
-  el('bStelle').innerHTML=[['beide','beide']].concat(st.map(x=>[x.name,x.name.replace('Reservoir ','')]))
-    .map(([v,l])=>`<button class="${bStelle===v?'on':''}" data-tun="bStelle" data-v="${esc(v)}">${esc(l)}</button>`).join('');
-  /* Produkte aus den Stammdaten – dieselben Namen wie im Büro */
-  const pr=kontext.produkte||[];
-  if(!mittel&&pr.length)mittel=pr[0].id;
-  el('bMittel').innerHTML=pr.map(x=>`<button class="chip ${mittel===x.id?'on':''}" data-tun="mittel" data-v="${esc(x.id)}">${esc(x.name.replace(/ \(.*\)$/,'').replace(' Bio-Kraftdünger 9N',''))}</button>`).join('')
-    +`<button class="chip ${mittel==='_anderes'?'on':''}" data-tun="mittel" data-v="_anderes">Anderes</button>`;
-  einheitSetzen();
+  /* Das Sauerstoffgerät hängt im Reservoir vorne – nur dort gibt es das Feld. */
+  el('o2Zeile').hidden=!istVorne(stelle);
+  /* Säuren aus den Stammdaten; heute nur eine, das Auswahlfeld bleibt trotzdem
+     eines, damit eine zweite später ohne Umbau dazukommt. */
+  const saeuren=(kontext.produkte||[]).filter(x=>x.typ==='Säurezugabe');
+  el('sMittel').innerHTML=saeuren.length?saeuren.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')
+    :'<option value="">keine Säure in den Stammdaten – im Büro unter Einstellungen anlegen</option>';
+  for(const r of ['saeure','duengen','wasser']){
+    el('r'+r[0].toUpperCase()+r.slice(1)).hidden=reiter!==r;
+    document.querySelector(`.reiter button[data-v="${r}"]`).classList.toggle('on',reiter===r);
+  }
   letzteZeigen();
   zuletztZeigen();
-}
-function einheitSetzen(){
-  const p=(kontext.produkte||[]).find(x=>x.id===mittel);
-  el('bEinh').textContent=p?p.einheit:'l';
 }
 /* Der letzte Wert derselben Stelle steht unter dem Feld – nicht als Urteil,
    sondern damit ein Tippfehler auffällt (6,1 gestern, 61 heute?). */
@@ -204,7 +294,7 @@ function letzteZeigen(){
 function zuletztZeigen(){
   const aus=[];
   for(const s of sitzung)aus.push(s);
-  for(const b of (kontext.beigaben||[]))aus.push({art:'beigabe',text:`${b.mittel||'?'} ${nz(b.menge)} ${b.einheit||''}${b.jeReservoir?' je Reservoir':''}`,datum:b.datum,wer:b.wer});
+  for(const b of (kontext.beigaben||[]))aus.push({art:'beigabe',text:`${(produkt(b.mittel)||{}).name||b.mittel||'?'} ${nz(b.menge)} ${b.einheit||''}${b.jeReservoir?' je Reservoir':''}`,datum:b.datum,wer:b.wer});
   for(const st of Object.keys(kontext.letzte||{}))for(const m of kontext.letzte[st])
     aus.push({art:'messung',text:`${st||'?'}: pH ${nz(m.ph,1)} · EC ${nz(m.ec)}${m.o2!=null?' · O₂ '+nz(m.o2,1):''}`,datum:m.datum,wer:m.wer});
   aus.sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
@@ -216,7 +306,7 @@ function zeigeWarte(){
   el('warte').classList.toggle('an',n>0);
   el('warteText').textContent=n===1?'1 Eintrag wartet auf Netz.':`${n} Einträge warten auf Netz.`;
 }
-function meld(id,art,text){const m=el(id);m.className='meld '+art;m.textContent=text;if(art==='ok')setTimeout(()=>{if(m.textContent===text)m.className='meld'},6000)}
+function meld(id,art,text){const m=el(id);m.className='meld '+art;m.textContent=text;if(art==='ok')setTimeout(()=>{if(m.textContent===text)m.className='meld'},8000)}
 
 /* ── Senden, mit Warteschlange ─────────────────────────────────────────── */
 async function abschicken(art,body){
@@ -237,7 +327,7 @@ async function senden(){
     const e=warteschlange[0];
     try{await api(e.art==='messung'?'/api/messung':'/api/ereignis','POST',e.body)}
     catch(err){
-      if(err.dauerhaft){warteschlange.shift();merk.schreib('warteschlange',warteschlange);continue}  /* abgelehnt: fällt weg, steht in der Meldung */
+      if(err.dauerhaft){warteschlange.shift();merk.schreib('warteschlange',warteschlange);continue}  /* abgelehnt: fällt weg */
       break;
     }
     warteschlange.shift();merk.schreib('warteschlange',warteschlange);raus++;
@@ -250,11 +340,12 @@ AKTION.senden=()=>senden();
 
 /* ── Eingaben ──────────────────────────────────────────────────────────── */
 AKTION.stelle=d=>{stelle=d.v;aufbauen()};
-AKTION.bStelle=d=>{bStelle=d.v;aufbauen()};
-AKTION.mittel=d=>{mittel=d.v;aufbauen()};
+AKTION.bReiter=d=>{reiter=d.v;merk.schreib('reiter',reiter);aufbauen()};
 AKTION.messung=async()=>{
-  const werte={ph:zahl(el('mPh').value),ec:zahl(el('mEc').value),o2:zahl(el('mO2').value),o2sat:zahl(el('mO2s').value),temp:zahl(el('mTemp').value)};
-  for(const k in werte)if(werte[k]===undefined)return meld('mMeld','alarm','Ein Feld enthält keine Zahl – bitte prüfen.');
+  const k=werNoetig();if(!k)return;
+  const werte={ph:zahl(el('mPh').value),ec:zahl(el('mEc').value),temp:zahl(el('mTemp').value),
+    o2:istVorne(stelle)?zahl(el('mO2').value):null};
+  for(const q in werte)if(werte[q]===undefined)return meld('mMeld','alarm','Ein Feld enthält keine Zahl – bitte prüfen.');
   if(Object.values(werte).every(v=>v==null))return meld('mMeld','warn','Bitte mindestens einen Wert eintragen.');
   if(werte.ph!=null&&(werte.ph<0||werte.ph>14))return meld('mMeld','alarm','Der pH liegt ausserhalb 0–14 – Tippfehler?');
   /* Ein grober Sprung gegenüber dem letzten Wert ist kein Fehler, aber eine
@@ -264,43 +355,84 @@ AKTION.messung=async()=>{
     el('mPh').dataset.bestaetigt='1';
     return meld('mMeld','warn',`pH ${nz(werte.ph,1)} gegen zuletzt ${nz(l.ph,1)} – ein grosser Sprung. Stimmt das? Dann noch einmal auf «Messung eintragen».`);
   }
-  const body=Object.assign({datum:el('mDatum').value,stelle,notiz:el('mNotiz').value||null,wer:werEins()},werte);
+  const body=Object.assign({datum:el('mDatum').value,stelle,notiz:el('mNotiz').value||null,wer:k},werte);
   const e=await abschicken('messung',body);
   delete el('mPh').dataset.bestaetigt;
   if(e.ok||!e.dauerhaft){
-    sitzung.unshift({art:'messung',text:`${stelle}: pH ${nz(werte.ph,1)} · EC ${nz(werte.ec)}${werte.o2!=null?' · O₂ '+nz(werte.o2,1):''}`+(e.ok?'':' (wartet)'),datum:body.datum,wer:body.wer});
-    for(const id of ['mPh','mEc','mO2','mO2s','mTemp','mNotiz'])el(id).value='';
+    sitzung.unshift({art:'messung',text:`${stelle}: pH ${nz(werte.ph,1)} · EC ${nz(werte.ec)}${werte.o2!=null?' · O₂ '+nz(werte.o2,1):''}`+(e.ok?'':' (wartet)'),datum:body.datum,wer:k});
+    for(const id of ['mPh','mEc','mO2','mTemp','mNotiz'])el(id).value='';
     meld('mMeld',e.ok?'ok':'warn',e.ok?`Eingetragen: ${stelle}, ${fmt(body.datum)}.`:e.fehler);
     if(e.ok)try{kontext=await api('/api/kontext')}catch(x){}
     aufbauen();
   }else meld('mMeld','alarm','Nicht angenommen: '+e.fehler);
 };
-AKTION.beigabe=async()=>{
-  const menge=zahl(el('bMenge').value);
-  if(menge===undefined)return meld('bMeld','alarm','Die Menge ist keine Zahl.');
-  if(menge==null)return meld('bMeld','warn','Bitte die Menge eintragen.');
-  const p=(kontext.produkte||[]).find(x=>x.id===mittel);
-  if(!p&&mittel!=='_anderes')return meld('bMeld','warn','Bitte wählen, was gegeben wurde.');
-  if(mittel==='_anderes'&&!el('bNotiz').value)return meld('bMeld','warn','Bei «Anderes» bitte in die Notiz schreiben, was es war.');
-  const body={datum:el('bDatum').value,typ:p?p.typ:'Düngergabe',mittel:p?p.id:null,titel:p?null:'Anderes',
-    menge,einheit:p?p.einheit:'l',jeReservoir:el('bJe').checked,stelle:bStelle,notiz:el('bNotiz').value||null,wer:werEins()};
-  const e=await abschicken('ereignis',body);
-  if(e.ok||!e.dauerhaft){
-    sitzung.unshift({art:'beigabe',text:`${p?p.name.replace(/ \(.*\)$/,''):'Anderes'} ${nz(menge)} ${body.einheit}${body.jeReservoir?' je Reservoir':''}`+(e.ok?'':' (wartet)'),datum:body.datum,wer:body.wer});
-    el('bMenge').value='';el('bNotiz').value='';el('bJe').checked=false;
-    meld('bMeld',e.ok?'ok':'warn',e.ok?`Eingetragen: ${p?p.name:'Anderes'}, ${nz(menge)} ${body.einheit}${body.jeReservoir?' je Reservoir':''}.`:e.fehler);
-    if(e.ok)try{kontext=await api('/api/kontext')}catch(x){}
-    aufbauen();
-  }else meld('bMeld','alarm','Nicht angenommen: '+e.fehler);
+
+/* Eine Beigabe kann mehrere Logbucheinträge sein (vorne und hinten, Wasser
+   und Dünger). Jeder geht einzeln raus – und einzeln in die Warteschlange. */
+async function beigaben(liste,notizFeld,zusammenfassung){
+  const k=werNoetig();if(!k)return;
+  const datum=heute();
+  const notiz=el(notizFeld).value||null;
+  let ok=0,wartet=0;const ab=[];
+  for(const b of liste){
+    const body=Object.assign({datum,notiz,wer:k},b);
+    const e=await abschicken('ereignis',body);
+    if(e.ok)ok++;else if(!e.dauerhaft)wartet++;else ab.push(e.fehler);
+  }
+  sitzung.unshift({art:'beigabe',text:zusammenfassung+(wartet?' (wartet)':''),datum,wer:k});
+  if(ab.length)meld('bMeld','alarm','Nicht angenommen: '+ab.join(' · '));
+  else meld('bMeld',wartet?'warn':'ok',(wartet?'Keine Verbindung – wartet auf dem Gerät.\n':'Eingetragen: ')+zusammenfassung);
+  if(ok)try{kontext=await api('/api/kontext')}catch(x){}
+  return !ab.length;
+}
+const paar=(idV,idH)=>{
+  const v=zahl(el(idV).value),h=zahl(el(idH).value);
+  if(v===undefined||h===undefined)return {fehler:'Eine Menge ist keine Zahl.'};
+  if(v==null&&h==null)return {fehler:'Bitte vorne oder hinten eine Menge eintragen.'};
+  return {v,h};
 };
-function werEins(){const w=el('wer').value.trim().toUpperCase().slice(0,6);merk.schreib('wer',w);return w||null}
+AKTION.saeure=async()=>{
+  const p=paar('sVorne','sHinten');if(p.fehler)return meld('bMeld','warn',p.fehler);
+  const mittel=el('sMittel').value;if(!mittel)return meld('bMeld','warn','Keine Säure in den Stammdaten.');
+  const pr=produkt(mittel);
+  const liste=[];
+  if(p.v!=null)liste.push({typ:'Säurezugabe',mittel,menge:p.v,einheit:'l',stelle:'vorne'});
+  if(p.h!=null)liste.push({typ:'Säurezugabe',mittel,menge:p.h,einheit:'l',stelle:'hinten'});
+  const text=`${pr?pr.name:mittel}: ${p.v!=null?nz(p.v)+' l vorne':''}${p.v!=null&&p.h!=null?', ':''}${p.h!=null?nz(p.h)+' l hinten':''}`;
+  if(await beigaben(liste,'sNotiz',text)){for(const id of ['sVorne','sHinten','sNotiz'])el(id).value='';aufbauen()}
+};
+AKTION.duengen=async()=>{
+  const w=paar('dWasserVorne','dWasserHinten');
+  const bio=zahl(el('dBiovin').value),mg=zahl(el('dMg').value),kali=zahl(el('dKali').value),zink=zahl(el('dZink').value);
+  if([bio,mg,kali,zink].some(x=>x===undefined))return meld('bMeld','warn','Eine Menge ist keine Zahl.');
+  const hatWasser=!w.fehler,hatDuenger=[bio,mg,kali,zink].some(x=>x!=null);
+  if(!hatWasser&&!hatDuenger)return meld('bMeld','warn','Bitte Wasser oder Dünger eintragen – oder für Wasser allein den Reiter «Nur Wasser».');
+  if(w.fehler&&w.fehler!=='Bitte vorne oder hinten eine Menge eintragen.')return meld('bMeld','warn',w.fehler);
+  const liste=[],teile=[];
+  if(hatWasser){
+    if(w.v!=null){liste.push({typ:'Wasserzugabe',menge:w.v,einheit:'l',stelle:'vorne',felder:{mitDuenger:hatDuenger?'ja':'nein'}});teile.push(nz(w.v)+' l Wasser vorne')}
+    if(w.h!=null){liste.push({typ:'Wasserzugabe',menge:w.h,einheit:'l',stelle:'hinten',felder:{mitDuenger:hatDuenger?'ja':'nein'}});teile.push(nz(w.h)+' l Wasser hinten')}
+  }
+  if(bio!=null){liste.push({typ:'Düngergabe',mittel:'biovin',menge:bio,einheit:'l',stelle:'beide'});teile.push(nz(bio)+' l Biovin')}
+  for(const [id,m,name] of [['epsotop',mg,'Magnesium'],['kali',kali,'Kali'],['zink',zink,'Zink']])
+    if(m!=null){liste.push({typ:'Zusatzdünger / Spurenelemente',mittel:id,menge:m,einheit:'g',stelle:'beide'});teile.push(nz(m)+' g '+name)}
+  if(await beigaben(liste,'dNotiz',teile.join(', '))){for(const id of ['dWasserVorne','dWasserHinten','dBiovin','dMg','dKali','dZink','dNotiz'])el(id).value='';aufbauen()}
+};
+AKTION.wasser=async()=>{
+  const p=paar('wVorne','wHinten');if(p.fehler)return meld('bMeld','warn',p.fehler);
+  const liste=[];
+  if(p.v!=null)liste.push({typ:'Wasserzugabe',menge:p.v,einheit:'l',stelle:'vorne',felder:{mitDuenger:'nein'}});
+  if(p.h!=null)liste.push({typ:'Wasserzugabe',menge:p.h,einheit:'l',stelle:'hinten',felder:{mitDuenger:'nein'}});
+  const text=`nur Wasser: ${p.v!=null?nz(p.v)+' l vorne':''}${p.v!=null&&p.h!=null?', ':''}${p.h!=null?nz(p.h)+' l hinten':''}`;
+  if(await beigaben(liste,'wNotiz',text)){for(const id of ['wVorne','wHinten','wNotiz'])el(id).value='';aufbauen()}
+};
 
 /* ── Verdrahtung ───────────────────────────────────────────────────────── */
 document.addEventListener('click',ev=>{
   const t=ev.target.closest('[data-tun]');if(!t)return;
   const f=AKTION[t.dataset.tun];if(f){ev.preventDefault();f(t.dataset,ev)}
 });
-el('wer').addEventListener('change',werEins);
+el('schrankeWer').addEventListener('keydown',ev=>{if(ev.key==='Enter')AKTION.anmelden()});
 window.addEventListener('online',()=>senden());
 laden();
 </script>

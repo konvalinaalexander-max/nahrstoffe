@@ -1,5 +1,6 @@
 /* Die Handy-Seite hinten am Tank, im echten Browser gegen den echten Server:
-   anmelden, messen, Beigabe eintragen, Netz weg, Warteschlange, Netz da.
+   Namensschranke, messen (O₂ nur vorne), Säure · Düngen · nur Wasser,
+   Netz weg, Warteschlange, Netz da, die Stunde ist um.
    Aufruf:  CHROME=… NODE_PATH=… node pruefung/tank.js                      */
 const {chromium}=require('playwright');
 const {spawn}=require('child_process');
@@ -16,11 +17,12 @@ fs.mkdirSync(shots,{recursive:true});
    so, wie er nach der ersten Sitzung im Büro aussieht. */
 fs.mkdirSync(path.join(daten,'sicherungen'),{recursive:true});
 fs.writeFileSync(path.join(daten,'bestand.json'),JSON.stringify({version:3,geaendert:'2026-09-25T10:00:00Z',von:'admin',db:{
-  schema:9,analysen:[],ereignisse:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
+  schema:10,analysen:[],ereignisse:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
   messungen:[{id:'m0',datum:'2026-09-25',stelle:'Reservoir vorne',ph:6.1,ec:1.8,o2:7.9,temp:20,wer:'AK',quelle:'erfassen'}],
   stellen:{gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}},
-  produkte:{biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig'},epsotop:{name:'Epsotop (Bittersalz)',form:'fest'},
-    zitronensaeure:{name:'Zitronensäure',form:'fest'}},
+  produkte:{biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig'},epsotop:{name:'Magnesium (Epsotop, Bittersalz)',form:'fest',einheit:'g'},
+    kali:{name:'Kali',form:'fest',einheit:'g'},zink:{name:'Zink',form:'fest',einheit:'g'},
+    schwefelsaeure25:{name:'Schwefelsäure 25 %',form:'fluessig',einheit:'l'}},
   einst:{}}}));
 
 function starten(){
@@ -46,118 +48,131 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
      gekappte Aufruf im Abschnitt «Netz weg», die absichtliche 401-Probe. */
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/Failed to load resource|net::ERR_/.test(t))stoerung.push('console: '+t)});
 
-  console.log('════ Öffnen ════');
+  console.log('════ Wer misst? ════');
   await p.goto(B+'/erfassen');await p.waitForTimeout(700);
   ok(/Am Tank/.test(await p.title()),'Die Seite öffnet mit den Zugangsdaten der Rolle «hinten»');
-  const stellen=await p.$$eval('#mStelle button',es=>es.map(e=>e.textContent));
-  console.log('   Stellen:',stellen.join(' | '));
-  ok(stellen.length===2&&/vorne/.test(stellen[0]),'Die Stellen kommen aus dem Bestand: die zwei Reservoirs');
-  const mittel=await p.$$eval('#bMittel .chip',es=>es.map(e=>e.textContent));
-  console.log('   Mittel:',mittel.join(' | '));
-  ok(mittel.length===4&&/Biovin/.test(mittel[0])&&/Anderes/.test(mittel[3]),'Die Produkte sind dieselben wie im Büro, plus «Anderes»');
-  const letzt=await p.$eval('[data-letzt="ph"]',e=>e.textContent);
-  console.log('   unter dem pH-Feld:',letzt);
-  ok(/zuletzt 6.1|zuletzt 6,1/.test(letzt)&&/AK/.test(letzt),'Unter dem Feld steht der letzte Wert dieser Stelle – mit Datum und Kürzel');
-  const ohne=await p.$eval('#bEinh',e=>e.textContent);
-  ok(ohne==='l','Die Einheit folgt dem Produkt (Biovin: Liter)');
-  await p.screenshot({path:shots+'/tank-leer.png'});
+  ok(!(await p.$eval('#schranke',e=>e.hidden)),'Zuerst die Schranke: ohne Kürzel geht nichts');
+  await p.screenshot({path:shots+'/tank-schranke.png'});
+  await p.fill('#schrankeWer','m');await p.click('#schranke button:text-is("Weiter")');await p.waitForTimeout(200);
+  ok(!(await p.$eval('#schranke',e=>e.hidden)),'Ein Zeichen reicht nicht');
+  await p.fill('#schrankeWer','mk');await p.click('#schranke button:text-is("Weiter")');await p.waitForTimeout(300);
+  ok(await p.$eval('#schranke',e=>e.hidden),'Zwei Zeichen, dann ist die Schranke weg');
+  ok((await p.$eval('#werAnzeige',e=>e.textContent))==='MK','Das Kürzel steht gross geschrieben im Kopf');
+  ok(/bis \d\d:\d\d/.test(await p.$eval('#werBis',e=>e.textContent)),'Mit der Uhrzeit, bis wann es gilt');
 
   console.log('\n════ Messung ════');
-  await p.fill('#wer','mk');
+  const stellen=await p.$$eval('#mStelle button',es=>es.map(e=>e.textContent));
+  ok(stellen.length===2&&/vorne/.test(stellen[0]),'Die Stellen kommen aus dem Bestand: die zwei Reservoirs');
+  ok(!(await p.$eval('#o2Zeile',e=>e.hidden)),'Vorne gibt es das Sauerstoff-Feld');
+  await p.click('#mStelle button:text-is("hinten")');await p.waitForTimeout(200);
+  ok(await p.$eval('#o2Zeile',e=>e.hidden),'Hinten nicht – das Gerät hängt vorne');
+  await p.click('#mStelle button:text-is("vorne")');await p.waitForTimeout(200);
+  const letzt=await p.$eval('[data-letzt="ph"]',e=>e.textContent);
+  ok(/zuletzt 6.1|zuletzt 6,1/.test(letzt)&&/AK/.test(letzt),'Unter dem Feld steht der letzte Wert dieser Stelle – mit Datum und Kürzel');
   await p.fill('#mPh','6,3');await p.fill('#mEc','1.9');await p.fill('#mO2','7,4');await p.fill('#mTemp','21');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(700);
   const m1=await p.$eval('#mMeld',e=>e.textContent);
-  console.log('   Meldung:',m1);
   ok(/Eingetragen/.test(m1)&&/vorne/.test(m1),'Bestätigung nennt Stelle und Datum');
   let db=await bestand();
   const neu=db.messungen[db.messungen.length-1];
   ok(db.messungen.length===2&&neu.ph===6.3&&neu.ec===1.9&&neu.o2===7.4&&neu.temp===21,'Der Eintrag ist im gemeinsamen Bestand – mit Komma wie mit Punkt');
-  ok(neu.wer==='MK'&&neu.quelle==='erfassen'&&neu.stelle==='Reservoir vorne','Mit Kürzel (gross geschrieben), Herkunft und Stelle');
+  ok(neu.wer==='MK'&&neu.quelle==='erfassen'&&neu.stelle==='Reservoir vorne','Mit Kürzel, Herkunft und Stelle');
   ok((await p.$eval('#mPh',e=>e.value))==='','Die Felder sind danach leer für die nächste Messung');
-  const letzt2=await p.$eval('[data-letzt="ph"]',e=>e.textContent);
-  ok(/6.3|6,3/.test(letzt2)&&/MK/.test(letzt2),'Und «zuletzt» zeigt schon den eigenen Wert');
-  const liste=await p.$eval('#zuletzt',e=>e.innerText);
-  ok(/pH 6.3|pH 6,3/.test(liste),'Der Eintrag steht in «Zuletzt»');
-
-  /* Ein grosser Sprung wird nachgefragt, nicht verweigert */
   await p.fill('#mPh','8,4');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(400);
-  const frage=await p.$eval('#mMeld',e=>e.textContent);
-  console.log('   Nachfrage:',frage);
-  ok(/grosser Sprung/.test(frage),'pH 8,4 nach 6,3: die Seite fragt nach');
-  db=await bestand();
-  ok(db.messungen.length===2,'Und hat noch nichts gespeichert');
+  ok(/grosser Sprung/.test(await p.$eval('#mMeld',e=>e.textContent)),'pH 8,4 nach 6,3: die Seite fragt nach');
+  db=await bestand();ok(db.messungen.length===2,'Und hat noch nichts gespeichert');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(700);
-  db=await bestand();
-  ok(db.messungen.length===3&&db.messungen[2].ph===8.4,'Nochmals antippen bestätigt – der Wert ist gespeichert, so wie er gemessen wurde');
-
-  /* Unsinn wird benannt */
-  await p.fill('#mPh','sechs');
-  await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(300);
+  db=await bestand();ok(db.messungen.length===3&&db.messungen[2].ph===8.4,'Nochmals antippen bestätigt');
+  await p.fill('#mPh','sechs');await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(300);
   ok(/keine Zahl/.test(await p.$eval('#mMeld',e=>e.textContent)),'«sechs» ist keine Zahl – gesagt, nicht geraten');
   await p.fill('#mPh','');
 
-  console.log('\n════ Beigabe ════');
-  await p.click('#bMittel .chip:text-is("Epsotop")');await p.waitForTimeout(200);
-  ok((await p.$eval('#bEinh',e=>e.textContent))==='kg','Epsotop ist fest: die Einheit springt auf kg');
-  await p.fill('#bMenge','3');
-  await p.click('#bStelle button:text-is("beide")');
-  await p.check('#bJe');
-  await p.fill('#bNotiz','wie immer');
-  await p.click('button:text-is("Beigabe eintragen")');await p.waitForTimeout(700);
-  const bm=await p.$eval('#bMeld',e=>e.textContent);
-  console.log('   Meldung:',bm);
-  ok(/Eingetragen/.test(bm)&&/3 kg je Reservoir/.test(bm),'Bestätigung nennt Produkt, Menge, Einheit und «je Reservoir»');
+  console.log('\n════ Beigabe: Säure ════');
+  await p.click('.reiter button:text-is("Säure")');await p.waitForTimeout(200);
+  const saeuren=await p.$$eval('#sMittel option',es=>es.map(e=>e.textContent));
+  ok(saeuren.length===1&&/Schwefelsäure 25/.test(saeuren[0]),'Zur Wahl steht genau die Säure aus den Stammdaten: '+saeuren[0]);
+  await p.fill('#sVorne','1,5');await p.fill('#sHinten','1');await p.fill('#sNotiz','pH vorher 7,4');
+  await p.click('button:text-is("Säure eintragen")');await p.waitForTimeout(900);
+  const sm=await p.$eval('#bMeld',e=>e.textContent);
+  ok(/Eingetragen/.test(sm)&&/1.5 l vorne|1,5 l vorne/.test(sm)&&/1 l hinten/.test(sm),'Bestätigung: '+sm.replace(/\n/g,' '));
   db=await bestand();
-  const ev=db.ereignisse[db.ereignisse.length-1];
-  ok(db.ereignisse.length===1&&ev.mittel==='epsotop'&&ev.menge===3&&ev.einheit==='kg'&&ev.jeReservoir===true&&ev.typ==='Düngergabe',
-     'Im Logbuch des Bestands: Düngergabe Epsotop 3 kg je Reservoir');
-  ok(ev.wer==='MK'&&ev.quelle==='erfassen'&&ev.notiz==='wie immer','Mit Kürzel, Herkunft und Notiz');
-  await p.click('#bMittel .chip:text-is("Zitronensäure")');await p.waitForTimeout(200);
-  await p.fill('#bMenge','0,5');
-  await p.click('button:text-is("Beigabe eintragen")');await p.waitForTimeout(700);
+  const sae=db.ereignisse.filter(e=>e.typ==='Säurezugabe');
+  ok(sae.length===2&&sae[0].stelle==='vorne'&&sae[0].menge===1.5&&sae[1].stelle==='hinten'&&sae[1].menge===1,'Zwei Einträge im Logbuch: vorne 1,5 l, hinten 1 l');
+  ok(sae.every(e=>e.mittel==='schwefelsaeure25'&&e.einheit==='l'&&e.wer==='MK'&&e.notiz==='pH vorher 7,4'),'Beide mit Säure, Liter, Kürzel und Notiz');
+  await p.screenshot({path:shots+'/tank-saeure.png'});
+
+  console.log('\n════ Beigabe: Düngen ════');
+  await p.click('.reiter button:text-is("Düngen")');await p.waitForTimeout(200);
+  const gramm=await p.$$eval('#rDuengen .einh',es=>es.map(e=>e.textContent));
+  ok(gramm.filter(x=>x==='Gramm').length===3,'Magnesium, Kali und Zink stehen in Gramm – ausgeschrieben, kein Auswahlfeld');
+  await p.fill('#dWasserVorne','2000');await p.fill('#dWasserHinten','1500');await p.fill('#dBiovin','20');
+  await p.fill('#dMg','500');await p.fill('#dKali','300');await p.fill('#dZink','20');
+  await p.click('button:text-is("Düngung eintragen")');await p.waitForTimeout(1500);
+  const dm=await p.$eval('#bMeld',e=>e.textContent);
+  console.log('   ',dm.replace(/\n/g,' '));
+  ok(/Eingetragen/.test(dm)&&/20 l Biovin/.test(dm)&&/500 g Magnesium/.test(dm),'Bestätigung nennt alles, was gegeben wurde');
   db=await bestand();
-  ok(db.ereignisse[1].typ==='Säurezugabe'&&db.ereignisse[1].menge===0.5,'Zitronensäure landet als «Säurezugabe», nicht als Düngergabe');
-  await p.click('#bMittel .chip:text-is("Anderes")');
-  await p.fill('#bMenge','1');await p.fill('#bNotiz','');
-  await p.click('button:text-is("Beigabe eintragen")');await p.waitForTimeout(300);
-  ok(/in die Notiz/.test(await p.$eval('#bMeld',e=>e.textContent)),'«Anderes» ohne Notiz: nachgefragt, was es war');
-  await p.screenshot({path:shots+'/tank-eingetragen.png'});
+  const wz=db.ereignisse.filter(e=>e.typ==='Wasserzugabe');
+  ok(wz.length===2&&wz.some(e=>e.stelle==='vorne'&&e.menge===2000)&&wz.some(e=>e.stelle==='hinten'&&e.menge===1500),'Wasser vorne und hinten getrennt');
+  ok(wz.every(e=>e.felder&&e.felder.mitDuenger==='ja'),'Und als «mit Dünger angesetzt» gekennzeichnet');
+  const bio=db.ereignisse.find(e=>e.typ==='Düngergabe'&&e.mittel==='biovin');
+  ok(bio&&bio.menge===20&&bio.einheit==='l'&&bio.stelle==='beide','Biovin 20 l für beide');
+  const zu=db.ereignisse.filter(e=>e.typ==='Zusatzdünger / Spurenelemente');
+  ok(zu.length===3&&zu.every(e=>e.einheit==='g')&&zu.find(e=>e.mittel==='epsotop').menge===500&&zu.find(e=>e.mittel==='zink').menge===20,'Magnesium, Kali, Zink in Gramm, je ein Eintrag');
+  await p.screenshot({path:shots+'/tank-duengen.png'});
+
+  console.log('\n════ Beigabe: nur Wasser ════');
+  await p.click('.reiter button:text-is("Nur Wasser")');await p.waitForTimeout(200);
+  await p.click('button:text-is("Wasser eintragen")');await p.waitForTimeout(300);
+  ok(/vorne oder hinten/.test(await p.$eval('#bMeld',e=>e.textContent)),'Ohne Menge: nachgefragt');
+  await p.fill('#wHinten','800');
+  await p.click('button:text-is("Wasser eintragen")');await p.waitForTimeout(800);
+  db=await bestand();
+  const nw=db.ereignisse.filter(e=>e.typ==='Wasserzugabe'&&e.felder&&e.felder.mitDuenger==='nein');
+  ok(nw.length===1&&nw[0].stelle==='hinten'&&nw[0].menge===800,'Nur Wasser hinten 800 l, ohne Dünger');
+  ok(/Zuletzt/.test(await p.$eval('body',e=>e.innerText))&&/nur Wasser: 800 l hinten/.test(await p.$eval('#zuletzt',e=>e.innerText)),'Steht in «Zuletzt»');
 
   console.log('\n════ Netz weg ════');
   await p.route('**/api/**',r=>r.abort('connectionfailed'));
-  await p.fill('#mPh','8,2');            /* nahe am zuletzt bestätigten 8,4 – keine Nachfrage */
-  await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(700);
-  const offline=await p.$eval('#mMeld',e=>e.textContent);
-  console.log('   Meldung:',offline);
-  ok(/wartet/.test(offline),'Ohne Netz: der Eintrag wartet, die Seite sagt es');
+  await p.fill('#wVorne','300');
+  await p.click('button:text-is("Wasser eintragen")');await p.waitForTimeout(700);
+  ok(/wartet/.test(await p.$eval('#bMeld',e=>e.textContent)),'Ohne Netz: der Eintrag wartet, die Seite sagt es');
   ok(await p.$eval('#warte',e=>e.classList.contains('an')),'Die Warteschlange ist sichtbar');
-  ok(/1 Eintrag wartet/.test(await p.$eval('#warteText',e=>e.textContent)),'Und zählt');
   ok(await p.$eval('#stand',e=>e.classList.contains('aus')),'Der Verbindungspunkt zeigt es an');
-  db=await bestand();
-  ok(db.messungen.length===3,'Auf dem Server ist noch nichts davon');
-  /* Die Seite neu laden – die Warteschlange muss den Neustart überleben */
   await p.unroute('**/api/**');
-  await p.route('**/api/messung',r=>r.abort('connectionfailed'));
+  await p.route('**/api/ereignis',r=>r.abort('connectionfailed'));
   await p.reload();await p.waitForTimeout(800);
   ok(/1 Eintrag wartet/.test(await p.$eval('#warteText',e=>e.textContent)),'Die Warteschlange überlebt das Neuladen der Seite');
-  ok((await p.$eval('#wer',e=>e.value))==='MK','Das Kürzel ebenso');
+  ok(await p.$eval('#schranke',e=>e.hidden)&&(await p.$eval('#werAnzeige',e=>e.textContent))==='MK','Das Kürzel gilt nach dem Neuladen weiter – innerhalb der Stunde');
 
   console.log('\n════ Netz da ════');
-  await p.unroute('**/api/messung');
+  await p.unroute('**/api/ereignis');
   await p.click('#warte button:text-is("Erneut senden")');await p.waitForTimeout(800);
   ok(!(await p.$eval('#warte',e=>e.classList.contains('an'))),'«Erneut senden» leert die Warteschlange');
   db=await bestand();
-  ok(db.messungen.length===4&&db.messungen[3].ph===8.2,'Der gewartete Eintrag ist jetzt im Bestand – unverändert');
-  ok(/nachgesendet/.test(await p.$eval('#mMeld',e=>e.textContent)),'Und die Seite sagt, dass sie nachgesendet hat');
-  ok(!(await p.$eval('#stand',e=>e.classList.contains('aus'))),'Der Verbindungspunkt ist wieder grün');
+  ok(db.ereignisse.some(e=>e.typ==='Wasserzugabe'&&e.stelle==='vorne'&&e.menge===300),'Der gewartete Eintrag ist jetzt im Bestand – unverändert');
+
+  console.log('\n════ Die Stunde ist um ════');
+  await p.evaluate(()=>{const w=JSON.parse(localStorage.getItem('tank.wer'));w.bis=Date.now()-1000;localStorage.setItem('tank.wer',JSON.stringify(w))});
+  await p.fill('#mPh','8,3');
+  await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(400);
+  ok(!(await p.$eval('#schranke',e=>e.hidden)),'Nach Ablauf der Stunde: erst wieder das Kürzel, dann der Eintrag');
+  ok(/Stunde ist um/.test(await p.$eval('#schrankeMeld',e=>e.textContent)),'Mit dem Grund');
+  db=await bestand();const vorher=db.messungen.length;
+  await p.fill('#schrankeWer','ab');await p.click('#schranke button:text-is("Weiter")');await p.waitForTimeout(300);
+  await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(700);
+  db=await bestand();
+  ok(db.messungen.length===vorher+1&&db.messungen[vorher].wer==='AB','Der Eintrag trägt jetzt das neue Kürzel');
+  await p.click('header button:text-is("wechseln")');await p.waitForTimeout(200);
+  ok(!(await p.$eval('#schranke',e=>e.hidden)),'«wechseln» im Kopf öffnet die Schranke sofort');
 
   console.log('\n════ Grenzen der Rolle ════');
   const r=await p.evaluate(async()=>{const x=await fetch('/api/bestand');return x.status});
   ok(r===401,'Auch aus der Seite heraus kommt «hinten» nicht an den Bestand');
   const roh=await p.$eval('body',e=>e.innerHTML);
   ok(!/Blattsaft|Analysen einlesen/.test(roh),'Die Seite enthält nichts vom Büro-Werkzeug');
-  ok(!/<script src=|<link [^>]*href="http/.test(roh),'Sie lädt nichts von aussen – sofort da, auch bei schlechtem Empfang');
+  ok(!/<script src=|<link [^>]*href="http/.test(roh),'Sie lädt nichts von aussen');
 
   console.log('\n════ Ergebnis ════');
   if(stoerung.length){fehler+=stoerung.length;stoerung.forEach(x=>console.log('  ✗',x))}

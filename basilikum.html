@@ -35,6 +35,12 @@ button.primary:hover{background:#25352B}
 button.ghost{border-color:transparent;background:none;color:var(--muted);padding:5px 8px}
 button.ghost:hover{color:var(--ink);background:var(--line2)}
 button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--muted)}
+/* Wesentlich: nur die Hauptkarte, darin nur die Auswahl der Nährstoffe.
+   Alles Übrige bleibt im Dokument und kommt mit einem Klick zurück. */
+nav#nav{display:flex;align-items:center;flex-wrap:wrap}
+body.wesentlich #view>*:not(.haupt){display:none}
+body.wesentlich #view .haupt .werkzeug .wz:not(.haupt){display:none}
+body.wesentlich #view .haupt .note,body.wesentlich #view .haupt p.tiny,body.wesentlich #view .haupt .hd .sub{display:none}
 button.klein:hover{color:var(--ink)}
 button:disabled{opacity:.4;cursor:not-allowed}
 button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
@@ -425,6 +431,7 @@ function evEinheit(typ,mittel){
   if(!d.m)return '';
   if(d.m.e!=='auto')return d.m.e;
   const pr=mittel&&db.produkte?db.produkte[mittel]:null;
+  if(pr&&pr.einheit)return pr.einheit;
   return (pr&&pr.form==='fest')?'kg':'l';
 }
 const STELLEN=['beide','vorne','hinten'];
@@ -671,8 +678,18 @@ async function pdfSeiten(buf){
 const PRODUKTE_VORGABE={
   biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig',dichte:1.25,
     gehalt:{N_gesamt:9,Fe:0.22,Mn:0.10,Zn:0.19,Cu:0.13},quelle:'Etikett'},
-  epsotop:{name:'Epsotop (Bittersalz)',form:'fest',dichte:null,
+  epsotop:{name:'Magnesium (Epsotop, Bittersalz)',form:'fest',einheit:'g',dichte:null,
     gehalt:{Mg:9.86,S:13.0},quelle:'Etikett'},
+  /* Kali und Zink werden seit dem Frühjahr in Gramm beigemischt. Welches
+     Produkt genau, ist nicht hinterlegt – darum kein Gehalt. Wer die
+     Bilanz darauf rechnen will, trägt Name und Gehalt vom Etikett ein. */
+  kali:{name:'Kali',form:'fest',einheit:'g',dichte:null,gehalt:{},liefert:['K'],quelle:'Produkt nicht hinterlegt – Gehalt vom Etikett eintragen'},
+  zink:{name:'Zink',form:'fest',einheit:'g',dichte:null,gehalt:{},liefert:['Zn'],quelle:'Produkt nicht hinterlegt – Gehalt vom Etikett eintragen'},
+  /* 25 % Schwefelsäure: Schwefelgehalt aus der Stöchiometrie (S/H2SO4 =
+     32,06/98,08 von 25 %), Dichte aus der Tabelle für 25 % – beides
+     Chemie, kein Etikett. */
+  schwefelsaeure25:{name:'Schwefelsäure 25 %',form:'fluessig',einheit:'l',dichte:1.18,
+    gehalt:{S:8.2},quelle:'Stöchiometrie und Dichtetabelle für 25 % H₂SO₄'},
   /* Die folgenden Mittel sind nur benannt, damit sie sich im Logbuch erfassen
      lassen. Ihre Gehalte sind bewusst LEER: eine geratene Konzentration wäre
      erfundene Sicherheit. Phosphorsäure bringt Phosphor ins System – wer die
@@ -690,14 +707,16 @@ const PRODUKTE_VORGABE={
    zu[<Bezeichnung>] ist die Kennung der Stelle, null heisst ausdruecklich
    «gehoert zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
 const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
-const leer=()=>({schema:9,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+const leer=()=>({schema:10,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   stellen:STELLEN_VORGABE(),
   /* Zielwochen 2 und 4: das Satzpaar-Schema. Alle zwei Wochen ein Satz in
      Woche 2 und einer in Woche 4 – so bekommt jeder Satz zwei Proben, und
      alle Woche-2-Proben sind untereinander vergleichbar. */
   saetze:{},eigeneOptima:{},plan:{zielwochen:[2,4],begleitet:[],geplant:[]},
-  einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:7,dauerWinter:10,
+  /* Kulturdauer 4 Wochen bis zur Ernte (Entscheid vom 26.09.2026), im
+     Winter länger – beides einstellbar. */
+  einst:{verlagerung:1.3,kMg:8,kCa:3,nh4no3:0.5,toleranz:5,dauerSommer:4,dauerWinter:6,
     systemLiter:19200,
     hoeheM:440,          /* Schwerzenbach – für die Sauerstoff-Sättigungsgrenze */
     kern:KERN_VORGABE.slice(),schaeden:SCHAEDEN.slice(0,9).map(s=>s.id)}});
@@ -706,6 +725,11 @@ let db=leer(),tab='lage',dirty=false,nachRender=null;
    seiner Bedienung neu zu bauen statt der ganzen Seite. Siehe diagFrisch(). */
 let DIAG=null;
 
+/* Ein alter Eintrag ohne eigene Einheit bekam sie bisher aus der Form des
+   Produkts (fest = kg). Das bleibt so – heute dosiert man Epsotop in Gramm,
+   aber die 3 kg vom Mai waren Kilogramm. */
+const evEinheitAlt=e=>{const d=EVTYPEN[e.typ];if(!d||!d.m)return null;if(d.m.e!=='auto')return d.m.e;
+  const pr=PRODUKTE_VORGABE[e.mittel];return (pr&&pr.form==='fest')?'kg':'l'};
 /* Ältere Sicherungsdateien einlesen, ohne dass etwas verloren geht. */
 function migriere(roh){
   const basis=leer(),notizen=[],von=+(roh.schema||1);
@@ -829,7 +853,15 @@ function migriere(roh){
     if(n)notizen.push(`Messungen am Tank haben zwei neue Felder: Sauerstoff (mg/l, dazu die Sättigung in %) und ein Kürzel, wer gemessen hat. Für die ${n} bisherigen Einträge stehen sie auf «unbekannt».`);
     notizen.push('Neu gibt es eine Handy-Seite für die Erfassung am Tank (erfassen.html) – Messungen und Beigaben von dort tragen das Kürzel und die Herkunft «erfassen».');
   }
-  d.schema=9;
+  if(von<10){
+    /* Entscheide vom 26. September: Beprobung in Woche 2 und 4, Kultur
+       4 Wochen bis zur Ernte. Beides waren bisher andere Vorgaben. */
+    if(JSON.stringify(d.plan.zielwochen)==='[2,4,6]'){d.plan.zielwochen=[2,4];notizen.push('Die Zielwochen stehen neu auf 2 und 4 – das Satzpaar-Schema. Unter «Sätze & Einstellungen» änderbar.')}
+    if(d.einst.dauerSommer===7&&d.einst.dauerWinter===10){d.einst.dauerSommer=4;d.einst.dauerWinter=6;
+      notizen.push('Die Kulturdauer steht neu auf 4 Wochen (Sommer) und 6 Wochen (Winter) statt 7 und 10. Sie bestimmt, wann ein Satz als «laufend» gilt und wann Woche 4 erreicht ist. Unter «Sätze & Einstellungen» änderbar.')}
+    for(const e of (d.ereignisse||[]))if(e.einheit===undefined&&e.mittel)e.einheit=evEinheitAlt(e);
+  }
+  d.schema=10;
   return {db:d,notizen,von};
 }
 
@@ -1508,8 +1540,14 @@ function chartPunkte(box,o){
   /* Fotospur: eine eigene Zeile unter der Messwertflaeche. Sie bekommt Platz
      im unteren Rand, damit sie keinen Messpunkt verdeckt. */
   const spur=(xTyp==='datum'&&o.fotos&&o.fotos.length)?o.fotos:null;
-  const W=Math.max(box.clientWidth||820,540),H=hoehe+(spur?30:0),ml=lageSkala?100:66,mr=22,mt=26,mb=48+(spur?30:0);
-  const xs=pts.map(p=>p.x);
+  /* Beigabe-Spannen: nur auf der Zeitachse, als eigene Zeilen im unteren Rand. */
+  const spannen=(xTyp==='datum'&&o.spannen&&o.spannen.length)?o.spannen:[];
+  const spH=spannen.length?14+spannen.length*16:0;
+  const W=Math.max(box.clientWidth||820,540),H=hoehe+(spur?30:0)+spH,ml=lageSkala?100:66,mr=22,mt=26,mb=48+(spur?30:0)+spH;
+  /* Die Zeitachse reicht so weit wie die Messungen – und so weit wie die
+     Beigabe-Spannen: eine Gabe nach der letzten Analyse gehört ins Bild,
+     gerade weil noch keine Analyse dazu vorliegt. */
+  const xs=pts.map(p=>p.x).concat(spannen.flatMap(sp=>[sp.x0,sp.x1]));
   let x0=Math.min(...xs),x1=Math.max(...xs);
   if(x0===x1){const d=xTyp==='datum'?6048e5:1;x0-=d;x1+=d}
   const sp=(x1-x0)*0.07;x0-=sp;x1+=sp;
@@ -1604,6 +1642,18 @@ function chartPunkte(box,o){
   }
   s+=`<text x="${(ml+W-mr)/2}" y="${H-(spur?36:6)}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}${ausserhalb?' · '+esc(ausserhalb):''}</text>`;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
+  if(spannen.length){
+    const spO=H-mb+24;
+    s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
+    spannen.forEach((sp,i)=>{
+      const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)return;
+      const xa=X(a),xb=Math.max(X(b),xa+4),y=spO+2+i*16;
+      s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
+        <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
+        <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
+        <text x="${xa+7}" y="${y+9.5}" font-size="9.5" fill="#141D17">${esc(sp.text)}</text></g>`;
+    });
+  }
   if(spur){
     const y=H-16;
     s+=`<line x1="${ml}" x2="${W-mr}" y1="${y-13}" y2="${y-13}" stroke="#EDF1E9"/>`;
@@ -1636,7 +1686,9 @@ function chartStapel(box,o){
   const spuren=o.spuren||[];
   if(!spuren.length)return leerBox(box,'Nichts ausgewählt.');
   const W=Math.max(box.clientWidth||900,560),ml=104,mr=44;
-  const evH=(o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0;
+  const spannen=(o.spannen||[]);
+  const spH=spannen.length?14+spannen.length*16:0;
+  const evH=((o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0)+spH;
   const achseH=34;
   const hoehen=spuren.map(sp=>sp.hoehe||190);
   const H=hoehen.reduce((a,b)=>a+b,0)+evH+achseH+10;
@@ -1644,6 +1696,7 @@ function chartStapel(box,o){
   if(x0==null||x1==null||!(x1>x0)){
     const alle=spuren.flatMap(sp=>(sp.serien||[]).flatMap(se=>se.punkte.map(p=>p.x)));
     if(!alle.length)return leerBox(box,'Keine Werte im gewählten Zeitraum.');
+    for(const sp of spannen){alle.push(sp.x0,sp.x1)}
     x0=Math.min(...alle);x1=Math.max(...alle);
     if(x0===x1){x0-=6048e5;x1+=6048e5}
     const sp=(x1-x0)*0.05;x0-=sp;x1+=sp;
@@ -1756,6 +1809,20 @@ function chartStapel(box,o){
     }
   }
 
+  /* Beigabe-Spannen: ein Balken je Nährstoff, seit wann er dazugegeben
+     wird. Nur auf der Zeitachse sinnvoll; die Mengen stehen im Kästchen. */
+  if(spannen.length){
+    const spO=evO+evH-spH;
+    s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
+    spannen.forEach((sp,i)=>{
+      const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)return;
+      const xa=X(a),xb=Math.max(X(b),xa+4),y=spO+2+i*16;
+      s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
+        <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
+        <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
+        <text x="${xa+7}" y="${y+9.5}" font-size="9.5" fill="#141D17">${esc(sp.text)}</text></g>`;
+    });
+  }
   /* Gemeinsame Zeitachse, einmal */
   const achseY=evO+evH+2;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${achseY}" y2="${achseY}" stroke="#141D17"/>`;
@@ -1977,7 +2044,9 @@ const ANSICHT={lage:()=>vLage(),analysen:()=>vAnalysen(),verlauf:()=>vVerlauf(),
 function render(){
   const yVor=window.scrollY||window.pageYOffset||0;
   tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
-  el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
+  el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('')
+    +`<span style="flex:1"></span><span class="seg" title="Wesentlich: nur das Diagramm mit seiner Auswahl – zum Zeigen. Alles: Tabellen, Zahlen, Vorbehalte."><button class="${wesentlich?'on':''}" data-tun="wesentlich">Wesentlich</button><button class="${wesentlich?'':'on'}" data-tun="wesentlich">Alles</button></span>`;
+  document.body.classList.toggle('wesentlich',wesentlich);
   kopfStand();
   const f=ANSICHT[tab]||ANSICHT.lage;
   DIAG=null;zoomHaken=null;
@@ -1993,6 +2062,7 @@ function render(){
   if(letzterTab!==tab){letzterTab=tab;window.scrollTo({top:0})}
   else window.scrollTo({top:yVor});
   if(nachRender){const g=nachRender;nachRender=null;try{g()}catch(err){}}
+  ansichtMerken();
 }
 let letzterTab=null;
 
@@ -2012,6 +2082,7 @@ function diagFrisch(){
     for(const [id,fn] of DIAG.teile){const b=el(id);if(!b)return render();b.innerHTML=fn()}
     if(DIAG.zeichnen)DIAG.zeichnen();
     if((window.scrollY||window.pageYOffset||0)!==yVor)window.scrollTo({top:yVor});
+    ansichtMerken();
   }catch(err){render()}
 }
 AKTION.reiter=d=>{const dg=el('dlg');if(dg.open)dg.close();tab=d.reiter;render()};
@@ -2129,7 +2200,7 @@ function vLage(){
     if(erh.length<2)return;                 /* bei einer Erhebung gibt es keine Diagramme */
     chartIndex(el('cIndex'),erh);
     const serien=ueSerien();
-    chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,
+    chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,spannen:beigabeBalken(ueParams,ueFarben()),
       linien:ueLinien!=='aus',aufKlick:true,fotos:fotoSpur?fotoGruppen():null,
       ereignisse:ueLog?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
     el('legBand').innerHTML=legende(serien,diagAus,'Skala 0–3: 1 bis 2 ist der Sollbereich');
@@ -2140,7 +2211,7 @@ function vLage(){
       <p class="sub">Alle Nährstoffe auf einer gemeinsamen Skala: das grüne Band ist der Sollbereich, unabhängig von der Einheit.
       Farbe und Form kennzeichnen den Nährstoff. Mit dem Zeiger über einem Punkt stehen Satz, Datum und die gemessenen Werte; ein Klick öffnet die Erhebung.</p></div></div>
       <div class="werkzeug">
-        <div class="wz"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+        <div class="wz haupt"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
           ${verf.map(k=>`<span class="chip stoff ${ueParams.includes(k)?'on':''}" data-tun="ueParam" data-k="${esc(k)}"><span class="dot" style="background:${ueParams.includes(k)?ueFarbe[k]:'#C3CDBF'}"></span>${esc(NAME[k]||k)}</span>`).join('')}
         </span></div>
         <div class="wz"><span class="lab">Linien</span>
@@ -2191,7 +2262,7 @@ function vLage(){
      dort nichts zu sehen – dann stehen die Befunde oben, wo sonst das
      Diagramm steht, statt unter zwei fast leeren Kästen. */
   if(erh.length>1){
-    s+=`<div class="card" id="ueKarte">${ueKopf()}</div>`;
+    s+=`<div class="card haupt" id="ueKarte">${ueKopf()}</div>`;
     s+=indexKarte();
     s+=befundKarten();
   }else{
@@ -2448,6 +2519,10 @@ function detail(id){
       <span class="tag">${esc(a.labor||'manuell')}</span>${a.laborId?`<span class="tag">Probe ${esc(a.laborId)}</span>`:''}
       ${a.quelle&&a.quelle.datei?`<span class="tag">${esc(a.quelle.datei)}</span>`:''}</div>
     ${a.kultur?`<p class="tiny muted">Herkunft laut Bericht: ${esc(a.kultur)}</p>`:''}
+    ${a.quelle&&a.quelle.text?`<details style="margin:6px 0 10px"><summary class="tiny">Woher die Zahlen stammen: der Bericht im Wortlaut${a.quelle.datei?' («'+esc(a.quelle.datei)+'»)':''}</summary>
+      <p class="tiny muted" style="margin:6px 0">Das ist der Text, den die Anwendung aus dem PDF gelesen hat – zeilenweise, ohne Layout. Jede Zahl in der Tabelle unten steht hier drin.</p>
+      <pre class="tiny mono" style="white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--card2);padding:10px;border-radius:8px;border:1px solid var(--line)">${esc(a.quelle.text)}</pre></details>`
+      :`<p class="tiny muted">${a.labor&&a.labor!=='manuell'?'Aus einem Bericht übernommen; der Wortlaut wurde bei dieser Analyse nicht mitgespeichert.':'Von Hand erfasst – es gibt keinen Bericht dahinter.'}</p>`}
     ${a.parzelle?`<p class="tiny muted">Parzellenfeld: ${esc(a.parzelle)}</p>`:''}
     ${al?`<p class="tiny muted">${esc(al.text||'')}${a.blattalterBeleg||a.zustandBeleg?' · '+esc([a.blattalterBeleg,a.zustandBeleg].filter(Boolean).join(' · ')):''}</p>`:''}
     ${a.notiz?`<p class="small">${esc(a.notiz)}</p>`:''}
@@ -2923,6 +2998,7 @@ function vVerlauf(){
     const band=einBlatt?(erh.map(e=>optVon(leitProbe(e)||{optima:{}},paar.blatt[0])).find(Boolean)||null):null;
     chartStapel(el('cVl'),{
       von:koVon,bis:koBis,aufKlick:true,linien:vlLinien==='reihe',
+      spannen:beigabeBalken([...new Set(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))],farbe),
       spuren:[
         {titel:'Pflanze · Blattsaft',serien:bs,yTyp:vlSkala==='lage'?'lage':'wert',band,
          yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
@@ -2974,8 +3050,8 @@ function vVerlauf(){
           ${PAARE_VOR.map(p=>`<span class="chip ${vlPaar===p.id?'on':''}" data-tun="vlPaar" data-v="${p.id}">${esc(p.name)}</span>`).join('')}
           <span class="chip ${vlPaar==='eigen'?'on':''}" data-tun="vlPaar" data-v="eigen" title="Selbst zusammenstellen – die Auswahl unten bleibt erhalten.">eigene Auswahl</span>
         </div>
-        <div class="wz"><span class="lab">Pflanze <span class="tiny muted" style="font-weight:400">oben</span></span>${blattChips}</div>
-        <div class="wz"><span class="lab">Wasser <span class="tiny muted" style="font-weight:400">unten</span></span>${wasserChips}
+        <div class="wz haupt"><span class="lab">Pflanze <span class="tiny muted" style="font-weight:400">oben</span></span>${blattChips}</div>
+        <div class="wz haupt"><span class="lab">Wasser <span class="tiny muted" style="font-weight:400">unten</span></span>${wasserChips}
           ${passend.length&&!passend.every(k=>paar.wasser.includes('gw_'+k))
             ? `<button class="klein" data-tun="vlPassend" title="Nimmt zu jedem gewählten Nährstoff die gleichnamige Wassergrösse dazu.">passend zur Pflanze</button>`:''}
         </div>
@@ -3084,7 +3160,7 @@ function vVerlauf(){
     if(erh.some(e=>e.id===id))erhebungDetail(id);else detail(id);
   }};
   nachRender=vlZeichnen;
-  return `<div class="card" id="vlKarte">${vlKopf()}</div><div id="vlUnten">${vlUnten()}</div>`;
+  return `<div class="card haupt" id="vlKarte">${vlKopf()}</div><div id="vlUnten">${vlUnten()}</div>`;
 }
 AKTION.vlPaar=d=>{
   diagAus.clear();
@@ -3252,7 +3328,7 @@ function vNaehr(){
 
   function nsZeichnen(){
     const Z=nsAb(),serien=serienBauen(Z);
-    chartPunkte(el('cNs'),{serien,yTyp:Z.skala==='lage'?'lage':'wert',
+    chartPunkte(el('cNs'),{serien,yTyp:Z.skala==='lage'?'lage':'wert',spannen:beigabeBalken(nsWahl,Z.farbe),
       band:Z.band,bandLabel:'Sollbereich',
       xTyp:nsAchse==='woche'?'zahl':'datum',
       xLabel:nsAchse==='woche'?'Kulturwoche bei der Probenahme':'Probendatum',
@@ -3281,7 +3357,7 @@ function vNaehr(){
         ${[['haupt','Hauptnährstoffe'],['spur','Spurenelemente'],['ballast','Ballast'],['problem','Was daneben liegt'],['kern','Alle der Kennzahl']]
           .map(([v,l])=>`<button class="ghost" data-tun="nsSatzWahl" data-v="${v}">${l}</button>`).join('')}
       </div>
-      <div class="wz"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">${chips}</span></div>
+      <div class="wz haupt"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">${chips}</span></div>
       <div class="wz">
         <span class="lab">Waagrecht</span>${segment('nsAchse',nsAchse,[['datum','Probendatum'],['woche','Kulturwoche',!mitAlter.length,'Dafür braucht es Erhebungen mit bekanntem Aussaatdatum.']])}
         <span class="lab" style="min-width:0;margin-left:8px">Senkrecht</span>${segment('nsSkala',Z.skala,[['wert','Messwert',!Z.gleich,
@@ -3401,7 +3477,7 @@ function vNaehr(){
 
   DIAG={teile:[['nsKarte',nsKopf],['nsUnten',nsUnten]],zeichnen:nsZeichnen,klick:id=>erhebungDetail(id)};
   nachRender=nsZeichnen;
-  return `<div class="card" id="nsKarte">${nsKopf()}</div><div id="nsUnten">${nsUnten()}</div>`;
+  return `<div class="card haupt" id="nsKarte">${nsKopf()}</div><div id="nsUnten">${nsUnten()}</div>`;
 }
 /* Alle Regler des Diagramms zeichnen nur das Diagramm neu. */
 AKTION.nsStoff=d=>{
@@ -3872,6 +3948,7 @@ function vGiess(){
     if(alle.length>1){
       const Z=gwAb(),serien=gwSerien(Z),gwSk=Z.sk,gwEinheiten=Z.einheiten,gwBand=Z.band;
       chartPunkte(el('cGw'),{serien,yTyp:'wert',band:gwBand,bandLabel:'Richtwert (Annahme)',
+        spannen:beigabeBalken(gwWahl.map(k=>k.slice(3)),Object.fromEntries(gwWahl.map(k=>[k.slice(3),Z.farbe[k]]))),
         xTyp:'datum',xLabel:'Probendatum',hoehe:330,linien:gwLinien!=='aus',aufKlick:true,
         fotos:fotoSpur?fotoGruppen():null,
         yLabel:gwSk==='rel'?'Anteil am höchsten gemessenen Wert, in %':gwEinheiten.join(' · '),
@@ -3946,7 +4023,7 @@ function vGiess(){
     let t=`<div class="hd"><div><h2>Am Tank</h2>
       <p class="sub">pH, EC und Sauerstoff im Rücklauf, gemessen vor der neuen Düngergabe – von Hand hier oder vom Handy hinten. Alle Tische hängen am selben Kreislauf.</p></div></div>
       <div class="kpis">${tkKachel('ph','pH','',2)}${tkKachel('ec','EC Rücklauf','mS/cm',2)}${tkKachel('o2','Sauerstoff','mg/l',1)}${tkKachel('temp','Temperatur','°C',1)}</div>
-      <div class="werkzeug"><div class="wz">
+      <div class="werkzeug"><div class="wz haupt">
         ${stellen.length>1?`<span class="lab">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace('Reservoir ','')])).map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</span>`:''}
         <span class="lab" style="min-width:0;margin-left:${stellen.length>1?8:0}px">Zeitraum</span>
         <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${tkZeit===v?'on':''}" data-tun="tkZeit" data-v="${v}">${l}</button>`).join('')}</span>
@@ -3967,7 +4044,7 @@ function vGiess(){
         :'Farbe und Form stehen für die Entnahmestelle – dieselben Farben wie in den Karten darunter'} –
       so bleiben zwei Proben vom selben Tag unterscheidbar. Mit dem Zeiger über einem Punkt stehen Name, Datum und Wert; ein Klick öffnet die ganze Probe.</p></div></div>
       <div class="werkzeug">
-        <div class="wz"><span class="lab">Parameter</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
+        <div class="wz haupt"><span class="lab">Parameter</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
           ${gwVerf.map(k=>`<span class="chip stoff ${gwWahl.includes(k)?'on':''}" data-tun="gwStoff" data-k="${esc(k)}"><span class="dot" style="background:${gwWahl.includes(k)?gwFarbe[k]:'#C3CDBF'}"></span>${esc(gwName(k))}</span>`).join('')}
         </span></div>
         <div class="wz"><span class="lab">Zusammenstellung</span>
@@ -4008,7 +4085,7 @@ function vGiess(){
       <button data-tun="stellen" style="margin-left:8px">Jetzt zuordnen</button></div>`;
 
   /* Das Diagramm zuoberst, sobald es mehr als eine Probe gibt. */
-  if(alle.length>1)s+=`<div class="card" id="gwKarte">${gwKopf()}</div>`;
+  if(alle.length>1)s+=`<div class="card haupt" id="gwKarte">${gwKopf()}</div>`;
 
   s+=`<div class="kpis">
     <div class="kpi"><h4>Entnahmestellen</h4><b>${stellen.length}</b><span class="tiny muted">aus ${stellenListe().length} Bezeichnung${stellenListe().length===1?'':'en'} · ${alle.length} Proben</span></div>
@@ -4096,7 +4173,7 @@ function vGiess(){
     if(d>0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gestiegen. Steigt er bei gleicher Düngung, ist das Ballast und kein Nährstoff – dann hilft Ablassen, nicht weniger düngen.`;
     else if(d<-0.4)trend=`Der Rücklauf-EC ist von im Mittel ${nz(mittel(v.map(x=>x.ec)),2)} auf ${nz(mittel(h.map(x=>x.ec)),2)} mS/cm gefallen. Das spricht für stärkere Aufnahme oder eine geringere Zufuhr.`;
   }
-  if(messungen.length)s+=`<div class="card" id="tkKarte">${tkKopf()}</div>`;
+  if(messungen.length)s+=`<div class="card haupt" id="tkKarte">${tkKopf()}</div>`;
   s+=`<div class="card"><div class="hd"><div><h2>${messungen.length?'Messung von Hand eintragen':'Der Kreislauf selbst'}</h2>
     <p class="sub">${messungen.length?'Hinten am Tank geht das bequemer über die Handy-Seite «erfassen» – hier für Nachträge und den Import.':'pH, EC und Sauerstoff im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.'}</p></div></div>
     <div class="row">
@@ -4218,6 +4295,61 @@ const BILANZ_EL=[
  {el:'Cu',gw:['gw_Cu'],quellen:['Cu'],name:'Kupfer'},
  {el:'B', gw:['gw_B'], quellen:['B'], name:'Bor'},
  {el:'Mo',gw:['gw_Mo'],quellen:['Mo'],name:'Molybdän'}];
+/* ── Seit wann wird ein Nährstoff beigegeben? ─────────────────────────────
+   Aus den Logbucheinträgen der Produkte, die ihn enthalten (Gehalt vom
+   Etikett) oder von denen bekannt ist, dass sie ihn liefern («liefert»).
+   Mengen spielen hier keine Rolle – nur wann. Eine Lücke von mehr als
+   BEIGABE_LUECKE Tagen beendet eine Spanne; endet die letzte innerhalb
+   dieser Frist vor heute, gilt sie als «läuft». */
+const BEIGABE_LUECKE=28;
+const beigabeElement=k=>BILANZ_EL.find(x=>x.el===k||x.quellen.includes(k))||null;
+function beigabeProdukte(k){
+  const e=beigabeElement(k);if(!e)return [];
+  return Object.keys(db.produkte||{}).filter(id=>{
+    const pr=db.produkte[id];
+    const hat=Object.keys(pr.gehalt||{}).concat(pr.liefert||[]);
+    return hat.some(g=>g===e.el||e.quellen.includes(g));
+  });
+}
+function beigabeSpannen(k){
+  const ids=beigabeProdukte(k);if(!ids.length)return [];
+  const gaben=db.ereignisse.filter(x=>x.datum&&x.mittel&&ids.includes(x.mittel)&&!isNaN(+new Date(x.datum)))
+    .sort((a,b)=>a.datum.localeCompare(b.datum));
+  const out=[];let akt=null;
+  for(const g of gaben){
+    if(!akt||tage(akt.bis,g.datum)>BEIGABE_LUECKE){akt={k,von:g.datum,bis:g.datum,n:0,gaben:[],produkte:new Set()};out.push(akt)}
+    akt.bis=g.datum;akt.n++;akt.gaben.push(g);akt.produkte.add(g.mittel);
+  }
+  const h=heute();
+  for(const sp of out){sp.laeuft=tage(sp.bis,h)<=BEIGABE_LUECKE;sp.produkte=[...sp.produkte];}
+  return out;
+}
+/* Für die Diagramme: eine Spanne je Nährstoff, in seiner Farbe, mit Text
+   und Infokästchen. Ein Klick öffnet die Liste der Gaben. */
+function beigabeBalken(keys,farbe){
+  const out=[];
+  for(const k of keys)for(const sp of beigabeSpannen(k)){
+    const name=NAME[k]||k;
+    const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`;
+    out.push({k,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe:farbe[k]||'#697A6C',text,
+      kennung:k+'|'+sp.von,
+      tipp:tippBau(name+' beigegeben',farbe[k]||'#697A6C',[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],
+        ['Gaben',String(sp.n)],['Produkte',sp.produkte.map(id=>evMittelName(id)).join(', ')]],'Anklicken zeigt jede Gabe.')});
+  }
+  return out;
+}
+AKTION.spanne=d=>{
+  const [k,von]=String(d.id).split('|');
+  const sp=beigabeSpannen(k).find(x=>x.von===von);
+  if(!sp)return;
+  dialog(`${NAME[k]||k} beigegeben · ${fmt(sp.von)} bis ${sp.laeuft?'heute':fmt(sp.bis)}`,
+    `<p class="small muted">${sp.n} Gabe${sp.n>1?'n':''}, aus dem Logbuch. Mengen wie eingetragen; ob und wieviel davon in der Pflanze ankommt, sagt nur die Analyse.</p>
+     <div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Mittel</th><th>Menge</th><th>Wohin</th><th>wer</th><th>Notiz</th></tr></thead><tbody>
+     ${sp.gaben.slice().reverse().map(g=>`<tr><td class="mono">${fmt(g.datum)}</td><td>${esc(g.typ)}</td><td>${esc(evMittelName(g.mittel))}</td>
+       <td class="mono">${g.menge!=null?esc(evMenge(g)):'–'}</td><td class="tiny">${esc(g.stelle||'')}</td><td class="mono tiny">${esc(g.wer||'')}</td><td class="small muted">${esc(g.notiz||'')}</td></tr>`).join('')}
+     </tbody></table></div>`,
+    `<button data-tun="reiter" data-reiter="logbuch">Zum Logbuch</button><button class="primary" data-tun="dlgZu">Schliessen</button>`);
+};
 const BILANZ_HERKUNFT='Berechnet aus den Logbucheinträgen und den Produktangaben unter «Sätze & Einstellungen». Die Gehalte stammen von den Etiketten, nicht aus einer eigenen Analyse.';
 const BILANZ_DECKUNG=0.7;   /* darunter verweigert die App die Aussage */
 const systemLiter=()=>+db.einst.systemLiter||20000;
@@ -4230,8 +4362,13 @@ function eintragMasse(e,el){
   if(anteil==null)return null;
   if(e.menge==null)return null;
   const faktor=e.jeReservoir?2:1;
+  /* Die Einheit steht am Eintrag selbst – so bleibt eine alte Gabe in kg
+     richtig, auch wenn das Produkt heute in Gramm dosiert wird. */
+  const einh=e.einheit||evEinheit(e.typ,e.mittel);
   let kgProdukt;
-  if(pr.form==='fest')kgProdukt=e.menge*faktor;
+  if(einh==='g')kgProdukt=e.menge*faktor/1000;
+  else if(einh==='kg')kgProdukt=e.menge*faktor;
+  else if(einh==='ml'){if(!pr.dichte)return {fehlt:'dichte'};kgProdukt=e.menge*faktor*pr.dichte/1000}
   else{
     if(!pr.dichte)return {fehlt:'dichte'};
     kgProdukt=e.menge*faktor*pr.dichte;
@@ -6030,8 +6167,8 @@ function vSaetze(){
 
   <div class="card"><h2>Datenstand</h2>
     <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Einträge im Logbuch · ${db.messungen.length} Messungen · ${db.fotos.length} Fotos · ${db.rundgaenge.length} Rundgänge · ${alleSaetze().length} Sätze · Schema ${db.schema}</p>
-    <p class="small">Gesicherte Datei rund ${mb(dbBytes()+(SEITE_ROH?SEITE_ROH.length:0))} – davon ${mb(dbBytes())} Daten und ${mb(SEITE_ROH?SEITE_ROH.length:0)} Werkzeug.</p>
-    <p class="small muted" style="max-width:70ch"><strong>Sichern schreibt diese Seite neu.</strong> Es entsteht <em>eine</em> HTML-Datei:
+    <p class="small">${ONLINE.an?'Bestand auf dem Server':'Gesicherte Datei'} rund ${mb(dbBytes()+(SEITE_ROH?SEITE_ROH.length:0))} – davon ${mb(dbBytes())} Daten und ${mb(SEITE_ROH?SEITE_ROH.length:0)} Werkzeug.</p>
+    ${ONLINE.an?'':`<p class="small muted" style="max-width:70ch"><strong>Sichern schreibt diese Seite neu.</strong> Es entsteht <em>eine</em> HTML-Datei:
       dasselbe Werkzeug, mit allen Daten darin. Wer sie bekommt, öffnet sie mit einem Doppelklick und arbeitet weiter – keine zweite Datei,
       kein Hochladeschritt. Die Original-PDFs werden nicht mehr gebraucht.
       Jedes Sichern legt eine neue Datei mit Datum und Uhrzeit an, ältere Stände bleiben liegen. Es gibt bewusst keine automatische Speicherung –
@@ -6039,10 +6176,14 @@ function vSaetze(){
     <div class="note neutral" style="max-width:70ch"><strong>Zwei Dinge, die dazugehören.</strong>
       Erstens: Wer die Datei bekommt, hat <em>alles</em> – Analysen, Logbuch, Notizen, Fotos. Es gibt darin nichts, was sich zurückhalten liesse.
       Zweitens: Die Datei friert den Stand des Werkzeugs ein. Kommt später eine neuere Fassung, öffne diese und lade die alte Datei über
-      «Datei öffnen» – das nimmt auch HTML-Dateien und holt nur die Daten heraus, nie fremden Programmcode.</div>
-    <div class="row"><button class="primary" data-tun="sichern">Jetzt sichern (HTML mit Daten)</button><button data-tun="dateiOeffnen">Datei öffnen</button>
+      «Datei öffnen» – das nimmt auch HTML-Dateien und holt nur die Daten heraus, nie fremden Programmcode.</div>`}
+    ${ONLINE.an?`<div class="row"><button data-tun="kopie" title="Diese Seite mit allen Daten als eine HTML-Datei – zum Mitnehmen oder Aufheben.">Kopie herunterladen</button>
+      <button data-tun="sichernDaten" title="Nur der Bestand, ohne Werkzeug – für andere Programme.">Nur die Daten (JSON)</button>
+      <button data-tun="dateiOeffnen" title="Eine Sicherung (JSON oder HTML) einlesen – sie ersetzt den Bestand auf dem Server, für alle.">Sicherung einspielen</button></div>
+      <p class="tiny muted" style="margin-top:8px">Online wird laufend gesichert; oben rechts steht der Stand. «Sicherung einspielen» ersetzt den gemeinsamen Bestand – alle sehen danach diesen Stand.</p>`
+    :`<div class="row"><button class="primary" data-tun="sichern">Jetzt sichern (HTML mit Daten)</button><button data-tun="dateiOeffnen">Datei öffnen</button>
       <button data-tun="sichernDaten" title="Nur der Bestand, ohne Werkzeug – zum Archivieren oder für andere Programme.">Nur die Daten (JSON)</button>
-      ${ONLINE.an?'':'<button data-tun="zuruecksetzen">Alles zurücksetzen</button>'}</div>
+      <button data-tun="zuruecksetzen">Alles zurücksetzen</button></div>`}
     ${ONLINE.an?`<p class="tiny muted" style="margin-top:8px">Online gibt es kein «Alles zurücksetzen»: der Bestand gehört allen. Einträge lassen sich einzeln entfernen, oder eine Sicherungskopie wird über «Datei öffnen» eingespielt – sie ersetzt dann den Stand auf dem Server.</p>`:''}
     ${dirty?'<div class="note">Es gibt ungesicherte Änderungen.</div>':''}</div>`;
 }
@@ -6155,7 +6296,7 @@ function seiteMitDaten(){
     (m,a,b)=>{getroffen=true;return a+j+b});
   return getroffen?raus:null;
 }
-AKTION.sichern=()=>{if(ONLINE.an){if(dirty)sichernOnline();else toast('Alles ist gesichert – der Stand liegt auf dem Server.')}else sichern()};
+AKTION.sichern=()=>{if(ONLINE.an){if(dirty)sichernOnline();else toast('Wird von selbst gesichert – hier gibt es nichts zu drücken.')}else sichern()};
 AKTION.kopie=()=>sichern();
 AKTION.sichernDaten=()=>sichernJson();
 AKTION.dateiOeffnen=()=>el('fileJson').click();
@@ -6219,6 +6360,48 @@ async function laden(file){
   }else toast(`Geladen: ${db.analysen.length} Analysen, ${alleSaetze().length} Sätze.`);
 }
 
+/* ══════════ 17a · Persönliche Ansicht ══════════
+   Was alle angeht, liegt im Bestand (Zuordnungen, Einstellungen, Daten).
+   Was nur mich angeht – welche Nährstoffe ich gerade sehe, welcher Reiter
+   offen war, ob ich das Wesentliche oder alles sehen will –, bleibt auf
+   diesem Gerät. Das ist der einzige Gebrauch des Browserspeichers in der
+   Büro-Ansicht; der Bestand liegt nie dort. */
+const ANSICHT_SCHLUESSEL='basilikum.ansicht';
+function ansichtMerken(){
+  try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({tab,wesentlich,
+    nsWahl,nsAchse,nsSkala,nsLinien,nsBlatt,nsLog,
+    vlPaar,vlBlatt,vlWasser,vlSkala,vlTank,vlLog,vlEtage,vlLinien,
+    gwWahl,gwSkala,gwLinien,gwLog,tkStelle,tkLinien,tkBeigaben,ueParams,ueLinien,ueLog}))}catch(e){}
+}
+function ansichtLaden(){
+  let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
+  if(!a||typeof a!=='object')return;
+  const liste=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):null;
+  const wort=(v,erlaubt)=>erlaubt.includes(v)?v:undefined;
+  if(TABS.some(([k])=>k===a.tab))tab=a.tab;
+  wesentlich=!!a.wesentlich;
+  if(liste(a.nsWahl)&&a.nsWahl.length)nsWahl=liste(a.nsWahl);
+  nsAchse=wort(a.nsAchse,['datum','woche'])||nsAchse;nsSkala=wort(a.nsSkala,['auto','lage','wert'])||nsSkala;
+  nsLinien=wort(a.nsLinien,['aus','satz','alle'])||nsLinien;nsBlatt=wort(a.nsBlatt,['beide','jung','alt','misch'])||nsBlatt;
+  if(typeof a.nsLog==='boolean')nsLog=a.nsLog;
+  if(typeof a.vlPaar==='string')vlPaar=a.vlPaar;
+  if(liste(a.vlBlatt))vlBlatt=liste(a.vlBlatt);if(liste(a.vlWasser))vlWasser=liste(a.vlWasser);
+  vlSkala=wort(a.vlSkala,['lage','wert'])||vlSkala;vlEtage=wort(a.vlEtage,['beide','jung','alt','misch'])||vlEtage;vlLinien=wort(a.vlLinien,['keine','reihe'])||vlLinien;
+  if(typeof a.vlTank==='boolean')vlTank=a.vlTank;if(typeof a.vlLog==='boolean')vlLog=a.vlLog;
+  if(liste(a.gwWahl)&&a.gwWahl.length)gwWahl=liste(a.gwWahl);
+  gwSkala=wort(a.gwSkala,['auto','rel','wert'])||gwSkala;gwLinien=wort(a.gwLinien,['aus','stelle','alle'])||gwLinien;
+  if(typeof a.gwLog==='boolean')gwLog=a.gwLog;
+  if(typeof a.tkStelle==='string')tkStelle=a.tkStelle;tkLinien=wort(a.tkLinien,['keine','reihe'])||tkLinien;
+  if(typeof a.tkBeigaben==='boolean')tkBeigaben=a.tkBeigaben;
+  if(liste(a.ueParams)&&a.ueParams.length)ueParams=liste(a.ueParams);
+  ueLinien=wort(a.ueLinien,['aus','satz','alle'])||ueLinien;if(typeof a.ueLog==='boolean')ueLog=a.ueLog;
+}
+/* Wesentlich oder alles: der eine Schalter, mit dem man vor einem Chef die
+   Tabellen und Vorbehalte wegnimmt und nur das Diagramm stehen lässt –
+   und danach alles wieder hat. */
+let wesentlich=false;
+AKTION.wesentlich=()=>{wesentlich=!wesentlich;document.body.classList.toggle('wesentlich',wesentlich);ansichtMerken();render()};
+
 /* ══════════ 17b · Online ══════════
    Läuft die Seite von einem Server (http oder https statt file), holt sie
    den Bestand von dort und schreibt Änderungen nach kurzer Ruhe zurück.
@@ -6241,12 +6424,14 @@ function onlineStand(){
 }
 function kopfStand(){
   const st=el('stand');if(st)st.textContent=onlineStand();
+  /* Online ist es eine Webseite: kein Sichern-Knopf, kein Datei-Knopf. Was
+     eingetragen ist, ist eingetragen. Sicherung einspielen und Kopie holen
+     stehen unter «Sätze & Einstellungen», wo sie hingehören. */
   const link=el('erfassenLink'),kopie=el('knopfKopie'),sich=el('knopfSichern'),oeff=el('knopfOeffnen');
   if(link)link.hidden=!ONLINE.an;
-  if(kopie)kopie.hidden=!ONLINE.an;
-  if(sich){sich.textContent=ONLINE.an?'Jetzt sichern':'Sichern';sich.hidden=ONLINE.an&&!dirty;
-    sich.title=ONLINE.an?'Schreibt sofort auf den Server – sonst geschieht das von selbst nach kurzer Ruhe.':'Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.'}
-  if(oeff)oeff.title=ONLINE.an?'Eine Sicherung (JSON oder HTML) einlesen – sie ersetzt den Bestand auf dem Server.':'';
+  if(kopie)kopie.hidden=true;
+  if(sich)sich.hidden=ONLINE.an;
+  if(oeff)oeff.hidden=ONLINE.an;
 }
 async function onlineStart(){
   if(!/^https?:$/.test(location.protocol))return false;
@@ -6398,6 +6583,7 @@ async function pdfVorbereiten(){
   let eingebettet=null;
   try{eingebettet=datenAusSeite()}catch(e){eingebettet=null}
   seiteMerken();
+  try{ansichtLaden()}catch(e){}
   try{pdfBereit=await pdfVorbereiten()}catch(e){pdfBereit=false}
   let startNotiz=null;
   /* Vom Server geladen? Dann ist der Server die Wahrheit, nicht der Datenblock. */

@@ -107,7 +107,7 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
   console.log('\n── Alle Reiter mit einer einzigen Analyse ──');
   await p.click('#dlgFoot button:text-is("Schliessen")');
   await p.waitForTimeout(300);
-  const reiter=await p.$$eval('#nav button',bs=>bs.map(b=>b.textContent));
+  const reiter=await p.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(b=>b.textContent));
   for(const t of reiter){
     await p.click(`#nav button:text-is("${t}")`);
     await p.waitForTimeout(280);

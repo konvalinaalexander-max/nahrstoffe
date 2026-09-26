@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: 26. September 2026 · Schema 9 · rund 415 KB, 5600 Zeilen – plus `erfassen.html` (Handy) und `server.js` (Online). Konzept dazu: `KONZEPT-ONLINE.md`, Hosting: `ONLINE.md`.
+Stand: 26. September 2026 · Schema 10 · rund 415 KB, 5600 Zeilen – plus `erfassen.html` (Handy) und `server.js` (Online). Konzept dazu: `KONZEPT-ONLINE.md`, Hosting: `ONLINE.md`.
 
 ---
 
@@ -112,7 +112,7 @@ Wichtige Eigenheiten, die im Parser abgebildet sind:
 Ein einziges globales Objekt `db`. `leer()` definiert die Form:
 
 ```js
-{schema:9, version:0, gespeichert:null,
+{schema:10, version:0, gespeichert:null,
  analysen:[],      // jede Probe eine Zeile: typ, datum, satz, blattalter,
                    // zustand, werte{}, optima{}, stelle, laborId, kultur, quelle,
                    // herkunft ('ruecklauf'|'zulauf'|'tank'|'unbekannt'),
@@ -130,7 +130,7 @@ Ein einziges globales Objekt `db`. `leer()` definiert die Form:
  eigeneOptima:{},  // eigene Sollbereiche, schlagen die des Labors — je Grenze
  plan:{zielwochen:[2,4], begleitet:[], geplant:[]},     // Satzpaare; geplant: +typ, +analyseId
  einst:{verlagerung:1.3, kMg:8, kCa:3, nh4no3:0.5, toleranz:5,
-        dauerSommer:7, dauerWinter:10, systemLiter:19200, hoeheM:440,
+        dauerSommer:4, dauerWinter:6, systemLiter:19200, hoeheM:440,
         kern:[…], schaeden:[…], gwRicht:{}}}
 ```
 
@@ -152,7 +152,31 @@ Tages sind **eine** Erhebung mit zwei Proben. Fast alle Auswertungen arbeiten au
 Erhebungen, nicht auf Analysen. `e.proben` ist `{jung, alt, misch}`, `e.bew` die
 Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
 
-**Schema 9 (neu): Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
+**Schema 10: Entscheide vom 26. September.** Zielwochen `[2,4]` und
+Kulturdauer 4/6 Wochen – bestehende Bestände mit den alten Vorgaben werden
+gehoben und sagen es; eigene Werte bleiben. Produkte tragen `einheit`
+(`g`/`kg`/`l`) und `liefert` (Elemente ohne hinterlegten Gehalt, z. B. Kali →
+K); alte Logbucheinträge ohne Einheit bekommen die damalige (fest = kg).
+Neu: `schwefelsaeure25`, `kali`, `zink`; Epsotop heisst «Magnesium
+(Epsotop)» und wird in Gramm dosiert.
+
+**Beigabe-Bänder.** `beigabeSpannen(k)` bildet aus den Logbucheinträgen der
+Produkte, die einen Nährstoff enthalten (`gehalt`) oder liefern (`liefert`),
+zusammenhängende Spannen (Lücke > 28 Tage trennt; läuft, wenn die letzte Gabe
+höchstens 28 Tage her ist). `beigabeBalken(keys, farbe)` macht daraus Zeilen
+unter der Zeitachse in `chartPunkte` und `chartStapel` (`spannen:`), in der
+Farbe des Nährstoffs, mit Kästchen; Klick → `AKTION.spanne` zeigt jede Gabe.
+Gekoppelt an die gewählten Nährstoffe in Überblick, Nährstoffe, Giesswasser,
+Verlauf.
+
+**Persönliche Ansicht** (`ansichtMerken`/`ansichtLaden`) liegt im
+localStorage dieses Geräts: gewählte Nährstoffe, Achsen, Filter, offener
+Reiter, Wesentlich/Alles. Das ist der einzige Gebrauch des Browserspeichers
+in der Büro-Ansicht – nie der Bestand. **Wesentlich** (`body.wesentlich`)
+zeigt nur `.card.haupt` und darin nur `.wz.haupt` – die Karten und
+Nährstoffreihen sind so markiert.
+
+**Schema 9: Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
 `o2` (mg/l), `o2sat` (%) und `wer`; `ereignisse` haben `wer`; `einst.hoeheM`
 (440 m) für die Sättigungsgrenze; neue Bestände starten mit Zielwochen
 `[2,4]`, bestehende behalten ihre. `o2Saettigung(temp, hoehe)` ist die
@@ -579,7 +603,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (556 Einzelprüfungen, ohne Browser)
+# 2 · Fachliche Regressionsprüfungen (569 Einzelprüfungen, ohne Browser)
 for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser

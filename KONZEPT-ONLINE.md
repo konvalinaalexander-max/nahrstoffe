@@ -229,15 +229,36 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
 
 ---
 
-## 9 · Offen – bitte entscheiden
+## 9 · Entschieden (26. September, abends)
 
-1. **Laufend speichern** online (mein Vorschlag) oder weiterhin nur auf
-   Knopfdruck? Siehe §1, zweite Zeile.
-2. **O₂-Gerät:** liefert es mg/l, % Sättigung oder beides? Danach richtet
-   sich, was Pflichtfeld ist.
-3. **Kürzel oder Namen** für die Erfassung – und soll die Handy-Seite das
-   Kürzel im Browser merken (ist dann das einzige, was lokal liegt)?
-4. **Zielwochen** auf 2 und 4 umstellen, oder 2, 4, 6 behalten?
-5. Die vier Fragen aus `ENTWURF-KREISLAUF.md` §8 stehen weiterhin
-   (Kulturdauer 4 gegen 6–8 Wochen!) – mit dem Satzpaar-Schema wird die
-   Kulturdauer plötzlich wichtig, weil «Woche 4» sonst am falschen Tag liegt.
+1. **Laufend speichern, keine Knöpfe.** Online ist es eine Webseite: was
+   eingetragen ist, gilt. Sicherung einspielen und Kopie herunterladen
+   stehen unter «Sätze & Einstellungen», nicht in der Kopfzeile.
+2. **Geteilt gegen persönlich.** Alles, was den Bestand betrifft
+   (Zuordnung der Stellen, Einstellungen, Sätze, Produkte, Daten), gilt für
+   alle. Was nur die Ansicht betrifft (welche Nährstoffe gezeigt werden,
+   welcher Reiter offen ist, Wesentlich oder Alles), merkt sich nur der
+   eigene Browser.
+3. **O₂-Gerät** misst mg/l, nur im Reservoir vorne. Die Handy-Seite zeigt das
+   Feld nur bei «vorne»; die Sättigungsgrenze rechnet die App selbst.
+4. **Kürzel** wird jedes Mal verlangt und gilt eine Stunde. Danach fragt die
+   Handy-Seite wieder, ausnahmslos – jeder Eintrag trägt einen Namen.
+5. **Zielwochen 2 und 4, Kulturdauer 4 Wochen** (Winter 6). Alle zwei
+   Wochen ein Satz in Woche 2 und einer in Woche 4; dazwischen wird ein Satz
+   ausgelassen. Bestehende Bestände werden beim Laden auf diese Werte
+   gehoben und sagen es.
+6. **Beigaben in drei Reitern:** Säure (heute nur Schwefelsäure 25 %, Liter
+   vorne und hinten getrennt), Düngen (Wasser vorne/hinten, Biovin in
+   Litern, Magnesium, Kali, Zink in Gramm), nur Wasser (vorne/hinten).
+7. **Für den Chef:** Beigabe-Bänder unter jedem Zeitdiagramm – *seit wann*
+   Magnesium, Kali, Zink dazukommen, gekoppelt an die gewählten Nährstoffe,
+   mit Kästchen und Klick auf die Liste der Gaben. Dazu der Schalter
+   **Wesentlich / Alles** in der Reiterleiste: Wesentlich lässt nur das
+   Diagramm mit seiner Nährstoffauswahl stehen.
+8. **Transparenz:** jede Analyse zeigt im Detail «der Bericht im Wortlaut» –
+   den Text, den die App aus dem PDF gelesen hat. Jede Zahl lässt sich dort
+   nachlesen; kein PDF muss aufbewahrt werden.
+
+Weiterhin offen: die Excel-Datei des letzten halben Jahres (Beigaben seit
+April) – sie wird eingelesen, sobald sie da ist; die Bänder entstehen dann
+von selbst aus den Einträgen.

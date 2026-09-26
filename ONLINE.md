@@ -1,152 +1,226 @@
-# Die Anwendung online stellen
+# Die Webseite online stellen – Schritt für Schritt
 
-Was gebraucht wird: ein Ort, an dem Node läuft, eine Festplatte, die
-Neustarts überlebt, und HTTPS. Das ist alles. Der Server ist eine Datei
-(`server.js`) ohne Abhängigkeiten – es gibt kein `npm install`.
+Diese Anleitung geht davon aus, dass du noch nie einen Server aufgesetzt
+hast. Sie nimmt den einfachsten Weg: **Railway**, ein Dienst, der aus dem
+GitHub-Repository automatisch die Webseite baut und laufen lässt. Kein
+Terminal, keine Kommandozeile, nur Klicks im Browser. Etwa 20 Minuten.
 
-Drei Wege, geordnet nach Aufwand. **Für den Anfang: Weg 1.**
+Was am Ende steht: eine Adresse wie `https://basilikum-xyz.up.railway.app`.
+Büro öffnet `…/`, das Handy hinten öffnet `…/erfassen`. Beide fragen einmal
+nach Benutzername und Passwort.
 
----
-
-## Vorher, egal welcher Weg: zwei Passwörter
-
-Der Server kennt zwei Rollen. Beide brauchen ein Passwort, und die beiden
-müssen verschieden sein – sonst startet er nicht.
-
-| Rolle | Umgebungsvariable | wer | Seite |
-|---|---|---|---|
-| `admin` | `ADMIN_PASSWORT` | Büro | `https://…/` |
-| `hinten` | `HINTEN_PASSWORT` | am Tank | `https://…/erfassen` |
-
-Der Browser fragt beim ersten Öffnen nach «Benutzername» und «Passwort»:
-Benutzername ist `admin` bzw. `hinten`. Danach merkt er sich das. Auf dem
-Handy hinten: die Seite öffnen, anmelden, «zum Startbildschirm hinzufügen» –
-dann ist sie wie eine App.
-
-Wähle lange Passwörter (drei, vier Wörter). Nach zwanzig Fehlversuchen von
-derselben Adresse sperrt der Server zehn Minuten.
+Was es kostet: Railway rechnet nach Verbrauch; für diese kleine Anwendung
+sind das nach dem Probeguthaben rund **fünf Dollar im Monat** (Hobby-Plan).
+Preise ändern sich – auf railway.app unter «Pricing» nachsehen.
 
 ---
 
-## Weg 1 · Railway (oder Render, Fly)
+## Bevor du anfängst – zwei Dinge vorbereiten
 
-Ein Anbieter, der ein Git-Repository nimmt, daraus ein Abbild baut und es
-mit einer Festplatte («Volume») laufen lässt. Rund fünf Dollar im Monat –
-den aktuellen Stand nachprüfen.
+**1 · Zwei Passwörter ausdenken und irgendwo notieren.**
+Eines fürs Büro (`admin`), eines für hinten am Tank (`hinten`). Sie müssen
+verschieden sein. Nimm je drei, vier Wörter, zum Beispiel
+`basilikum-tisch-vorne-2026` – lang ist wichtiger als kompliziert.
 
-1. **Konto** bei railway.app anlegen, mit GitHub verbinden.
-2. **New Project → Deploy from GitHub repo** → dieses Repository wählen.
-   Railway findet das `Dockerfile` und baut es.
-3. **Variables** (Reiter des Dienstes): `ADMIN_PASSWORT` und
-   `HINTEN_PASSWORT` eintragen. `PORT` setzt Railway selbst; `DATEN` steht
-   im Dockerfile auf `/daten`.
-4. **Volume** anlegen und an den Dienst hängen, Mount-Pfad **`/daten`**.
-   Ohne Volume ist der Bestand beim nächsten Neustart weg – das ist der
-   Schritt, der am häufigsten vergessen wird.
-5. **Settings → Networking → Generate Domain.** Die Adresse ist dann etwa
-   `basilikum-xyz.up.railway.app`, mit HTTPS.
-6. Aufrufen, als `admin` anmelden, unter «Datei öffnen» die letzte
-   Sicherung (`basilikum_….html` oder `.json`) einspielen. Fertig.
+**2 · Der Code muss auf dem Hauptzweig liegen.**
+Alles, was gebaut wurde, liegt im Repository `konvalinaalexander-max/nahrstoffe`
+auf dem Zweig `claude/new-session-0ege9e`. Railway kann von jedem Zweig
+bauen – wir wählen ihn unten einfach aus. Du musst nichts zusammenführen.
 
-Render und Fly.io funktionieren gleich; die Begriffe heissen dort «Disk»
-bzw. «Volume».
+---
 
-**Aktualisieren:** ein Push ins Repository baut neu. Der Bestand liegt im
+## Teil A · Konto bei Railway
+
+1. Öffne **https://railway.app** im Browser.
+2. Klicke oben rechts auf **Login**, dann **Login with GitHub**.
+3. GitHub fragt, ob Railway auf dein Konto zugreifen darf → **Authorize**.
+4. Railway zeigt einmalig eine Startseite («Welcome»). Du bist jetzt drin.
+
+> Railway startet mit einem Probeguthaben. Irgendwann fragt es nach einer
+> Kreditkarte für den Hobby-Plan. Das ist der Moment, in dem du dich
+> entscheidest, ob die Seite bleibt.
+
+---
+
+## Teil B · Das Projekt anlegen
+
+1. Klicke auf **New Project** (grosser Knopf, oder oben rechts «+ New»).
+2. Wähle **Deploy from GitHub repo**.
+3. Beim ersten Mal: **Configure GitHub App** → GitHub öffnet sich → wähle
+   **Only select repositories** → suche `nahrstoffe` → **Install & Authorize**.
+   Zurück bei Railway steht das Repository jetzt in der Liste.
+4. Klicke auf **konvalinaalexander-max/nahrstoffe**.
+5. Railway legt einen Dienst («Service») an und beginnt sofort zu bauen.
+   **Der erste Bau schlägt fehl – das ist richtig so.** Die Passwörter fehlen
+   noch; der Server weigert sich ohne sie zu starten. Weiter mit Teil C.
+
+---
+
+## Teil C · Den richtigen Zweig wählen
+
+1. Klicke auf den Dienst (das Kästchen mit dem Namen `nahrstoffe`).
+2. Reiter **Settings**.
+3. Abschnitt **Source** → bei **Branch** steht `main`. Klicke darauf und
+   wähle **`claude/new-session-0ege9e`**.
+4. Ebenfalls unter Settings, Abschnitt **Build**: bei **Builder** sollte
+   **Dockerfile** stehen. Railway findet die Datei `Dockerfile` von selbst;
+   falls dort «Nixpacks» steht, auf **Dockerfile** umstellen.
+
+---
+
+## Teil D · Die Passwörter eintragen
+
+1. Reiter **Variables** des Dienstes.
+2. Klicke **+ New Variable**.
+   - Name: `ADMIN_PASSWORT` · Wert: dein Büro-Passwort → **Add**
+3. Nochmals **+ New Variable**.
+   - Name: `HINTEN_PASSWORT` · Wert: das Tank-Passwort → **Add**
+4. Mehr braucht es nicht. `PORT` setzt Railway selbst, `DATEN` steht schon
+   im Dockerfile.
+
+Railway baut nach jeder Änderung neu (oben erscheint «Deploying…»). Warte
+nicht darauf – zuerst Teil E, sonst ist der Bestand beim nächsten Neustart weg.
+
+---
+
+## Teil E · Die Festplatte («Volume») – der Schritt, der am häufigsten vergessen wird
+
+Ohne Volume speichert der Server in den Container, und der wird bei jedem
+Neustart frisch aufgesetzt. **Dann wären alle Daten weg.** Also:
+
+1. Zurück zur Projektübersicht (die Fläche mit dem Dienst-Kästchen).
+2. **Rechtsklick auf die leere Fläche** → **Volume** (oder oben «+ New» →
+   **Volume**).
+3. Railway fragt, an welchen Dienst das Volume gehängt wird → **nahrstoffe**.
+4. Beim **Mount Path** eintragen: **`/daten`** – genau so, mit Schrägstrich,
+   klein geschrieben.
+5. **Add** / **Deploy**.
+
+Prüfen: das Volume erscheint als eigenes kleines Kästchen, verbunden mit dem
+Dienst. Klick darauf → «Mount path: /daten».
+
+---
+
+## Teil F · Die Adresse
+
+1. Dienst anklicken → **Settings** → Abschnitt **Networking**.
+2. Bei **Public Networking** auf **Generate Domain**.
+3. Railway fragt nach dem Port → **8080** eintragen (falls es fragt).
+4. Es erscheint eine Adresse wie `nahrstoffe-production-a1b2.up.railway.app`.
+   Das ist die Webseite. HTTPS ist automatisch dabei.
+
+> Später kann hier auch eine eigene Domain hinein (z. B.
+> `basilikum.euer-betrieb.ch`) – dazu unten mehr. Für den Anfang reicht die
+> Railway-Adresse.
+
+---
+
+## Teil G · Warten, bis es läuft
+
+1. Reiter **Deployments**. Der oberste Eintrag sollte nach ein, zwei Minuten
+   auf **Active** springen (grün).
+2. Steht dort **Failed** oder **Crashed**: klicke darauf → **View Logs**.
+   Die letzte Zeile sagt, was fehlt. Die zwei häufigsten Fälle:
+   - «ADMIN_PASSWORT und HINTEN_PASSWORT müssen gesetzt sein» → Teil D.
+   - «dürfen nicht gleich sein» → zwei verschiedene Passwörter.
+   Nach dem Beheben unter Deployments **Redeploy**.
+3. Läuft es, steht in den Logs:
+   `Basilikum läuft auf Port 8080 · Bestand: /daten/bestand.json · Version 0`
+
+---
+
+## Teil H · Zum ersten Mal öffnen
+
+1. Öffne die Adresse aus Teil F im Browser.
+2. Der Browser fragt nach **Benutzername** und **Passwort**:
+   Benutzername `admin`, Passwort das Büro-Passwort. Häkchen «merken», wenn
+   es angeboten wird.
+3. Die Anwendung öffnet sich leer und sagt: *«Verbunden. Der Bestand auf dem
+   Server ist noch leer.»* Oben rechts steht *online · gesichert*.
+4. **Bisherige Daten hineinholen:** Reiter **Sätze & Einstellungen** →
+   ganz unten **Sicherung einspielen** → deine letzte gesicherte Datei wählen
+   (`basilikum_….html` oder `.json`). Ein paar Sekunden später steht alles
+   da, und oben rechts *gesichert hh:mm*. Fertig – das ist ab jetzt der
+   gemeinsame Bestand.
+5. Reiter **Giesswasser** → **Stellen zuordnen**, falls noch nicht geschehen.
+   Die Zuordnung gilt ab jetzt für alle.
+
+---
+
+## Teil I · Das Handy hinten einrichten
+
+1. Auf dem Handy den Browser öffnen und die Adresse eingeben, hinten mit
+   **`/erfassen`**: `https://….up.railway.app/erfassen`
+2. Benutzername `hinten`, Passwort das Tank-Passwort. «Merken» wählen.
+3. Die Seite fragt nach dem **Kürzel** (zwei bis sechs Zeichen). Es gilt eine
+   Stunde; danach fragt sie wieder – so trägt jeder Eintrag einen Namen.
+4. **Zum Startbildschirm hinzufügen**, damit es wie eine App aussieht:
+   - iPhone (Safari): Teilen-Symbol (Viereck mit Pfeil) → **Zum Home-Bildschirm**.
+   - Android (Chrome): Menü (drei Punkte) → **Zum Startbildschirm hinzufügen**.
+5. Eine Probemessung eintragen. Im Büro erscheint sie innerhalb einer halben
+   Minute im Reiter Giesswasser (Karte «Am Tank»), mit Kürzel.
+
+---
+
+## Teil J · Was du danach wissen musst
+
+**Es gibt keinen Speichern-Knopf mehr.** Was eingetragen ist, ist
+eingetragen – für alle. Oben rechts steht immer der Stand. Steht dort
+*«nicht erreichbar – Änderungen warten»*, ist der Server gerade nicht da;
+die Änderungen bleiben im Browserfenster und gehen raus, sobald er wieder
+antwortet. Das Fenster dann nicht schliessen.
+
+**Persönliche Ansicht bleibt persönlich.** Welche Nährstoffe du dir gerade
+anzeigst, welcher Reiter offen ist, ob «Wesentlich» oder «Alles» – das merkt
+sich nur dein Browser. Die Zuordnung der Stellen, Einstellungen, Sätze,
+Produkte gelten für alle.
+
+**Sicherungskopien** macht der Server selbst, bei jeder Änderung, unter
+`/daten/sicherungen`. Zusätzlich ab und zu **Kopie herunterladen** (Sätze &
+Einstellungen) und die Datei irgendwo ablegen – sie ist die ganze Anwendung
+mit allen Daten, vom Ordner aus doppelt klickbar.
+
+**Aktualisieren:** wenn es eine neue Fassung gibt, wird sie in dasselbe
+Repository geschoben. Railway baut sie von selbst; der Bestand liegt im
 Volume und bleibt.
 
----
-
-## Weg 2 · Ein kleiner Server (Hetzner, Infomaniak, …)
-
-Mehr Kontrolle, rund vier Euro im Monat, dafür SSH. Als Beispiel Ubuntu.
-
-```bash
-# Node 22
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs caddy
-
-# die drei Dateien nach /opt/basilikum
-sudo mkdir -p /opt/basilikum /var/lib/basilikum
-sudo cp server.js basilikum.html erfassen.html /opt/basilikum/
-```
-
-Ein Dienst, der beim Hochfahren startet – `/etc/systemd/system/basilikum.service`:
-
-```ini
-[Unit]
-Description=Basilikum
-After=network.target
-
-[Service]
-WorkingDirectory=/opt/basilikum
-Environment=PORT=8080
-Environment=DATEN=/var/lib/basilikum
-Environment=ADMIN_PASSWORT=hier-das-admin-passwort
-Environment=HINTEN_PASSWORT=hier-das-andere
-ExecStart=/usr/bin/node server.js
-Restart=always
-User=www-data
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo chown -R www-data /var/lib/basilikum
-sudo systemctl enable --now basilikum
-```
-
-HTTPS über Caddy, der die Zertifikate von selbst holt – `/etc/caddy/Caddyfile`:
-
-```
-basilikum.euer-betrieb.ch {
-    reverse_proxy 127.0.0.1:8080
-}
-```
-
-`sudo systemctl reload caddy`. Die Domain muss vorher auf die Adresse des
-Servers zeigen (ein A-Eintrag beim Domain-Anbieter).
-
-**Aktualisieren:** die drei Dateien ersetzen, `sudo systemctl restart basilikum`.
+**Ein Passwort ändern:** Reiter Variables → Wert ändern → Railway startet
+neu. Alle müssen sich dann neu anmelden.
 
 ---
-
-## Weg 3 · Nur im eigenen Netz
-
-Ein Rechner im Betrieb, der durchläuft (auch ein Raspberry Pi):
-
-```bash
-ADMIN_PASSWORT=… HINTEN_PASSWORT=… node server.js
-```
-
-Erreichbar unter `http://<adresse-des-rechners>:8080`. Kein HTTPS, kein
-Zugriff von unterwegs – dafür nichts zu mieten. Die Passwörter gehen dann
-unverschlüsselt durchs eigene WLAN; für ein Betriebsnetz ist das vertretbar,
-für öffentliches WLAN nicht.
-
----
-
-## Was der Server tut und was er nicht tut
-
-- **Bestand:** eine Datei `bestand.json` mit Versionsnummer, unter `DATEN`.
-- **Sicherungen:** bei jeder Änderung eine datierte Kopie unter
-  `DATEN/sicherungen/`. Behalten werden die letzten dreissig und je eine pro
-  Tag der letzten neunzig Tage. Zurückspielen: die Kopie umbenennen in
-  `bestand.json`, Server neu starten – oder im Büro über «Datei öffnen».
-- **`/gesund`** antwortet ohne Anmeldung mit `{"ok":true}` – für den
-  Hoster, damit er weiss, dass der Dienst lebt.
-- **Nicht dabei:** Benutzerkonten je Person (zwei Rollen und ein Kürzel
-  genügen bei eurer Grösse), automatische Sicherung *ausserhalb* des
-  Servers (dafür ab und zu «Kopie herunterladen» im Büro und die Datei
-  irgendwo ablegen), Zugriff für Dritte auf einzelne Sätze.
 
 ## Wenn etwas nicht geht
 
-| Symptom | Ursache | Abhilfe |
+| Was du siehst | Woran es liegt | Was zu tun ist |
 |---|---|---|
-| Der Dienst startet nicht, Log sagt «müssen gesetzt sein» | ein Passwort fehlt | beide Variablen setzen |
-| «dürfen nicht gleich sein» | gleiche Passwörter | verschiedene wählen |
-| Bestand nach Neustart leer | kein Volume / falscher Pfad | Volume auf `DATEN` (im Dockerfile `/daten`) |
-| Handy sagt «keine Verbindung», Büro geht | Empfang hinten | die Einträge warten auf dem Gerät und gehen später raus |
-| «nicht erreichbar – Änderungen warten» im Büro | Server weg | nichts tun; sobald er da ist, geht es auf «Jetzt sichern» oder von selbst raus |
-| 429 «Zu viele Fehlversuche» | zwanzigmal falsches Passwort | zehn Minuten warten |
+| Deployment «Failed», Log: *müssen gesetzt sein* | Passwort-Variable fehlt | Teil D, dann Redeploy |
+| Log: *dürfen nicht gleich sein* | beide Passwörter gleich | eines ändern |
+| Seite lädt, aber nach einem Neustart ist alles leer | Volume fehlt oder falscher Pfad | Teil E: Mount Path genau `/daten` |
+| Browser: *401* oder fragt dauernd nach dem Passwort | falscher Benutzername | `admin` bzw. `hinten`, klein geschrieben |
+| *429 – Zu viele Fehlversuche* | zwanzigmal falsch getippt | zehn Minuten warten |
+| Handy: Punkt oben links ist orange, «wartet auf Netz» | kein Empfang hinten | nichts tun – geht beim nächsten Öffnen raus |
+| Büro: *nicht erreichbar – Änderungen warten* | Server neu gestartet oder Netz weg | Fenster offen lassen; sobald der Server da ist, geht es raus |
+| Nach dem Öffnen steht «Bestand vom Server geladen» und eine Liste von Anpassungen | eine ältere Sicherung wurde eingespielt | einmal lesen, «Verstanden» – die App hat das Format angehoben |
+
+---
+
+## Eigene Domain (später, freiwillig)
+
+1. Bei eurem Domain-Anbieter einen **CNAME**-Eintrag anlegen:
+   `basilikum` → die Railway-Adresse (ohne `https://`).
+2. Railway: Settings → Networking → **Custom Domain** → `basilikum.euer-betrieb.ch`.
+3. Ein paar Minuten warten; Railway holt das Zertifikat selbst.
+
+---
+
+## Die beiden anderen Wege (falls Railway nicht passt)
+
+**Render.com** funktioniert fast gleich (Web Service → Docker → Environment
+für die Passwörter → **Disk** mit Mount Path `/daten`). Persistente Disks
+gibt es dort erst im bezahlten Plan.
+
+**Eigener Server** (Hetzner, Infomaniak …): rund vier Euro im Monat, dafür
+SSH. Node 22 installieren, die drei Dateien `server.js`, `basilikum.html`,
+`erfassen.html` nach `/opt/basilikum`, ein systemd-Dienst mit den zwei
+Umgebungsvariablen, davor Caddy als HTTPS-Proxy. Wenn ihr diesen Weg wollt,
+sag Bescheid – dann schreibe ich ihn genauso Schritt für Schritt auf.

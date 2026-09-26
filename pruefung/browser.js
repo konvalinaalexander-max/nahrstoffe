@@ -12,7 +12,7 @@ require('fs').mkdirSync(shots,{recursive:true});
   await p.goto('file://'+path);
   await p.waitForTimeout(1500);
 
-  const reiter=await p.$$eval('#nav button',bs=>bs.map(b=>b.textContent));
+  const reiter=await p.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(b=>b.textContent));
   console.log('Reiter:',reiter.join(' · '));
 
   console.log('\n── leere Datenbank ──');

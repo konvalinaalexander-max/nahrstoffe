@@ -39,12 +39,14 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('   Stand:',stand0);
   ok(/online/.test(stand0),'Die Seite merkt, dass sie vom Server kommt');
   ok(await p.$eval('#erfassenLink',e=>!e.hidden),'Der Link zur Handy-Seite erscheint');
-  ok(await p.$eval('#knopfKopie',e=>!e.hidden),'Und «Kopie herunterladen»');
-  ok(await p.$eval('#knopfSichern',e=>e.hidden),'«Jetzt sichern» ist versteckt, solange nichts offen ist');
+  ok(await p.$eval('#knopfKopie',e=>e.hidden)&&await p.$eval('#knopfSichern',e=>e.hidden)&&await p.$eval('#knopfOeffnen',e=>e.hidden),
+     'Keine Knöpfe zum Sichern oder Öffnen – online ist es eine Webseite');
   const toasts0=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
   ok(toasts0.some(t=>/Server ist noch leer/.test(t)),'Und sagt, dass der Bestand auf dem Server noch leer ist');
 
   console.log('\n════ Sicherung einspielen, laufend sichern ════');
+  await p.click('#nav button:text-is("Sätze & Einstellungen")');await p.waitForTimeout(400);
+  ok(!!(await p.$('#view button:text-is("Sicherung einspielen")')),'«Sicherung einspielen» steht unter Einstellungen');
   await p.setInputFiles('#fileJson',path.join(__dirname,'testdaten.json'));await p.waitForTimeout(600);
   const standW=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand gleich danach:',standW);
@@ -62,11 +64,9 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   await p.click('#view button:text-is("Biovin")');await p.waitForTimeout(200);
   await p.fill('#lbForm [data-f="menge"]','20');
   await p.click('#lbForm button:text-is("Eintragen")');await p.waitForTimeout(400);
-  ok(await p.$eval('#knopfSichern',e=>!e.hidden),'Solange etwas offen ist, gibt es den Knopf «Jetzt sichern»');
   await p.waitForTimeout(2500);
   srv=await ruf('/api/bestand',{headers:ADMIN});
   ok(srv.json.version===v1+1&&srv.json.db.ereignisse.some(e=>e.mittel==='biovin'&&e.menge===20),'Ein Logbucheintrag ist 2,5 s später auf dem Server – Version '+srv.json.version);
-  ok(await p.$eval('#knopfSichern',e=>e.hidden),'Und der Knopf ist wieder weg');
 
   console.log('\n════ Gleichzeitig: hinten trägt ein, während hier etwas offen ist ════');
   /* Hier eine Aenderung, die noch nicht hochgegangen ist … */
@@ -103,8 +103,9 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   await p.screenshot({path:shots+'/online-tank.png',fullPage:false});
 
   console.log('\n════ Kopie herunterladen ════');
+  await p.click('#nav button:text-is("Sätze & Einstellungen")');await p.waitForTimeout(400);
   const dl=p.waitForEvent('download');
-  await p.click('#knopfKopie');
+  await p.click('#view button:text-is("Kopie herunterladen")');
   const d=await dl;const ziel=path.join(shots,d.suggestedFilename());await d.saveAs(ziel);
   const text=fs.readFileSync(ziel,'utf8');
   ok(/^<!doctype html>/.test(text)&&/"wer":"MK"/.test(text),'Die Kopie ist die ganze Seite mit dem aktuellen Bestand – auch der Messung vom Handy');
@@ -116,6 +117,28 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   ok(/Satzpaare · Woche 2 und Woche 4/.test(pl),'Die Karte «Satzpaare» steht im Planer');
   await p.screenshot({path:shots+'/online-planer.png',fullPage:false});
 
+  console.log('\n════ Beigabe-Bänder und Wesentlich ════');
+  await p.click('#nav button:text-is("Nährstoffe")');await p.waitForTimeout(500);
+  await p.$eval('#nsKarte .chip.stoff:text-is("Magnesium")',e=>e.click());await p.waitForTimeout(450);
+  const baender=await p.$$eval('#cNs [data-tun="spanne"] text',es=>es.map(e=>e.textContent));
+  console.log('   Bänder:',baender.join(' | '));
+  ok(baender.some(t=>/Magnesium seit|Magnesium \d/.test(t)),'Magnesium gewählt → das Band «Magnesium seit …» erscheint unter dem Diagramm');
+  await p.$eval('#cNs [data-tun="spanne"]',e=>e.dispatchEvent(new MouseEvent('click',{bubbles:true})));await p.waitForTimeout(400);
+  const bd=await p.$eval('#dlgTitel',e=>e.textContent);
+  ok(/Magnesium beigegeben/.test(bd),'Klick auf das Band öffnet die Liste der Gaben: '+bd);
+  await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(200);
+  const vorW=await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length);
+  await p.click('#nav button:text-is("Wesentlich")');await p.waitForTimeout(500);
+  const nachW=await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length);
+  ok(nachW===1&&vorW>1,'«Wesentlich» lässt nur die Diagrammkarte stehen ('+vorW+' → '+nachW+')');
+  ok(await p.$eval('#cNs svg',e=>!!e),'Das Diagramm selbst bleibt');
+  await p.screenshot({path:shots+'/online-wesentlich.png',fullPage:false});
+  await p.click('#nav button:text-is("Alles")');await p.waitForTimeout(400);
+  ok((await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length))===vorW,'«Alles» bringt alles zurück');
+  await p.reload();await p.waitForTimeout(1500);
+  ok((await p.$eval('#nav button.active',e=>e.textContent))==='Nährstoffe','Nach dem Neuladen ist der Reiter noch derselbe – persönliche Ansicht auf diesem Gerät');
+  ok(await p.$eval('#nsKarte .chip.stoff:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Nährstoffauswahl auch');
+
   console.log('\n════ Server weg ════');
   await p.route('**/api/**',r=>r.abort('connectionfailed'));
   await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(400);
@@ -124,11 +147,10 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const standF=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand:',standF);
   ok(/nicht erreichbar/.test(standF),'Ohne Server: «nicht erreichbar – Änderungen warten», nichts geht verloren');
-  ok(await p.$eval('#knopfSichern',e=>!e.hidden),'Der Knopf «Jetzt sichern» bleibt sichtbar');
   await p.unroute('**/api/**');
-  await p.click('#knopfSichern');await p.waitForTimeout(1500);
+  await p.evaluate(()=>sichernOnline());await p.waitForTimeout(1500);
   srv=await ruf('/api/bestand',{headers:ADMIN});
-  ok(srv.json.db.ereignisse.some(e=>e.mittel==='biovin'&&e.menge===15),'Sobald der Server da ist, geht es auf Knopfdruck raus');
+  ok(srv.json.db.ereignisse.some(e=>e.mittel==='biovin'&&e.menge===15),'Sobald der Server da ist, geht es raus – von selbst beim nächsten Versuch');
   ok(/online · gesichert/.test(await p.$eval('#stand',e=>e.textContent)),'Und der Stand ist wieder grün');
 
   console.log('\n════ Ergebnis ════');

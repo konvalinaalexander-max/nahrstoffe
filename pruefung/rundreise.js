@@ -104,7 +104,7 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
   ok(meldung.some(t=>/Aus dieser Datei geladen/.test(t)),'Beim Öffnen steht da, woher die Daten stammen');
 
   console.log('\n   ── und weiterarbeiten ──');
-  const reiter=await p2.$$eval('#nav button',bs=>bs.map(x=>x.textContent));
+  const reiter=await p2.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(x=>x.textContent));
   ok(reiter.length===11,'Alle elf Reiter sind da');
   for(const t of reiter){
     await p2.click(`#nav button:text-is("${t}")`);await p2.waitForTimeout(250);
