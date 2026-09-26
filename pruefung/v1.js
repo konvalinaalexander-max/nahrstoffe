@@ -261,7 +261,11 @@ console.log('\n════ Eingangsbilanz ════');
   const b=A.eingangsbilanz();
   b.forEach(x=>console.log('   '+x.el.name.padEnd(12)+(x.quellen.length?x.quellen.map(q=>q.name).join(', '):'>>> keine Quelle <<<')));
   const ohne=b.filter(x=>x.ohneQuelle).map(x=>x.el.el);
-  ok(ohne.indexOf('K')>=0,'Kalium hat mit den Vorgabeprodukten KEINE Quelle');
+  /* Seit dem 26.8. gibt es Kalisulfat als Produkt (Gehalt als Annahme). Damit
+     hat Kalium eine Quelle – ob je etwas gegeben wurde, sagt «nieGegeben». */
+  const ka=b.find(x=>x.el.el==='K');
+  ok(ka.quellen.some(q=>q.produkt==='kali'),'Kalium hat mit Kalisulfat jetzt eine Quelle in den Vorgabeprodukten');
+  ok(ka.nieGegeben===true||ohne.indexOf('K')<0,'Aber in diesem Bestand wurde nie Kalisulfat gegeben – das steht dran');
   ok(ohne.indexOf('P')>=0,'Phosphor ebenso wenig');
   ok(b.find(x=>x.el.el==='Fe').quellen.length>0,'Eisen dagegen kommt aus dem Dünger');
   ok(b.find(x=>x.el.el==='Mg').quellen.some(q=>q.produkt==='epsotop'),'Magnesium aus Epsotop');

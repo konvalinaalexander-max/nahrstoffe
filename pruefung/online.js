@@ -123,9 +123,10 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const baender=await p.$$eval('#cNs [data-tun="spanne"] text',es=>es.map(e=>e.textContent));
   console.log('   Bänder:',baender.join(' | '));
   ok(baender.some(t=>/Magnesium seit|Magnesium \d/.test(t)),'Magnesium gewählt → das Band «Magnesium seit …» erscheint unter dem Diagramm');
-  await p.$eval('#cNs [data-tun="spanne"]',e=>e.dispatchEvent(new MouseEvent('click',{bubbles:true})));await p.waitForTimeout(400);
+  /* Im Modus «alle Mittel» stehen mehrere Bänder – gezielt das Magnesium-Band anklicken. */
+  await p.$$eval('#cNs [data-tun="spanne"]',es=>{const g=es.find(e=>/Magnesium/.test(e.textContent));(g||es[0]).dispatchEvent(new MouseEvent('click',{bubbles:true}))});await p.waitForTimeout(400);
   const bd=await p.$eval('#dlgTitel',e=>e.textContent);
-  ok(/Magnesium beigegeben/.test(bd),'Klick auf das Band öffnet die Liste der Gaben: '+bd);
+  ok(/Magnesium/.test(bd)&&/bis/.test(bd),'Klick auf das Band öffnet die Liste der Gaben: '+bd);
   await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(200);
   const vorW=await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length);
   await p.click('#nav button:text-is("Wesentlich")');await p.waitForTimeout(500);

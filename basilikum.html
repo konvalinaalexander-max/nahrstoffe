@@ -39,7 +39,8 @@ button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--mute
    Alles Übrige bleibt im Dokument und kommt mit einem Klick zurück. */
 nav#nav{display:flex;align-items:center;flex-wrap:wrap}
 body.wesentlich #view>*:not(.haupt){display:none}
-body.wesentlich #view .haupt .werkzeug .wz:not(.haupt){display:none}
+body.wesentlich #view .haupt .werkzeug .wz:not(.haupt):not(.mitBeigaben){display:none}
+body.wesentlich #view .haupt .werkzeug .wz.mitBeigaben>*:not(.seg):not(.lab){display:none}
 body.wesentlich #view .haupt .note,body.wesentlich #view .haupt p.tiny,body.wesentlich #view .haupt .hd .sub{display:none}
 button.klein:hover{color:var(--ink)}
 button:disabled{opacity:.4;cursor:not-allowed}
@@ -683,7 +684,11 @@ const PRODUKTE_VORGABE={
   /* Kali und Zink werden seit dem Frühjahr in Gramm beigemischt. Welches
      Produkt genau, ist nicht hinterlegt – darum kein Gehalt. Wer die
      Bilanz darauf rechnen will, trägt Name und Gehalt vom Etikett ein. */
-  kali:{name:'Kali',form:'fest',einheit:'g',dichte:null,gehalt:{},liefert:['K'],quelle:'Produkt nicht hinterlegt – Gehalt vom Etikett eintragen'},
+  /* Kalisulfat: handelsübliches Düngesalz mit 50 % K₂O = 41,5 % K und rund
+     17 % S. Das ist ein typischer Wert, kein Etikett – deshalb «Annahme»,
+     bis jemand die Zahl vom Sack einträgt. Zink: welches Salz, ist nicht
+     bekannt – nur, dass es Zink liefert. */
+  kali:{name:'Kalisulfat',form:'fest',einheit:'g',dichte:null,gehalt:{K:41.5,S:17},liefert:['K'],quelle:'typisches Kaliumsulfat (50 % K₂O) – Annahme, vom Etikett bestätigen'},
   zink:{name:'Zink',form:'fest',einheit:'g',dichte:null,gehalt:{},liefert:['Zn'],quelle:'Produkt nicht hinterlegt – Gehalt vom Etikett eintragen'},
   /* 25 % Schwefelsäure: Schwefelgehalt aus der Stöchiometrie (S/H2SO4 =
      32,06/98,08 von 25 %), Dichte aus der Tabelle für 25 % – beides
@@ -2200,7 +2205,7 @@ function vLage(){
     if(erh.length<2)return;                 /* bei einer Erhebung gibt es keine Diagramme */
     chartIndex(el('cIndex'),erh);
     const serien=ueSerien();
-    chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,spannen:beigabeBalken(ueParams,ueFarben()),
+    chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,spannen:beigabenFuer(ueParams,ueFarben()),
       linien:ueLinien!=='aus',aufKlick:true,fotos:fotoSpur?fotoGruppen():null,
       ereignisse:ueLog?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
     el('legBand').innerHTML=legende(serien,diagAus,'Skala 0–3: 1 bis 2 ist der Sollbereich');
@@ -2214,9 +2219,9 @@ function vLage(){
         <div class="wz haupt"><span class="lab">Nährstoffe</span><span style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
           ${verf.map(k=>`<span class="chip stoff ${ueParams.includes(k)?'on':''}" data-tun="ueParam" data-k="${esc(k)}"><span class="dot" style="background:${ueParams.includes(k)?ueFarbe[k]:'#C3CDBF'}"></span>${esc(NAME[k]||k)}</span>`).join('')}
         </span></div>
-        <div class="wz"><span class="lab">Linien</span>
+        <div class="wz mitBeigaben"><span class="lab">Linien</span>
           <span class="seg">${[['aus','keine'],['satz','je Satz'],['alle','durchgehend']].map(([v,l])=>`<button class="${ueLinien===v?'on':''}" data-tun="ueLinien" data-v="${v}">${l}</button>`).join('')}</span>
-          <span class="chip ${ueLog?'on':''}" data-tun="ueLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}
+          <span class="chip ${ueLog?'on':''}" data-tun="ueLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}${beigabenSchalter()}
           <button class="ghost" data-tun="ueSatzWahl" data-v="problem" style="margin-left:auto">Was daneben liegt</button>
           <button class="ghost" data-tun="ueSatzWahl" data-v="kern">Alle der Kennzahl</button>
         </div></div>
@@ -2998,7 +3003,7 @@ function vVerlauf(){
     const band=einBlatt?(erh.map(e=>optVon(leitProbe(e)||{optima:{}},paar.blatt[0])).find(Boolean)||null):null;
     chartStapel(el('cVl'),{
       von:koVon,bis:koBis,aufKlick:true,linien:vlLinien==='reihe',
-      spannen:beigabeBalken([...new Set(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))],farbe),
+      spannen:beigabenFuer([...new Set(paar.blatt.concat(paar.wasser.map(k=>k.slice(3))))],farbe),
       spuren:[
         {titel:'Pflanze · Blattsaft',serien:bs,yTyp:vlSkala==='lage'?'lage':'wert',band,
          yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
@@ -3065,14 +3070,14 @@ function vVerlauf(){
             `<button class="${vlLinien===v?'on':''}" data-tun="vlLinien" data-v="${v}" title="${
               v==='keine'?'Punkte sind die Messung.':'Verbindet nur innerhalb einer Reihe – nie über zwei Blattetagen oder zwei Entnahmestellen hinweg.'}">${l}</button>`).join('')}</span>
         </div>
-        <div class="wz">
+        <div class="wz mitBeigaben">
           <span class="lab">Anzeige</span>
           <span class="seg">${[['lage','Lage 0–3'],['wert','Messwert',paar.blatt.length>1]].map(([v,l,aus])=>
             `<button class="${vlSkala===v?'on':''}"${aus?' disabled title="Mehrere Nährstoffe mit verschiedenen Grössenordnungen – nur die Lage 0–3 ist gemeinsam lesbar."':''} data-tun="vlSkala" data-v="${v}">${l}</button>`).join('')}</span>
           <span class="lab" style="min-width:0;margin-left:8px">Zeitraum</span>
           <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${vlZeit===v?'on':''}" data-tun="vlZeit" data-v="${v}">${l}</button>`).join('')}</span>
           ${paar.wasser.includes('gw_pH')?`<span class="chip ${vlTank?'on':''}" data-tun="vlTank" style="margin-left:8px">pH am Tank</span>`:''}
-          <span class="chip ${vlLog?'on':''}" data-tun="vlLog">Logbuch</span>${fotoChip()}
+          <span class="chip ${vlLog?'on':''}" data-tun="vlLog">Logbuch</span>${fotoChip()}${beigabenSchalter()}
           ${stellenChip()}
         </div></div>
       <div id="cVl" class="diagramm"></div><div class="legend" id="legVl"></div>
@@ -3328,7 +3333,7 @@ function vNaehr(){
 
   function nsZeichnen(){
     const Z=nsAb(),serien=serienBauen(Z);
-    chartPunkte(el('cNs'),{serien,yTyp:Z.skala==='lage'?'lage':'wert',spannen:beigabeBalken(nsWahl,Z.farbe),
+    chartPunkte(el('cNs'),{serien,yTyp:Z.skala==='lage'?'lage':'wert',spannen:beigabenFuer(nsWahl,Z.farbe),
       band:Z.band,bandLabel:'Sollbereich',
       xTyp:nsAchse==='woche'?'zahl':'datum',
       xLabel:nsAchse==='woche'?'Kulturwoche bei der Probenahme':'Probendatum',
@@ -3364,10 +3369,10 @@ function vNaehr(){
           Z.achse.grund==='einheit'?'Die ausgewählten Nährstoffe haben verschiedene Einheiten – nur die Lage 0–3 ist gemeinsam lesbar.'
             :'Die ausgewählten Nährstoffe liegen zu weit auseinander für eine gemeinsame Messwert-Achse.'],['lage','Lage 0–3']])}
       </div>
-      <div class="wz">
+      <div class="wz mitBeigaben">
         <span class="lab">Blatt</span>${segment('nsBlatt',nsBlatt,[['beide','alle']].concat(blattArten.map(a=>[a,a==='misch'?'Mischprobe':a])))}
         <span class="lab" style="min-width:0;margin-left:8px">Linien</span>${segment('nsLinien',nsLinien,[['aus','keine'],['satz','je Satz'],['alle','durchgehend']])}
-        ${nsAchse==='datum'?`<span class="chip ${nsLog?'on':''}" data-tun="nsLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}`:''}
+        ${nsAchse==='datum'?`<span class="chip ${nsLog?'on':''}" data-tun="nsLog" style="margin-left:8px">Logbuch einblenden</span>${fotoChip()}${beigabenSchalter()}`:''}
       </div></div>`;
     t+=`<div id="cNs" class="diagramm"></div><div class="legend" id="legNs"></div>`;
     if(Z.erzwungen)t+=`<div class="note">${Z.achse.grund==='einheit'
@@ -3948,7 +3953,7 @@ function vGiess(){
     if(alle.length>1){
       const Z=gwAb(),serien=gwSerien(Z),gwSk=Z.sk,gwEinheiten=Z.einheiten,gwBand=Z.band;
       chartPunkte(el('cGw'),{serien,yTyp:'wert',band:gwBand,bandLabel:'Richtwert (Annahme)',
-        spannen:beigabeBalken(gwWahl.map(k=>k.slice(3)),Object.fromEntries(gwWahl.map(k=>[k.slice(3),Z.farbe[k]]))),
+        spannen:beigabenFuer(gwWahl.map(k=>k.slice(3)),Object.fromEntries(gwWahl.map(k=>[k.slice(3),Z.farbe[k]]))),
         xTyp:'datum',xLabel:'Probendatum',hoehe:330,linien:gwLinien!=='aus',aufKlick:true,
         fotos:fotoSpur?fotoGruppen():null,
         yLabel:gwSk==='rel'?'Anteil am höchsten gemessenen Wert, in %':gwEinheiten.join(' · '),
@@ -3997,7 +4002,7 @@ function vGiess(){
       {titel:'Sauerstoff',serien:o2,yTyp:'wert',yLabel:'mg/l',hoehe:150,band:grenze?[null,grenze]:null,
        bandLabel:grenze?`Sättigungsgrenze bei ${nz(mitTemp.temp,1)} °C, ${nz(db.einst.hoeheM,0)} m (Annahme)`:'',
        leerText:o2.length?'kein Sauerstoff in diesem Zeitraum':'noch nie gemessen – neu am Tank erfassbar'}];
-    chartStapel(el('cTank'),{von:koVon,bis:koBis,linien:tkLinien==='reihe',spuren,
+    chartStapel(el('cTank'),{von:koVon,bis:koBis,linien:tkLinien==='reihe',spuren,spannen:beigabenFuer([],{}),
       ereignisse:tkBeigaben?rel.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),farbe:evFarbe(e.typ),
         tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmt(e.datum)],e.mittel?['Mittel',evMittelName(e.mittel)]:null,
           e.menge!=null?['Menge',evMenge(e)]:null,e.stelle&&e.stelle!=='beide'?['Wohin',e.stelle]:null,e.wer?['eingetragen von',e.wer]:null],e.notiz||'')})):[]});
@@ -4023,13 +4028,13 @@ function vGiess(){
     let t=`<div class="hd"><div><h2>Am Tank</h2>
       <p class="sub">pH, EC und Sauerstoff im Rücklauf, gemessen vor der neuen Düngergabe – von Hand hier oder vom Handy hinten. Alle Tische hängen am selben Kreislauf.</p></div></div>
       <div class="kpis">${tkKachel('ph','pH','',2)}${tkKachel('ec','EC Rücklauf','mS/cm',2)}${tkKachel('o2','Sauerstoff','mg/l',1)}${tkKachel('temp','Temperatur','°C',1)}</div>
-      <div class="werkzeug"><div class="wz haupt">
+      <div class="werkzeug"><div class="wz haupt mitBeigaben">
         ${stellen.length>1?`<span class="lab">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace('Reservoir ','')])).map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</span>`:''}
         <span class="lab" style="min-width:0;margin-left:${stellen.length>1?8:0}px">Zeitraum</span>
         <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${tkZeit===v?'on':''}" data-tun="tkZeit" data-v="${v}">${l}</button>`).join('')}</span>
         <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
         <span class="seg">${[['keine','keine'],['reihe','je Reihe']].map(([v,l])=>`<button class="${tkLinien===v?'on':''}" data-tun="tkLinien" data-v="${v}">${l}</button>`).join('')}</span>
-        <span class="chip ${tkBeigaben?'on':''}" data-tun="tkBeigaben" style="margin-left:8px">Beigaben</span>
+        <span class="chip ${tkBeigaben?'on':''}" data-tun="tkBeigaben" style="margin-left:8px">Marken</span>${beigabenSchalter()}
       </div></div>
       <div id="cTank" class="diagramm"></div><div class="legend" id="legTank"></div>`;
     if(!hatO2)t+=`<p class="tiny muted">Sauerstoff wurde noch nie gemessen. Die Spur bleibt leer, bis der erste Wert vom Tank kommt.</p>`;
@@ -4051,12 +4056,12 @@ function vGiess(){
           ${[['ballast','Ballast und Puffer'],['naehr','Nährstoffe im Wasser'],['technik','Technik'],['leit','Leitwerte']]
             .map(([v,l])=>`<button class="ghost" data-tun="gwSatzWahl" data-v="${v}">${l}</button>`).join('')}
         </div>
-        <div class="wz">
+        <div class="wz mitBeigaben">
           <span class="lab">Senkrecht</span>
           <span class="seg">${[['wert','Messwert',!gwGleich],['rel','relativ, in %',false]].map(([v,l,aus])=>`<button class="${gwSk===v?'on':''}"${aus?' disabled title="'+esc(gwAchse.grund==='einheit'?'Die ausgewählten Parameter haben verschiedene Einheiten.':'Die ausgewählten Parameter liegen zu weit auseinander für eine gemeinsame Messwert-Achse.')+'"':''} data-tun="gwSkala" data-v="${v}">${l}</button>`).join('')}</span>
           <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
           <span class="seg">${[['aus','keine'],['stelle','je Stelle'],['alle','durchgehend']].map(([v,l])=>`<button class="${gwLinien===v?'on':''}" data-tun="gwLinien" data-v="${v}">${l}</button>`).join('')}</span>
-          <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>${fotoChip()}
+          <span class="chip ${gwLog?'on':''}" data-tun="gwLog" style="margin-left:8px">Eingriffe einblenden</span>${fotoChip()}${beigabenSchalter()}
           ${stellenChip()}
         </div></div>
       <div id="cGw" class="diagramm"></div><div class="legend" id="legGw"></div>`;
@@ -4303,12 +4308,19 @@ const BILANZ_EL=[
    dieser Frist vor heute, gilt sie als «läuft». */
 const BEIGABE_LUECKE=28;
 const beigabeElement=k=>BILANZ_EL.find(x=>x.el===k||x.quellen.includes(k))||null;
+/* Ein Produkt zählt für einen Nährstoff, wenn es ihn ausdrücklich liefert
+   («liefert») oder mindestens BEIGABE_MINDESTGEHALT Prozent davon enthält.
+   Biovin enthält 0,19 % Zink – aber wer fragt «seit wann geben wir Zink
+   dazu», meint das Zinksalz vom August, nicht die Spur im Stickstoffdünger.
+   Für Spuren aus dem Hauptdünger gibt es die Eingangsbilanz. */
+const BEIGABE_MINDESTGEHALT=1;
 function beigabeProdukte(k){
   const e=beigabeElement(k);if(!e)return [];
   return Object.keys(db.produkte||{}).filter(id=>{
     const pr=db.produkte[id];
-    const hat=Object.keys(pr.gehalt||{}).concat(pr.liefert||[]);
-    return hat.some(g=>g===e.el||e.quellen.includes(g));
+    const passt=g=>g===e.el||e.quellen.includes(g);
+    if((pr.liefert||[]).some(passt))return true;
+    return Object.keys(pr.gehalt||{}).some(g=>passt(g)&&+pr.gehalt[g]>=BEIGABE_MINDESTGEHALT);
   });
 }
 function beigabeSpannen(k){
@@ -4324,6 +4336,57 @@ function beigabeSpannen(k){
   for(const sp of out){sp.laeuft=tage(sp.bis,h)<=BEIGABE_LUECKE;sp.produkte=[...sp.produkte];}
   return out;
 }
+/* ── Je Mittel statt je Nährstoff ─────────────────────────────────────────
+   Die Geschichte für den Chef ist eine Zeile je Mittel: Halades vom 6. bis
+   19. August und dann nicht mehr, Phosphorsäure bis 25. August, Schwefelsäure
+   seit 16. September. Ohne Etikett «Versuch» – einfach, was gegeben wurde,
+   von wann bis wann. Dieselbe Lückenregel wie bei den Nährstoffen. */
+const MITTEL_FARBE={biovin:'#2C7A4B',epsotop:'#8A7118',kali:'#A2432E',zink:'#3F7F7A',phosphorsaeure:'#7A4E8C',
+  zitronensaeure:'#BE6F16',schwefelsaeure25:'#B0446F',halades:'#3A6DA6'};
+const mittelKurz=id=>String(evMittelName(id)||id).replace(/\s*\(.*?\)\s*/g,' ').replace(' Bio-Kraftdünger 9N','').replace(/\s+/g,' ').trim();
+function beigabeSpannenMittel(id){
+  const gaben=db.ereignisse.filter(x=>x.datum&&x.mittel===id&&!isNaN(+new Date(x.datum))).sort((a,b)=>a.datum.localeCompare(b.datum));
+  const out=[];let akt=null;
+  for(const g of gaben){
+    if(!akt||tage(akt.bis,g.datum)>BEIGABE_LUECKE){akt={id,von:g.datum,bis:g.datum,n:0,gaben:[]};out.push(akt)}
+    akt.bis=g.datum;akt.n++;akt.gaben.push(g);
+  }
+  const h=heute();
+  for(const sp of out)sp.laeuft=tage(sp.bis,h)<=BEIGABE_LUECKE;
+  return out;
+}
+function beigabeBalkenMittel(){
+  const ids=[...new Set(db.ereignisse.filter(x=>x.mittel).map(x=>x.mittel))];
+  const reihenfolge=Object.keys(db.produkte||{});
+  ids.sort((a,b)=>{const ia=reihenfolge.indexOf(a),ib=reihenfolge.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
+  const out=[];
+  ids.forEach((id,i)=>{
+    const farbe=MITTEL_FARBE[id]||FARBEN[i%FARBEN.length],name=mittelKurz(id);
+    for(const sp of beigabeSpannenMittel(id)){
+      const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:(sp.von===sp.bis?`${name} ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`);
+      out.push({k:null,mittel:id,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
+        tipp:tippBau(name,farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],['Gaben',String(sp.n)],
+          ['Menge gesamt',(function(){const m={};for(const g of sp.gaben)if(g.menge!=null){const e=g.einheit||'';m[e]=(m[e]||0)+g.menge*(g.jeReservoir?2:1)}return Object.keys(m).map(e=>nz(m[e])+' '+e).join(' + ')||'–'})()]],
+          'Anklicken zeigt jede Gabe.')});
+    }
+  });
+  return out;
+}
+/* Welche Balken ein Diagramm zeigt, entscheidet EIN Schalter für alle
+   Diagramme: alle Mittel (die Geschichte), zur Auswahl (nur die Nährstoffe,
+   die gerade gezeigt werden), keine. Persönliche Einstellung. */
+let beigabenModus='mittel';
+function beigabenFuer(keys,farbe){
+  if(beigabenModus==='aus')return [];
+  if(beigabenModus==='auswahl')return beigabeBalken(keys||[],farbe||{});
+  return beigabeBalkenMittel();
+}
+function beigabenSchalter(){
+  return `<span class="lab" style="min-width:0;margin-left:8px">Beigaben</span><span class="seg" title="Balken unter der Zeitachse: seit wann etwas dazugegeben wird, und bis wann.">${
+    [['mittel','alle Mittel'],['auswahl','zur Auswahl'],['aus','keine']].map(([v,l])=>`<button class="${beigabenModus===v?'on':''}" data-tun="beigabenModus" data-v="${v}">${l}</button>`).join('')}</span>`;
+}
+AKTION.beigabenModus=d=>{beigabenModus=d.v;diagFrisch()};
+
 /* Für die Diagramme: eine Spanne je Nährstoff, in seiner Farbe, mit Text
    und Infokästchen. Ein Klick öffnet die Liste der Gaben. */
 function beigabeBalken(keys,farbe){
@@ -4339,10 +4402,12 @@ function beigabeBalken(keys,farbe){
   return out;
 }
 AKTION.spanne=d=>{
-  const [k,von]=String(d.id).split('|');
-  const sp=beigabeSpannen(k).find(x=>x.von===von);
+  const teile=String(d.id).split('|');
+  let sp,titel;
+  if(teile[0]==='m'){sp=beigabeSpannenMittel(teile[1]).find(x=>x.von===teile[2]);titel=mittelKurz(teile[1])}
+  else{sp=beigabeSpannen(teile[0]).find(x=>x.von===teile[1]);titel=(NAME[teile[0]]||teile[0])+' beigegeben'}
   if(!sp)return;
-  dialog(`${NAME[k]||k} beigegeben · ${fmt(sp.von)} bis ${sp.laeuft?'heute':fmt(sp.bis)}`,
+  dialog(`${titel} · ${fmt(sp.von)} bis ${sp.laeuft?'heute':fmt(sp.bis)}`,
     `<p class="small muted">${sp.n} Gabe${sp.n>1?'n':''}, aus dem Logbuch. Mengen wie eingetragen; ob und wieviel davon in der Pflanze ankommt, sagt nur die Analyse.</p>
      <div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Mittel</th><th>Menge</th><th>Wohin</th><th>wer</th><th>Notiz</th></tr></thead><tbody>
      ${sp.gaben.slice().reverse().map(g=>`<tr><td class="mono">${fmt(g.datum)}</td><td>${esc(g.typ)}</td><td>${esc(evMittelName(g.mittel))}</td>
@@ -4536,7 +4601,8 @@ const TAB_KOPF=[
   ['ec',         /^ec$|^ec\b(?!.*(vorn|hint|\d))/i],
   ['ph',         /^ph$|^ph\b(?!.*(vorn|hint))/i],
   ['saeure',     /säurezugabe|säure.*ml|zugabe.*ml|^ml$/i],
-  ['temp',       /temperatur|^temp/i]];
+  ['temp',       /temperatur|^temp/i],
+  ['o2',         /^o2$|^o₂|sauerstoff/i]];
 const zelle=v=>v==null?'':String(v).trim();
 function kopfArt(t){
   const x=zelle(t);
@@ -4558,7 +4624,9 @@ function tabDatum(v,letzt){
   const t=zelle(v);
   let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
-  m=t.match(/^(\d{1,2})\s*[.\/]\s*(\d{1,2})\s*[.\/]?\s*(\d{2,4})?\s*\.?$/);
+  /* «17,06», «2,7», «12,8»: in der Datumsspalte ein Datum mit Komma statt
+     Punkt – so steht es in den echten Tabellen. */
+  m=t.match(/^(\d{1,2})\s*[.\/,]\s*(\d{1,2})\s*[.\/]?\s*(\d{2,4})?\s*\.?$/);
   if(!m)return null;
   const tag=+m[1],mon=+m[2];
   if(tag<1||tag>31||mon<1||mon>12)return null;
@@ -4590,10 +4658,23 @@ const MITTEL_MUSTER=[
    warnung:'«BioV-Wasser» ist Wasser, das mit Dünger angesetzt wurde. Wieviel Dünger darin war, steht in dieser Bemerkung nicht – trag das als eigene Düngergabe ein, wenn du es weisst.'},
   {re:/\bbiovin\b|\bbiov\b/i,typ:'Düngergabe',mittel:'biovin'},
   {re:/\bepsotop\b/i,typ:'Düngergabe',mittel:'epsotop'},
-  {re:/(?:^|[^A-Za-zÄÖÜäöü])ET(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Düngergabe',mittel:'epsotop',streng:1},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])EP?T(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Düngergabe',mittel:'epsotop',streng:1},
+  /* Die Kürzel, wie sie hinten geschrieben werden: EPT, KS, Zn, HA, PS, ZS,
+     H2SO4 – auch mit Null statt O. «Haldes» ist der Tippfehler für Halades. */
+  /* Wörter ohne Rücksicht auf Gross und Klein; die Kürzel dagegen genau so,
+     wie sie geschrieben werden – sonst wäre jedes «ha» in einem Satz Halades. */
+  {re:/kalisulfat|kaliumsulfat/i,typ:'Zusatzdünger / Spurenelemente',mittel:'kali'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])KS(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Zusatzdünger / Spurenelemente',mittel:'kali',streng:1},
+  {re:/\bzink/i,typ:'Zusatzdünger / Spurenelemente',mittel:'zink'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])Zn(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Zusatzdünger / Spurenelemente',mittel:'zink',streng:1},
   {re:/p-?\s?säure|phosphorsäure|p-?saeure/i,typ:'Säurezugabe',mittel:'phosphorsaeure'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])PS(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Säurezugabe',mittel:'phosphorsaeure',streng:1},
+  {re:/h2s[o0]4|schwefelsäure|schwefelsaeure/i,typ:'Säurezugabe',mittel:'schwefelsaeure25'},
   {re:/zitronensäure|zitronensaeure|\bcitro/i,typ:'Säurezugabe',mittel:'zitronensaeure'},
-  {re:/halades/i,typ:'Desinfektion',mittel:'halades'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])ZS(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Säurezugabe',mittel:'zitronensaeure',streng:1},
+  {re:/hal[a-z]{0,3}des/i,typ:'Desinfektion',mittel:'halades'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])HA(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Desinfektion',mittel:'halades',streng:1},
+  {re:/mk\s*boden/i,typ:'Notiz',mittel:null,unbekannt:'MKBoden'},
   {re:/säurezugabe|\bsäure\b|\bsaeure\b/i,typ:'Säurezugabe',mittel:null,allgemein:1},
   {re:/dünger|duenger/i,typ:'Düngergabe',mittel:null,allgemein:1},
   {re:/wasser|zudosiert|zudosieren|nachgefüllt|nachgefuellt|aufgefüllt/i,typ:'Wasserzugabe',mittel:null,allgemein:1}];
@@ -4618,18 +4699,57 @@ const EINH_NORM={l:'l',lt:'l',ltr:'l',liter:'l',ml:'ml',kg:'kg',g:'g','%':'%'};
 function bemerkungLesen(text,datum){
   const roh=zelle(text);
   if(!roh)return [];
-  const t=roh.replace(/[’']/g,"'").replace(/(\d)'(\d{3})/g,'$1$2');
+  let t=roh.replace(/[’']/g,"'").replace(/(\d)'(\d{3})/g,'$1$2');
+  /* RV und RH heissen hinten die Reservoirs – überall dasselbe Wort. */
+  t=t.replace(/(?:^|[^A-Za-zÄÖÜäöü])RV(?=$|[^A-Za-zÄÖÜäöü])/g,m=>m.replace('RV','vorne')).replace(/(?:^|[^A-Za-zÄÖÜäöü])RH(?=$|[^A-Za-zÄÖÜäöü])/g,m=>m.replace('RH','hinten'));
+  /* «vorne (ca. 5000l)» ist das Volumen des Reservoirs, keine Zugabe. Es
+     wird gemerkt und aus dem Text genommen. */
+  const volumen={};
+  t=t.replace(/\b(vorne|hinten)\s*:?\s*\(\s*ca\.?\s*(\d[\d.]*)\s*l\s*\)/gi,(m,st,v)=>{volumen[st.toLowerCase()]=toNum(v.replace(/\./g,''));return st});
   const stelleVon=x=>/vordere|vorne|vorderes/i.test(x)?'vorne':(/hintere|hinten|hinteres/i.test(x)?'hinten':null);
   const stelleGlobal=stelleVon(t)||'beide';
-  const teile=t.split(/\s*\+\s*|\s*;\s*|\s+und\s+|-->|→|\n/).map(x=>x.trim()).filter(Boolean);
+  /* «je 1kg Zitronensäure RV + RH» heisst je Reservoir; «15'000l (je
+     Reservoir ca. 7500l)» dagegen nennt eine Gesamtmenge und erklärt nur,
+     wie sie sich verteilt – dann wird nichts verdoppelt. */
+  const jeGesamt=/je\s+(reservoir|tank)\s*(ca\.?\s*)?\d/i.test(t);
+  const jeText=(/\bje\s+\d/i.test(t)&&/vorne/.test(t)&&/hinten/.test(t))||(/je\s+(reservoir|tank)/i.test(t)&&!jeGesamt);
+  /* Trennen: an «+», «;», «und», Pfeilen, «danach», «zusätzlich» – und an
+     einem Stellenwort, wenn ein Teil beide Stellen mit Mengen nennt
+     («vorne 2100ml, hinten 2100ml»). Ein Stellenwort am Ende eines Teils
+     («1l H2SO4 hinten») gehört zum nächsten Teil, nicht zu diesem. */
+  let teile=t.split(/\s*\+\s*|\s*;\s*|\s+und\s+|-->|→|\n|,?\s*danach\s*,?|,?\s*zusätzlich\s*/i).map(x=>x.trim()).filter(Boolean);
+  teile=teile.flatMap(x=>(x.match(/\b(vorne|hinten)\b/g)||[]).length>=2?x.split(/(?=\b(?:vorne|hinten)\b)/).map(y=>y.trim()).filter(Boolean):[x]);
+  for(let i=0;i<teile.length-1;i++){
+    const m=teile[i].match(/^(.*\S)\s+(vorne|hinten)\s*:?$/i);
+    if(m){teile[i]=m[1];teile[i+1]=m[2]+' '+teile[i+1]}
+  }
   const out=[];
-  for(const teil of teile){
-    const stelle=stelleVon(teil)||stelleGlobal;
-    const je=/je\s+reservoir|pro\s+reservoir|je\s+tank/i.test(teil);
+  let aktStelle=stelleGlobal,traegerMittel=null;
+  for(let ti=0;ti<teile.length;ti++){
+    const teil=teile[ti];
+    /* nur ein Stellenwort: setzt die Stelle für das Folgende */
+    if(/^(vorne|hinten)\s*:?$/i.test(teil)){aktStelle=stelleVon(teil);continue}
+    const eigene=stelleVon(teil);
+    if(eigene)aktStelle=eigene;
+    const stelle=eigene||aktStelle;
+    const je=jeText||/je\s+reservoir|pro\s+reservoir|je\s+tank/i.test(teil)&&!jeGesamt;
     const mengen=[];MENGE_RE.lastIndex=0;
     let mm;while((mm=MENGE_RE.exec(teil)))mengen.push({z:toNum(mm[1]),e:EINH_NORM[mm[2].toLowerCase()]||mm[2].toLowerCase(),pos:mm.index});
     const prozent=mengen.find(x=>x.e==='%');
-    const echte=mengen.filter(x=>x.e!=='%');
+    let echte=mengen.filter(x=>x.e!=='%');
+    /* Wasser: Liter ab 500 sind Wasser, nicht Dünger – niemand dosiert
+       15 000 Liter Biovin. Solche Mengen werden als Wasserzugabe geführt,
+       mit Dünger, wenn im selben Teil einer steht. */
+    const wasser=echte.filter(x=>x.e==='l'&&x.z>=500);
+    if(wasser.length&&!/bio-?v[a-zä]*[-\s]?wasser/i.test(teil)){
+      const mitD=/dünger|duenger|biovin|biov\b|epsotop|\bET\b|EPT/i.test(teil)&&!/\bohne\b/i.test(teil);
+      out.push({typ:'Wasserzugabe',mittel:null,menge:wasser[0].z,einheit:'l',jeReservoir:false,stelle,datum,roh,
+        felder:{mitDuenger:mitD?'ja':'nein'},warnung:null,dabei:true});
+      echte=echte.filter(x=>!wasser.includes(x));
+      /* Bleibt ausser dem Wasser nichts mit Menge, ist der Teil erledigt –
+         «Wasser ohne Dünger zudosiert» braucht keine zweite Notiz. */
+      if(!echte.length&&!mitD)continue;
+    }
 
     /* Ereignisse ohne Menge zuerst: «kalibriert», «umgepumpt», «leer». */
     const rein=REIN_MUSTER.find(mu=>mu.re.test(teil));
@@ -4651,6 +4771,22 @@ function bemerkungLesen(text,datum){
       if(/\bohne\s*$/i.test(teil.slice(Math.max(0,pos-8),pos)))continue;
       const rang=mu.allgemein?1:0;
       if(rang<bestRang||(rang===bestRang&&pos<bestPos)){bestRang=rang;bestPos=pos;treffer=mu}
+    }
+    /* «nach PS (vorne 2100ml, hinten 2100ml)»: das Mittel steht im ersten
+       Teil, die Mengen in den folgenden – das Mittel wird mitgetragen. */
+    if(treffer&&!treffer.allgemein&&!echte.length)traegerMittel={mu:treffer,pos:0,notizAn:out.length};
+    else if(!treffer&&echte.length&&traegerMittel&&eigene){
+      treffer=traegerMittel.mu;bestPos=0;
+      /* die Notiz «PS erwähnt, ohne Menge» ist damit überholt */
+      if(traegerMittel.notizAn!=null){out.splice(traegerMittel.notizAn,1);traegerMittel.notizAn=null}
+    }
+    else if(treffer)traegerMittel=null;
+    /* Ein unbekanntes Mittel mit Menge: Notiz mit klarer Bitte, statt zu raten. */
+    if(treffer&&treffer.unbekannt){
+      out.push({typ:'Notiz',mittel:null,menge:null,einheit:null,jeReservoir:false,stelle,datum,roh,
+        felder:{text:teil.slice(0,180)},warnung:null,dabei:true,
+        hinweis:`«${treffer.unbekannt}» ist kein hinterlegtes Produkt${echte.length?' ('+echte.map(x=>nz(x.z)+' '+x.e).join(', ')+')':''} – Art wählen und das Produkt unter «Sätze & Einstellungen» anlegen, dann lässt es sich beim nächsten Import zuordnen.`});
+      continue;
     }
 
     if(treffer&&echte.length){
@@ -4724,20 +4860,34 @@ function tabBlatt(zeilen){
         const dat=d||letztDatum;
         if(!dat)continue;
         const bem=b.bemerkung!==undefined?zelle(w[b.bemerkung]):'';
+        /* Ohne Datum in der Zeile gilt das der Zeile davor – aber gesagt,
+           nicht stillschweigend. Ein Datum, das dasteht und nicht lesbar
+           ist, ebenso. */
+        const datumZelle=zelle(w[b.datum]);
+        const inhalt=[b.ecVorne,b.ecHinten,b.phVorne,b.phHinten,b.ec,b.ph,b.o2,b.bemerkung,b.wurzel1].some(c=>c!==undefined&&zelle(w[c])!=='');
+        if(inhalt&&!datumZelle)hinweise.push(`Zeile ${z+1}: kein Datum – das der Zeile davor (${fmtK(dat)}) übernommen, bitte prüfen.`);
+        else if(inhalt&&datumZelle&&!d)hinweise.push(`Zeile ${z+1}: Datum «${datumZelle}» nicht lesbar – das der Zeile davor (${fmtK(dat)}) übernommen, bitte prüfen.`);
         /* Reservoirblock */
         if(b.ecVorne!==undefined||b.phVorne!==undefined||b.ec!==undefined||b.ph!==undefined){
           const paare=[['vorne',b.ecVorne,b.phVorne],['hinten',b.ecHinten,b.phHinten]];
           if(b.ecVorne===undefined&&b.ecHinten===undefined)paare.length=0;
           if(!paare.length&&(b.ec!==undefined||b.ph!==undefined))paare.push(['beide',b.ec,b.ph]);
           let gesetzt=false;
+          /* Sauerstoff: das Gerät hängt im Reservoir vorne – die Spalte
+             gehört zur vorderen Messung. */
+          const o2=b.o2!==undefined?tabZahl(w[b.o2]):null;
           for(const [stelle,ce,cp] of paare){
             const ec=ce!==undefined?tabZahl(w[ce]):null;
             const ph=cp!==undefined?tabZahl(w[cp]):null;
-            if(ec==null&&ph==null)continue;
+            const o2hier=(stelle==='vorne'||stelle==='beide')?o2:null;
+            if(ec==null&&ph==null&&o2hier==null)continue;
             gesetzt=true;
-            mess.push({id:uid(),datum:dat,stelle,ec,ph,ecFrisch:null,
+            const warn=[];
+            if(ph!=null&&(ph<3||ph>10))warn.push(`pH ${nz(ph,2)} liegt ausserhalb 3–10 – Tippfehler?`);
+            if(ec!=null&&(ec<0||ec>10))warn.push(`EC ${nz(ec,2)} ist für einen Rücklauf unwahrscheinlich – Tippfehler?`);
+            mess.push({id:uid(),datum:dat,stelle,ec,ph,ecFrisch:null,o2:o2hier,o2sat:null,wer:null,
               temp:b.temp!==undefined?tabZahl(w[b.temp]):null,
-              notiz:bem||null,quelle:'excel',dabei:true,zeile:z+1});
+              notiz:bem||null,quelle:'excel',dabei:true,zeile:z+1,warnung:warn.length?warn.join(' '):null});
           }
           if(!gesetzt&&bem)hinweise.push(`Zeile ${z+1}: nur eine Bemerkung, kein Messwert – daraus entsteht nur ein Logbuchvorschlag.`);
         }
@@ -4780,7 +4930,8 @@ function tabZusammen(teile){
 /* ── Einlesen ── */
 let TABPRUEF=null;
 const csvZeilen=text=>{
-  const trenner=(text.split('\n')[0]||'').split(';').length>(text.split('\n')[0]||'').split(',').length?';':',';
+  const kopf=(text.split('\n')[0]||'');
+  const trenner=kopf.split('\t').length>1?'\t':(kopf.split(';').length>kopf.split(',').length?';':',');
   const out=[];let feld='',zeile=[],inAnf=false;
   for(let i=0;i<text.length;i++){
     const c=text[i];
@@ -4846,14 +4997,17 @@ function tabDialog(){
 
   h+=`<div class="hd" style="margin:16px 0 8px"><div><h2 style="font-size:16px">Messungen am Tank (${nm} von ${t.mess.length})</h2>
     <p class="sub">Zwei Entnahmestellen ergeben zwei Messungen je Zeile. Mehrere Zeilen mit demselben Datum bleiben erhalten – die Bemerkung unterscheidet sie.</p></div></div>`;
-  h+=t.mess.length?`<div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Stelle</th><th>EC</th><th>pH</th><th>Bemerkung</th></tr></thead><tbody>
+  const warnMess=t.mess.filter(m=>m.warnung).length;
+  if(warnMess)h+=`<div class="note warn">${warnMess} Messwert${warnMess>1?'e sind':' ist'} unwahrscheinlich und rot markiert – bitte prüfen, bevor du übernimmst. Sie sind angehakt, damit nichts stillschweigend wegfällt.</div>`;
+  h+=t.mess.length?`<div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Stelle</th><th>EC</th><th>pH</th><th>O₂</th><th>Bemerkung</th></tr></thead><tbody>
     ${t.mess.map((m,i)=>`<tr><td><input type="checkbox" data-aend="tabAn" data-k="mess" data-i="${i}"${m.dabei?' checked':''}></td>
       <td class="tiny muted">${m.zeile}</td>
       <td><input type="date" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="datum" value="${esc(m.datum)}"></td>
       <td><select data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="stelle">${STELLEN.map(x=>`<option${m.stelle===x?' selected':''}>${esc(x)}</option>`).join('')}</select></td>
       <td><input class="mono" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ec" value="${m.ec==null?'':m.ec}"></td>
-      <td><input class="mono" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ph" value="${m.ph==null?'':m.ph}"></td>
-      <td class="tiny muted">${esc((m.notiz||'').slice(0,60))}</td></tr>`).join('')}
+      <td><input class="mono${m.warnung&&/pH/.test(m.warnung)?' val-off':''}" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ph" value="${m.ph==null?'':m.ph}"${m.warnung?` title="${esc(m.warnung)}"`:''}></td>
+      <td><input class="mono" size="4" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="o2" value="${m.o2==null?'':m.o2}"></td>
+      <td class="tiny ${m.warnung?'val-off':'muted'}">${m.warnung?esc(m.warnung)+' · ':''}${esc((m.notiz||'').slice(0,60))}</td></tr>`).join('')}
     </tbody></table></div>`:'<p class="muted small">Keine Messwerte erkannt.</p>';
 
   if(t.wurzel.length)h+=`<div class="hd" style="margin:16px 0 8px"><div><h2 style="font-size:16px">EC im Wurzelraum (${nw} von ${t.wurzel.length})</h2>
@@ -6371,7 +6525,7 @@ function ansichtMerken(){
   try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({tab,wesentlich,
     nsWahl,nsAchse,nsSkala,nsLinien,nsBlatt,nsLog,
     vlPaar,vlBlatt,vlWasser,vlSkala,vlTank,vlLog,vlEtage,vlLinien,
-    gwWahl,gwSkala,gwLinien,gwLog,tkStelle,tkLinien,tkBeigaben,ueParams,ueLinien,ueLog}))}catch(e){}
+    gwWahl,gwSkala,gwLinien,gwLog,tkStelle,tkLinien,tkBeigaben,ueParams,ueLinien,ueLog,beigabenModus}))}catch(e){}
 }
 function ansichtLaden(){
   let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
@@ -6395,6 +6549,7 @@ function ansichtLaden(){
   if(typeof a.tkBeigaben==='boolean')tkBeigaben=a.tkBeigaben;
   if(liste(a.ueParams)&&a.ueParams.length)ueParams=liste(a.ueParams);
   ueLinien=wort(a.ueLinien,['aus','satz','alle'])||ueLinien;if(typeof a.ueLog==='boolean')ueLog=a.ueLog;
+  beigabenModus=wort(a.beigabenModus,['mittel','auswahl','aus'])||beigabenModus;
 }
 /* Wesentlich oder alles: der eine Schalter, mit dem man vor einem Chef die
    Tabellen und Vorbehalte wegnimmt und nur das Diagramm stehen lässt –

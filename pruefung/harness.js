@@ -43,7 +43,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
  'stellenVorschlag','stellenListe','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar','stellenDb','stellenDialog','stellenChip','STELLEN_VORGABE','gwStelle','gwProben',
  'satzpaare','PAAR_TOLERANZ','o2Saettigung','O2_LOESLICH','messStelle','vereinigen','ONLINE','onlineStand','zoomMelden',
- 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden',
+ 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',

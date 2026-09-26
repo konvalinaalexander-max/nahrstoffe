@@ -121,10 +121,14 @@ console.log('   Warnung:',biov.warnung);
 ok(!!biov.warnung&&/Wieviel Dünger darin war, steht in dieser Bemerkung nicht/.test(biov.warnung),
    'MIT Warnung: BioV-Wasser ist Wasser mit Dünger – wieviel, steht nicht da');
 ok(biov.felder.mitDuenger==='ja','Und der Eintrag ist als «mit Dünger angesetzt» gekennzeichnet');
+/* «15'000l (je Reservoir ca. 7500l) mit 0,1% Dünger Biovin zudosiert (15l)»:
+   Liter ab 500 sind Wasser, nicht Dünger – aus dem Satz werden zwei Eintraege,
+   und das «je Reservoir» in der Klammer verdoppelt nichts, weil eine
+   Gesamtmenge dasteht. */
 const mehr=v('2026-06-17','Düngergabe','biovin');
-console.log('   Mehrdeutig:',mehr.warnung);
-ok(!!mehr.warnung&&/mehrere Mengen/.test(mehr.warnung),
-   'Stehen mehrere Mengen im selben Satz, wird die Unsicherheit benannt statt geraten');
+const mehrW=v('2026-06-17','Wasserzugabe',null);
+ok(!!mehr&&mehr.menge===15&&!mehr.jeReservoir,'Biovin 15 l – nicht verdoppelt, weil 15 000 l als Gesamtmenge dasteht');
+ok(!!mehrW&&mehrW.menge===15000&&mehrW.felder.mitDuenger==='ja','Und 15 000 l Wasser mit Dünger als eigener Eintrag – Liter ab 500 sind Wasser');
 ok(mehr.menge===15,'Die Menge kurz hinter dem Mittel wird gewählt (15 l Biovin, nicht 15 000 l Wasser)');
 ok(!!v('2026-07-09','Düngergabe','epsotop'),'«3kg ET» → Epsotop');
 ok(v('2026-07-09','Düngergabe','epsotop').menge===3,'Mit 3 kg');
@@ -181,4 +185,71 @@ console.log('\n════ Robustheit ════');
 
 console.log('\n════ Ergebnis ════');
 console.log(fehler?`  ${fehler} FEHLER`:'  ✓ Alle Pruefungen bestanden.');
+
+console.log('\n════ Die echte Tabelle: April bis September 2026 ════');
+{
+  /* pruefung/fixtures/tank-2026.tsv ist das Blatt «pH/EC Reservoir», so wie
+     es am 26.9. aus Excel kopiert wurde – mit allen Eigenheiten. */
+  const fs=require('fs');
+  A.setDb(A.leer());
+  const zeilen=A.csvZeilen(fs.readFileSync(__dirname+'/fixtures/tank-2026.tsv','utf8'));
+  ok(zeilen[1].length>=12,'Tabulator als Trenner wird erkannt');
+  const t=A.tabBlatt(zeilen);
+  const hat=d=>t.mess.some(m=>m.datum===d);
+  console.log('   Messungen:',t.mess.length,'· Vorschläge:',t.vorschlaege.length,'· Hinweise:',t.hinweise.length);
+  ok(t.mess.length>=80,'Über 80 Messungen aus 29 Tagen');
+  ok(hat('2026-06-17')&&hat('2026-06-25')&&hat('2026-07-02')&&hat('2026-07-21')&&hat('2026-08-12'),'Daten mit Komma («17,06», «2,7», «12,8») werden gelesen');
+  ok(hat('2026-07-09')&&t.vorschlaege.some(x=>x.datum==='2026-07-30'),'Und die mit Punkt ohne Jahr («9.7.», «30.7.»)');
+  const o2=t.mess.filter(m=>m.o2!=null);
+  ok(o2.length===5&&o2.every(m=>m.stelle==='vorne')&&o2[0].o2===5.6,'Die O₂-Spalte kommt an – fünf Werte, alle zur vorderen Stelle');
+  const tipp=t.mess.find(m=>m.datum==='2026-08-14'&&m.stelle==='vorne');
+  ok(tipp&&tipp.ph===1.36&&/Tippfehler/.test(tipp.warnung||''),'pH 1,36 am 14.8. wird als unwahrscheinlich markiert – nicht verworfen, nicht geglaubt');
+  ok(t.hinweise.some(h=>/Zeile 27: kein Datum/.test(h)),'Die Zeile ohne Datum (zweites «10000l BioV-Wasser») wird benannt, nicht stillschweigend datiert');
+  const V=(datum,typ,mittel)=>t.vorschlaege.filter(x=>x.datum===datum&&x.typ===typ&&(mittel===undefined||x.mittel===mittel));
+  ok(V('2026-08-13','Düngergabe','epsotop').length===1&&V('2026-08-13','Desinfektion','halades')[0].menge===1.5,'«5kg EPT + 1.5l HA» → Epsotop 5 kg und Halades 1,5 l');
+  ok(V('2026-08-26','Zusatzdünger / Spurenelemente','kali')[0].menge===1.7&&V('2026-08-26','Zusatzdünger / Spurenelemente','zink')[0].menge===6,'«1,7kg KS + 6g Zn» → Kalisulfat 1,7 kg und Zink 6 g');
+  ok(V('2026-08-25','Säurezugabe','phosphorsaeure')[0].menge===1.2,'«+1,2l PS» → Phosphorsäure 1,2 l');
+  ok(V('2026-08-06','Desinfektion','halades').length===1,'«Haldes PE» mit Tippfehler → Halades');
+  const ps=V('2026-07-21','Säurezugabe','phosphorsaeure');
+  ok(ps.length===2&&ps.some(x=>x.stelle==='vorne'&&x.menge===2100&&x.einheit==='ml')&&ps.some(x=>x.stelle==='hinten'),
+     '«nach PS (vorne 2100ml, hinten 2100ml)» → zwei Gaben, das Mittel aus dem Satzanfang mitgetragen');
+  ok(!t.vorschlaege.some(x=>x.datum==='2026-07-21'&&x.typ==='Notiz'&&/nach PS/.test(x.felder.text||'')),'Und keine überflüssige Notiz «PS erwähnt» daneben');
+  const h2=V('2026-09-16','Säurezugabe','schwefelsaeure25');
+  ok(h2.length===2&&h2.some(x=>x.stelle==='vorne')&&h2.some(x=>x.stelle==='hinten')&&h2.every(x=>x.menge===1),
+     '«RV (ca. 5000l) + 1l H2S04 RH(ca.7000l) + 1l H2SO4» → je 1 l Schwefelsäure vorne und hinten, das Volumen ist keine Zugabe');
+  ok(!t.vorschlaege.some(x=>x.datum==='2026-09-16'&&x.typ==='Wasserzugabe'),'5000 l und 7000 l in der Klammer werden nicht zu Wasserzugaben');
+  const zs=V('2026-08-31','Säurezugabe','zitronensaeure');
+  ok(zs.length===1&&zs[0].menge===1&&zs[0].jeReservoir===true,'«je 1kg Zitronensäure RV + RH» → 1 kg je Reservoir');
+  const mk=t.vorschlaege.filter(x=>/MKBoden/.test(x.felder.text||''));
+  ok(mk.length===2&&mk.every(x=>x.typ==='Notiz'&&/kein hinterlegtes Produkt/.test(x.hinweis||'')),'«MKBoden» ist unbekannt: Notiz mit der Bitte, das Produkt anzulegen – nichts geraten');
+  const a=t.vorschlaege.find(x=>x.datum==='2026-08-18');
+  ok(a&&a.typ==='Notiz'&&/ohne erkennbares Mittel/.test(a.hinweis||''),'«1.4l A» bleibt eine Notiz mit Nachfrage – «A» ist kein bekanntes Kürzel');
+  ok(!t.vorschlaege.some(x=>x.datum==='2026-05-05'&&x.typ==='Notiz'),'«Wasser ohne Dünger» ergibt eine Wasserzugabe und keine zweite Notiz');
+  ok(V('2026-05-26','Düngergabe',null)[0].menge===10&&V('2026-05-26','Düngergabe',null)[0].stelle==='vorne','«10l Dünger» ohne Produktnamen bleibt eine Düngergabe ohne Mittel, vorne');
+  /* Uebernahme in den Bestand: die Baender entstehen von selbst */
+  const d=A.leer();
+  for(const v of t.vorschlaege)if(v.typ!=='Notiz')d.ereignisse.push({id:'e'+d.ereignisse.length,datum:v.datum,typ:v.typ,mittel:v.mittel,menge:v.menge,einheit:v.einheit,jeReservoir:v.jeReservoir,stelle:v.stelle,felder:v.felder||{},geltung:'alle',saetze:[],quelle:'excel'});
+  A.setDb(d);
+  const mg=A.beigabeSpannen('Mg'),k=A.beigabeSpannen('K'),zn=A.beigabeSpannen('Zn'),s=A.beigabeSpannen('S');
+  console.log('   Bänder: Mg',mg.map(x=>x.von+'→'+x.bis).join(','),'· K',k.map(x=>x.von).join(','),'· Zn',zn.map(x=>x.von).join(','),'· S',s.length);
+  ok(mg.length>=1&&mg[0].von==='2026-05-06','Magnesium: Band ab 6. Mai');
+  ok(k.length===1&&k[0].von==='2026-08-26'&&zn.length===1&&zn[0].von==='2026-08-26','Kali und Zink: ab 26. August – die 0,19 % Zink im Biovin zählen nicht als «Zink dazugeben»');
+  ok(s.length>=1,'Schwefel kommt aus Epsotop, Kalisulfat und Schwefelsäure – auch das wird ein Band');
+  /* Die Geschichte je Mittel: von wann bis wann, auch was wieder aufgehoert hat */
+  const M=A.beigabeBalkenMittel();
+  const txt=M.map(x=>x.text);
+  console.log('   Mittel:',txt.join(' | '));
+  ok(txt.some(t=>/^Halades( PE)? 06\.08\.–19\.08\./.test(t)),'Halades: 6. bis 19. August, dann nicht mehr – ein Balken mit Anfang und Ende');
+  ok(txt.some(t=>/^Phosphorsäure .*–25\.08\./.test(t)),'Phosphorsäure: bis 25. August');
+  /* Ob «seit» oder ein einzelner Tag, haengt davon ab, wie lange der 31.8.
+     heute her ist – die Regel sagt: laeuft, solange keine 28 Tage vergangen sind. */
+  ok(txt.some(t=>/^Zitronensäure (seit )?31\.08\./.test(t)),'Zitronensäure: 31. August – und danach nichts mehr in der Tabelle');
+  ok(txt.some(t=>/^Schwefelsäure 25 % seit 16\.09\./.test(t)),'Schwefelsäure: seit 16. September, läuft');
+  ok(txt.some(t=>/^Kalisulfat (seit )?26\.08\./.test(t))&&txt.some(t=>/^Zink (seit )?26\.08\./.test(t)),'Kalisulfat und Zink ab 26. August – in der Tabelle steht danach keine weitere Gabe, also kein «seit» ohne Beleg');
+  ok(M.every(x=>x.tipp&&/Menge gesamt/.test(x.tipp)),'Im Kästchen die Summe – für den Admin, nicht für den Chef');
+  ok(!/Versuch/.test(txt.join(' ')),'Kein Etikett «Versuch» – einfach die Daten');
+}
+
+console.log('\n════ Ergebnis ════');
+console.log(fehler?`  ${fehler} FEHLER`:'  ✓ Alle Prüfungen bestanden.');
 process.exit(fehler?1:0);

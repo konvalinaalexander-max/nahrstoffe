@@ -161,13 +161,21 @@ Neu: `schwefelsaeure25`, `kali`, `zink`; Epsotop heisst «Magnesium
 (Epsotop)» und wird in Gramm dosiert.
 
 **Beigabe-Bänder.** `beigabeSpannen(k)` bildet aus den Logbucheinträgen der
-Produkte, die einen Nährstoff enthalten (`gehalt`) oder liefern (`liefert`),
+Produkte, die einen Nährstoff zu mindestens 1 % enthalten (`gehalt`,
+`BEIGABE_MINDESTGEHALT`) oder ausdrücklich liefern (`liefert`) — die 0,19 %
+Zink im Biovin sind kein «Zink dazugeben», dafür gibt es die Eingangsbilanz —,
 zusammenhängende Spannen (Lücke > 28 Tage trennt; läuft, wenn die letzte Gabe
 höchstens 28 Tage her ist). `beigabeBalken(keys, farbe)` macht daraus Zeilen
 unter der Zeitachse in `chartPunkte` und `chartStapel` (`spannen:`), in der
 Farbe des Nährstoffs, mit Kästchen; Klick → `AKTION.spanne` zeigt jede Gabe.
 Gekoppelt an die gewählten Nährstoffe in Überblick, Nährstoffe, Giesswasser,
-Verlauf.
+Verlauf — das ist der Modus «zur Auswahl». Der Standard ist **«alle Mittel»**
+(`beigabeBalkenMittel`, `beigabenModus`): eine Zeile je Mittel, von wann bis
+wann, in fester Farbe (`MITTEL_FARBE`) — Halades 6.–19. August und dann nicht
+mehr, Phosphorsäure bis 25. August, Schwefelsäure seit 16. September. Das ist
+die Geschichte für den Chef; kein Etikett «Versuch», einfach die Daten. Der
+Schalter (alle Mittel · zur Auswahl · keine) steht in jeder Diagrammkarte,
+bleibt im Modus «Wesentlich» sichtbar und ist eine persönliche Einstellung.
 
 **Persönliche Ansicht** (`ansichtMerken`/`ansichtLaden`) liegt im
 localStorage dieses Geräts: gewählte Nährstoffe, Achsen, Filter, offener
@@ -175,6 +183,31 @@ Reiter, Wesentlich/Alles. Das ist der einzige Gebrauch des Browserspeichers
 in der Büro-Ansicht – nie der Bestand. **Wesentlich** (`body.wesentlich`)
 zeigt nur `.card.haupt` und darin nur `.wz.haupt` – die Karten und
 Nährstoffreihen sind so markiert.
+
+**Der Tabellenimport an der echten Tabelle (26. September).** Das Blatt
+«pH/EC Reservoir» von April bis September liegt als
+`pruefung/fixtures/tank-2026.tsv` im Repository und wird in `x1.js` Zeile für
+Zeile geprüft. Was daran gelernt wurde und jetzt im Parser steht:
+
+- Daten mit Komma («17,06», «2,7») sind Daten; ein fehlendes oder unlesbares
+  Datum übernimmt das der Zeile davor **und sagt es** (Hinweis mit Zeile).
+- Die Spalte **O₂** gehört zur vorderen Messung (das Gerät hängt vorne).
+- Kürzel, wie sie hinten geschrieben werden: `ET`/`EPT` Epsotop, `KS`
+  Kalisulfat, `Zn` Zink, `HA` Halades (auch «Haldes»), `PS` Phosphorsäure,
+  `ZS` Zitronensäure, `H2SO4`/`H2S04` Schwefelsäure, `RV`/`RH` vorne/hinten.
+  Kürzel gelten nur in genau dieser Schreibung; Wörter ohne Rücksicht auf
+  Gross und Klein. Unbekanntes («MKBoden», «1.4l A») bleibt eine Notiz mit
+  Nachfrage.
+- «RV (ca. 5000l)» ist das Reservoirvolumen, keine Zugabe; ein Stellenwort
+  am Ende eines Teils gehört zum nächsten Teil («1l H2SO4 RH …»).
+- **Liter ab 500 sind Wasser**, nie Dünger — daraus wird eine Wasserzugabe
+  (mit Dünger, wenn im selben Teil einer steht), der Rest bleibt für das
+  Produkt. «15'000l (je Reservoir ca. 7500l)» nennt eine Gesamtmenge:
+  nichts wird verdoppelt.
+- «nach PS (vorne 2100ml, hinten 2100ml)»: das Mittel aus dem Satzanfang
+  wird zu den Mengen der Stellen mitgetragen — zwei Gaben, keine Notiz.
+- pH ausserhalb 3–10 (der echte Tippfehler «1,36») wird rot markiert und
+  angehakt gelassen: nicht verworfen, nicht geglaubt.
 
 **Schema 9: Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
 `o2` (mg/l), `o2sat` (%) und `wer`; `ereignisse` haben `wer`; `einst.hoeheM`
@@ -603,7 +636,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (569 Einzelprüfungen, ohne Browser)
+# 2 · Fachliche Regressionsprüfungen (600 Einzelprüfungen, ohne Browser)
 for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser

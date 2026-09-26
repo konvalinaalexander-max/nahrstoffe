@@ -463,7 +463,11 @@ require('fs').mkdirSync(shots,{recursive:true});
     await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(200);
     const marke=await p.$('#cNs [data-tun="fotoTag"]');
     if(marke){
+      /* Das Diagramm ist mit den Beigabe-Zeilen hoeher als das Fenster – die
+         Marke muss erst sichtbar sein, sonst zeigt die Maus ins Leere. */
+      await marke.scrollIntoViewIfNeeded();await p.waitForTimeout(200);
       const bb=await marke.boundingBox();
+      await p.mouse.move(4,4);await p.waitForTimeout(80);
       await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.waitForTimeout(150);
       const bild=await p.$$eval('.tipp img',e=>e.length);
       console.log((bild>0?'  ✓ ':'  ✗ ')+'Das Infokaestchen zeigt ein Vorschaubild');

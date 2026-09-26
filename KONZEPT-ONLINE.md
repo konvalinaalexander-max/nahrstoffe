@@ -259,6 +259,14 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
    den Text, den die App aus dem PDF gelesen hat. Jede Zahl lässt sich dort
    nachlesen; kein PDF muss aufbewahrt werden.
 
-Weiterhin offen: die Excel-Datei des letzten halben Jahres (Beigaben seit
-April) – sie wird eingelesen, sobald sie da ist; die Bänder entstehen dann
-von selbst aus den Einträgen.
+9. **Balken je Mittel, keine Versuchs-Etiketten** (Nachtrag vom Abend).
+   Die Balken erzählen je Mittel: Halades vom 6. bis 19. August und dann
+   nicht mehr, Phosphorsäure bis 25. August, Zitronensäure Ende August,
+   Schwefelsäure seit 16. September, Magnesium seit Mai, Kali und Zink seit
+   26. August. Der Zitronensäure-Versuch vom September wird nicht als
+   Versuch ausgewiesen – es sind Messungen und Gaben wie alle anderen. Die
+   Mengen stehen im Kästchen, für den Admin; der Chef sieht den Balken.
+10. **Die Tabelle April–September** liegt als Fixture im Repository und
+    wird beim Import Zeile für Zeile geprüft (siehe `BRIEFING.md`,
+    Tabellenimport). Was darin nicht eindeutig ist, bleibt eine Notiz mit
+    Nachfrage: «1.4l A» am 18. August, «MKBoden» am 17. September.
