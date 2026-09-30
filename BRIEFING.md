@@ -5,7 +5,7 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 9
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten — und mehrere davon sind nicht offensichtlich.
 
-Stand: 26. September 2026 · Schema 10 · rund 415 KB, 5600 Zeilen – plus `erfassen.html` (Handy) und `server.js` (Online). Konzept dazu: `KONZEPT-ONLINE.md`, Hosting: `ONLINE.md`.
+Stand: 30. September 2026 · Schema 11 · rund 505 KB, 7300 Zeilen – plus `erfassen.html` (Eingabemaske fürs Handy, online unter `/maske`) und `server.js` (Online, ohne Passwort). Konzept dazu: `KONZEPT-ONLINE.md`, Hosting: `ONLINE.md`.
 
 ---
 
@@ -152,6 +152,49 @@ Tages sind **eine** Erhebung mit zwei Proben. Fast alle Auswertungen arbeiten au
 Erhebungen, nicht auf Analysen. `e.proben` ist `{jung, alt, misch}`, `e.bew` die
 Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
 
+**Schema 11: Entscheide vom 30. September.**
+
+- **Uhrzeit.** `messungen` und `ereignisse` haben `zeit` («HH:MM», Ortszeit
+  des Geräts) oder `null`. Die Maske setzt sie von selbst (das Feld «läuft
+  mit», bis jemand es anfasst), der Server nimmt sie vom Handy, nie von
+  sich (er läuft in UTC). `heute()` ist jetzt das Datum des Geräts, nicht
+  das UTC-Datum. Auf den Zeitachsen: `zeitpunkt(x)` = UTC-Mitternacht des
+  Tages + Minuten. Mehrere Messungen ohne Uhrzeit am selben Tag und
+  derselben Stelle verteilt `messLage()` in ihrer Reihenfolge zwischen 6 und
+  20 Uhr; das Kästchen sagt «Uhrzeit nicht erfasst – 2. von 5». Sortiert
+  wird mit `chrono`/`chronoAb`. `zeitMarken` zeigt unter 3 Tagen Stunden,
+  unter 16 Tagen Tage. Tabellenimport: Spalte «Zeit»/«Uhrzeit», Excel-Bruchteile,
+  «17.09.2026 09:05» in einer Zelle (`tabZeit`). Beim Übernehmen gehen jetzt
+  auch O₂ und Uhrzeit mit – vorher fiel der Sauerstoff dort stillschweigend weg.
+- **EM.** Produkt `em` «EM (Effektive Mikroorganismen, «MKBoden»)», Liter,
+  ohne Gehalt; der Import liest «MKBoden» als EM. «Biologisches Präparat»
+  zählt jetzt zum Kreislauf (`kreis:1`).
+- **Balken je Mittel, einzeln schaltbar.** Im Modus «je Mittel» steht unter
+  dem Schalter je Mittel ein Knopf in seiner Farbe (`beigabeMittelListe`,
+  `mittelAus`, persönlich im localStorage). Ein Balken **endet** auch, wenn
+  danach ein «Tank neu angesetzt» kommt (`beigabeLaeuft`) — sonst stünde die
+  Zitronensäure vom 9.9. nach dem Abpumpen noch wochenlang als «seit 31.08.»
+  da. «Menge gesamt» zählt g und kg (ml und l) zusammen und nennt Gaben ohne
+  Menge (`beigabeSumme`).
+- **Das Datenpaket** `PAKET_RES26` (Abschnitt 12b2): die Reservoir-Tabelle
+  April–September und der Bericht über die Säure, von Hand gelesen und mit den
+  Entscheiden des Betriebs eingetragen — «A» = Halades, «MKBoden» = EM, die
+  Zeile ohne Datum und pH 1,36 weggelassen, die Betriebsregel «1 kg Kalisulfat
+  pro 10'000 l» nicht als Gabe. 111 Messungen, 70 Logbucheinträge, feste
+  Kennungen (`p26m-…`, `p26e-…`), jeder mit `quelle:'paket'`, `paket` und
+  `beleg` (Tabellenzeile samt Rohtext oder Berichtsteil). Aktiviert wird über
+  den Hinweis in Überblick/Giesswasser/Logbuch oder die Karte «Vorbereitete
+  Daten» in den Einstellungen: zweimal aktivieren trägt nichts doppelt ein,
+  ein früherer Excel-Import im selben Zeitraum wird auf Wunsch ersetzt,
+  «Wieder entfernen» nimmt alles heraus. `db.pakete[id]` merkt sich den Stand.
+  **Wer das Paket ändert, ändert Kennungen nie** — sonst stünde nach einem
+  zweiten Aktivieren alles doppelt. `z1.js` hält jeden Entscheid fest.
+- **Online ohne Passwort** (siehe «Online» unten): `/` ist das Dashboard,
+  `/maske` die Eingabemaske, die nur nach dem Namen fragt (2–20 Zeichen;
+  kurze Kürzel werden gross geschrieben, Namen bleiben wie getippt) und
+  keinen Link ins Dashboard hat. Im Dashboard oben rechts «Maske ↗» und
+  «QR-Code» (Drucken, als Bild speichern).
+
 **Schema 10: Entscheide vom 26. September.** Zielwochen `[2,4]` und
 Kulturdauer 4/6 Wochen – bestehende Bestände mit den alten Vorgaben werden
 gehoben und sagen es; eigene Werte bleiben. Produkte tragen `einheit`
@@ -169,13 +212,14 @@ höchstens 28 Tage her ist). `beigabeBalken(keys, farbe)` macht daraus Zeilen
 unter der Zeitachse in `chartPunkte` und `chartStapel` (`spannen:`), in der
 Farbe des Nährstoffs, mit Kästchen; Klick → `AKTION.spanne` zeigt jede Gabe.
 Gekoppelt an die gewählten Nährstoffe in Überblick, Nährstoffe, Giesswasser,
-Verlauf — das ist der Modus «zur Auswahl». Der Standard ist **«alle Mittel»**
+Verlauf — das ist der Modus «zur Auswahl». Der Standard ist **«je Mittel»**
 (`beigabeBalkenMittel`, `beigabenModus`): eine Zeile je Mittel, von wann bis
 wann, in fester Farbe (`MITTEL_FARBE`) — Halades 6.–19. August und dann nicht
 mehr, Phosphorsäure bis 25. August, Schwefelsäure seit 16. September. Das ist
 die Geschichte für den Chef; kein Etikett «Versuch», einfach die Daten. Der
-Schalter (alle Mittel · zur Auswahl · keine) steht in jeder Diagrammkarte,
-bleibt im Modus «Wesentlich» sichtbar und ist eine persönliche Einstellung.
+Schalter (je Mittel · zur Auswahl · keine) steht in jeder Diagrammkarte,
+darunter je Mittel ein Knopf zum Aus- und Einblenden; beides bleibt im Modus
+«Wesentlich» sichtbar und ist eine persönliche Einstellung.
 
 **Persönliche Ansicht** (`ansichtMerken`/`ansichtLaden`) liegt im
 localStorage dieses Geräts: gewählte Nährstoffe, Achsen, Filter, offener
@@ -196,8 +240,8 @@ Zeile geprüft. Was daran gelernt wurde und jetzt im Parser steht:
   Kalisulfat, `Zn` Zink, `HA` Halades (auch «Haldes»), `PS` Phosphorsäure,
   `ZS` Zitronensäure, `H2SO4`/`H2S04` Schwefelsäure, `RV`/`RH` vorne/hinten.
   Kürzel gelten nur in genau dieser Schreibung; Wörter ohne Rücksicht auf
-  Gross und Klein. Unbekanntes («MKBoden», «1.4l A») bleibt eine Notiz mit
-  Nachfrage.
+  Gross und Klein. «MKBoden» und `EM` sind EM (seit 30.09.). Unbekanntes
+  («1.4l A») bleibt eine Notiz mit Nachfrage – im Datenpaket ist es geklärt.
 - «RV (ca. 5000l)» ist das Reservoirvolumen, keine Zugabe; ein Stellenwort
   am Ende eines Teils gehört zum nächsten Teil («1l H2SO4 RH …»).
 - **Liter ab 500 sind Wasser**, nie Dünger — daraus wird eine Wasserzugabe
@@ -215,9 +259,9 @@ Zeile geprüft. Was daran gelernt wurde und jetzt im Parser steht:
 Die Messreihen aus dem Bericht «pH- und Säure-Praxisversuch» (31.08.–10.09.,
 Zitronensäure, O₂ 0,2 mg/l, Neufüllung am 10.09.) liegen abgeschrieben als
 `pruefung/fixtures/praxis-2026.tsv` im selben Tabellenformat – zum Einspielen
-über «Tabelle importieren» und als zweite Prüfreihe in `x1.js`. Uhrzeiten
-kennt das Modell nicht: mehrere Messungen am selben Tag bleiben getrennte
-Einträge in der Reihenfolge der Tabelle. Nichts davon heisst «Versuch».
+über «Tabelle importieren» und als zweite Prüfreihe in `x1.js`, mit der
+Spalte «Zeit» für den 9. und 10. September. Dieselben Daten stecken
+bereinigt im Datenpaket. Nichts davon heisst «Versuch».
 
 **Schema 9: Sauerstoff, Kürzel, Satzpaare.** `messungen` haben
 `o2` (mg/l), `o2sat` (%) und `wer`; `ereignisse` haben `wer`; `einst.hoeheM`
@@ -276,7 +320,20 @@ Ausgeschlossenes aus den Diagrammen.
 - `einst.systemLiter` wird von 20 000 auf **19 200 l** berichtigt (2 × 9 600).
   Die Migration sagt das in ihrem Bericht.
 
-**Online (seit 26. September).** Läuft die Seite von `server.js` (http statt
+**Online (seit 26. September, ohne Passwort seit 30. September).** Der
+Betrieb hat entschieden: kein Login. `/` öffnet direkt das Dashboard,
+`/maske` die Eingabemaske (per QR-Code am Tank), `/erfassen` leitet dorthin.
+Schutz sind die lange Railway-Adresse, `X-Robots-Tag: noindex` und
+`/robots.txt` gegen Suchmaschinen, und die Sicherungskopien des Servers. Ein
+Passwort lässt sich ohne Codeänderung wieder einschalten: `ADMIN_PASSWORT`
+schützt Dashboard und Bestand (die Maske bleibt offen), `MASKE_PASSWORT`
+(alter Name `HINTEN_PASSWORT`) auch die Maske. Ohne jedes Passwort ignoriert
+der Server mitgeschickte Zugangsdaten ganz – sonst würde ein Browser mit
+alten Daten als Fehlversuch gesperrt. Das Log sagt beim Start, was gilt, und
+auf Railway, ob ein Volume unter `/daten` hängt. Das `Dockerfile` hat
+**kein `VOLUME`** — Railway bricht den Bau damit ab.
+
+Läuft die Seite von `server.js` (http statt
 file), holt sie den Bestand von `/api/bestand`, schreibt Änderungen nach
 1,5 s Ruhe zurück (`aend()` → `onlinePlanen()` → `sichernOnline()`) und
 fragt alle 30 s `/api/version`. Vom Ordner geöffnet ändert sich **nichts** —
@@ -285,12 +342,13 @@ dieselbe Datei läuft in beiden Modi, `onlineStart()` entscheidet beim Start.
 Gleichzeitigkeit in drei Sätzen: jeder `PUT` trägt `basisVersion`; bei 409
 holt die App den fremden Stand, `vereinigen()` bildet je Liste die
 Vereinigung nach `id` und schreibt noch einmal. Messungen und Beigaben von
-der Handy-Seite (`erfassen.html`, Rolle `hinten`) werden serverseitig nur
+der Maske (`erfassen.html` unter `/maske`) werden serverseitig nur
 *angehängt* — sie kollidieren nie. Was dabei zurückkommen kann, ist ein
 Eintrag, den man gerade gelöscht hatte; das wird gezählt und gesagt.
 
-Die Rolle `hinten` sieht **nicht** den Bestand, nur `/api/kontext` (Stellen,
-Produkte, letzte Werte). Der Server (`server.js`, reines Node, keine
+Die Maske selbst holt **nicht** den Bestand, nur `/api/kontext` (Stellen,
+Produkte, letzte Werte) – mit Passwort ist das auch serverseitig erzwungen.
+Der Server (`server.js`, reines Node, keine
 Abhängigkeiten) prüft jeden Eintrag von hinten auf erlaubte Felder, Zahlen
 und Datum; Kennung und Herkunft vergibt er selbst.
 
@@ -599,7 +657,8 @@ weiter, auch wenn du eine bessere Lösung siehst — dann sag es, bevor du es tu
 
 1. **Eine einzige HTML-Datei bleibt das Lieferformat** der Admin-Ansicht.
    Kein Build, kein Bundler, keine Modulaufteilung. Seit dem 26. September
-   kommen `erfassen.html` (eine zweite, eigenständige Seite fürs Handy)
+   kommen `erfassen.html` (eine zweite, eigenständige Seite fürs Handy,
+   online unter `/maske`, ohne Link ins Dashboard)
    und `server.js` dazu — beide ebenfalls je eine Datei ohne
    Abhängigkeiten. Vom Ordner geöffnet läuft `basilikum.html` weiter
    genau wie zuvor.
@@ -608,8 +667,11 @@ weiter, auch wenn du eine bessere Lösung siehst — dann sag es, bevor du es tu
    (Abschnitt 4) wird laufend gesichert, weil bei mehreren Menschen der
    ungesicherte Stand in einem Browserfenster genau das ist, was verloren
    geht; der Knopf heisst dort «Jetzt sichern» und «Kopie herunterladen».
-   localStorage bleibt für den Bestand ausgeschlossen; die Handy-Seite
-   nutzt ihn nur für das Kürzel und die Warteschlange ohne Netz.
+   localStorage bleibt für den Bestand ausgeschlossen; die Maske nutzt ihn
+   nur für den Namen und die Warteschlange ohne Netz, das Dashboard nur für
+   die persönliche Ansicht.
+   **Online ohne Passwort** ist ein Entscheid des Betriebs vom 30. September
+   — nicht still wieder einführen; der Weg zurück ist eine Umgebungsvariable.
 3. **Firefox muss funktionieren.** Verwende nichts, was Firefox nicht seit
    Jahren unterstützt.
 4. **Sprache: Deutsch, Schweizer Rechtschreibung (ss statt ß).** Keine
@@ -646,8 +708,8 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (610 Einzelprüfungen, ohne Browser)
-for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$f.js; done
+# 2 · Fachliche Regressionsprüfungen (731 Einzelprüfungen, ohne Browser)
+for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 z1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
 CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
@@ -657,8 +719,11 @@ CHROME=/pfad/zu/chromium NODE_PATH=… PDFJS=…/pdfjs-dist/build \
 PDF=…/probe.pdf  node pruefung/upload.js     # echtes Blattsaft-PDF
 GW=…/gw          node pruefung/gwupload.js   # drei echte Wasserberichte
 BILDER=…/bilder  node pruefung/rundreise.js  # sichern, Datei öffnen, weiterarbeiten
-node pruefung/tank.js                        # Handy-Seite gegen den echten Server
-node pruefung/online.js                      # Admin-Seite vom Server: laufend sichern, Konflikt, Auffrischen
+node pruefung/tank.js                        # Maske gegen den echten Server
+node pruefung/online.js                      # Dashboard vom Server: laufend sichern, Konflikt, Auffrischen
+node pruefung/paket.js                       # der erste Tag online: Sicherung, Paket, QR-Code, Handy, Neustart
+# paket.js liest den QR-Code zurück: im NODE_PATH jsqr und pngjs, daneben qrcode.min.js
+# (cdnjs qrcode-generator 1.4.4) – oder QRJS=… auf die Datei zeigen lassen.
 ```
 
 | Datei | Zweck |
@@ -674,13 +739,15 @@ node pruefung/online.js                      # Admin-Seite vom Server: laufend s
 | `d1` | Selbstsicherung: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
 | `st1` | Entnahmestellen zuordnen — gegen die vier echten Berichte mit ihren vier Schreibweisen |
 | `o1` | Schema 9, Sättigungsgrenze, `vereinigen`, Satzpaare, Stand in der Kopfzeile |
-| `server1` | `server.js` als eigener Prozess: Rollen, Anhängen, 409 bei veralteter Version, Sicherungskopien, Neustart |
+| `z1` | Schema 11: Uhrzeit (Normalform, Achse, Verteilung, Import), EM, Balken je Mittel und ihr Ende beim Neuansatz, das Datenpaket mit jedem Entscheid, Aktivieren/Ergänzen/Entfernen |
+| `server1` | `server.js` als eigener Prozess: offen ohne Passwort, nur Dashboard geschützt, beide Passwörter; `/maske`, Umleitung, noindex, Anhängen, Uhrzeit, 409, Sicherungskopien, Neustart |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
 | `upload.js`, `gwupload.js` | echte PDFs, ganzer Weg von der Datei zur Auswertung |
 | `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
-| `tank.js` | Chromium (Handy-Format) gegen `server.js`: messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da |
-| `online.js` | Chromium gegen `server.js`: Admin-Seite lädt, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen |
+| `tank.js` | Chromium (Handy-Format) gegen `server.js`, offen: Name, Uhrzeit von selbst und von Hand, messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da, kein Link ins Dashboard |
+| `online.js` | Chromium gegen `server.js`: Dashboard ohne Login, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen |
+| `paket.js` | Chromium: leerer Server → Sicherung einspielen → Paket aktivieren → Balken, Uhrzeit, Schalter → QR-Code zurückgelesen → Handy mit Namen → Neustart |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
 gitignoriert. Wer die HTML-Datei ändert und die Prüfungen laufen lässt, ohne

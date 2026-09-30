@@ -43,7 +43,8 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
  'stellenVorschlag','stellenListe','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar','stellenDb','stellenDialog','stellenChip','STELLEN_VORGABE','gwStelle','gwProben',
  'satzpaare','PAAR_TOLERANZ','o2Saettigung','O2_LOESLICH','messStelle','vereinigen','ONLINE','onlineStand','zoomMelden',
- 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz',
+ 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz','beigabeMittelListe','beigabeLaeuft','beigabeSumme','beigabenSchalter','MITTEL_FARBE',
+ 'PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte','zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','tabZeit','heute','jetztZeit',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
  'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',
@@ -53,5 +54,5 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
 
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
-  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, getTab:()=>tab, setMittelAus:x=>{mittelAus=x}, getMittelAus:()=>mittelAus, setModus:x=>{beigabenModus=x}, setTabPruef:x=>{TABPRUEF=x}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
 module.exports=fn(module,{},require,global.document,global.window,global);

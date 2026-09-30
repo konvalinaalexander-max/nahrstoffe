@@ -50,14 +50,20 @@ kein `onclick`, keine erfundene Sicherheit, keine Dosierempfehlung.
                                    └──────────────────────────────┘
 ```
 
+> **Nachtrag 30. September:** Der Betrieb will **kein Passwort und kein
+> Login.** `/` öffnet direkt das Dashboard, `/maske` die Eingabemaske (per
+> QR-Code am Tank), die nur nach dem Namen fragt und keinen Link ins
+> Dashboard hat. Die Rollen unten gibt es weiter – aber nur, wenn jemand
+> die Passwörter als Umgebungsvariable setzt (siehe §9, Punkt 11).
+
 **`server.js`** — eine Datei, reines Node ohne `npm install`. Liefert die zwei
 Seiten aus, hält den Bestand als JSON-Datei, schreibt bei jeder Änderung eine
-datierte Sicherungskopie, und kennt zwei Rollen:
+datierte Sicherungskopie, und kennt – freiwillig – zwei Rollen:
 
 | Rolle | Passwort | darf |
 |---|---|---|
 | `admin` | `ADMIN_PASSWORT` | alles: Bestand lesen und schreiben, beide Seiten |
-| `hinten` | `HINTEN_PASSWORT` | Messungen und Beigaben eintragen, den Kontext dafür lesen (Stellen, Produkte, letzte Werte) – **nicht** den ganzen Bestand |
+| `hinten` | `MASKE_PASSWORT` (auch `HINTEN_PASSWORT`) | Messungen und Beigaben eintragen, den Kontext dafür lesen (Stellen, Produkte, letzte Werte) – **nicht** den ganzen Bestand |
 
 Der Browser fragt das Passwort einmal ab und merkt es sich. Kein
 Benutzerkonto je Person – aber jeder Eintrag trägt ein Kürzel, damit man
@@ -268,5 +274,28 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
    Mengen stehen im Kästchen, für den Admin; der Chef sieht den Balken.
 10. **Die Tabelle April–September** liegt als Fixture im Repository und
     wird beim Import Zeile für Zeile geprüft (siehe `BRIEFING.md`,
-    Tabellenimport). Was darin nicht eindeutig ist, bleibt eine Notiz mit
-    Nachfrage: «1.4l A» am 18. August, «MKBoden» am 17. September.
+    Tabellenimport). Was darin nicht eindeutig ist, bleibt beim Import eine
+    Notiz mit Nachfrage.
+
+## 10 · Entschieden (30. September)
+
+11. **Kein Passwort, kein Login.** Dashboard unter `/`, Eingabemaske unter
+    `/maske` (per QR-Code am Tank; der Code steht im Dashboard oben rechts,
+    zum Drucken). Die Maske fragt nur nach dem Namen, jede Stunde neu, und
+    hat keinen Link ins Dashboard. Schutz: lange Adresse, keine Suchmaschine
+    (`noindex`, `robots.txt`), Sicherungskopien auf dem Server. Wer später
+    ein Passwort will, setzt `ADMIN_PASSWORT` (und/oder `MASKE_PASSWORT`) –
+    ohne Codeänderung.
+12. **Uhrzeiten.** Jede Messung und jede Beigabe trägt ab jetzt die Uhrzeit
+    des Handys. Alte Einträge ohne Uhrzeit bleiben ohne; im Diagramm werden
+    mehrere am selben Tag in ihrer Reihenfolge verteilt und als «Uhrzeit
+    nicht erfasst» bezeichnet.
+13. **Klärungen zur Tabelle:** «A» ist HA (Halades), «MKBoden» ist EM
+    (Effektive Mikroorganismen) – mit eigenem Balken; die Zeile ohne Datum
+    war ein Versehen; pH 1,36 ist zu ignorieren; «neu jeweils 1 kg
+    Kalisulfat pro 10'000 l …» ist eine Betriebsregel, keine Gabe. Annahmen
+    sind erlaubt, wenn sie als solche dastehen.
+14. **Die Daten April–September kommen fertig mit.** Von Hand gelesen,
+    bereinigt, mit Uhrzeiten aus dem Bericht, als Paket in der Anwendung;
+    online ein Klick auf «Aktivieren». Jeder Balken lässt sich je Mittel
+    ein- und ausblenden, auch EM und Halades.

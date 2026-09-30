@@ -1,4 +1,5 @@
-/* Die Handy-Seite hinten am Tank, im echten Browser gegen den echten Server:
+/* Die Eingabemaske («/maske») hinten am Tank, im echten Browser gegen den
+   echten Server – offen, ohne Passwort, wie er betrieben wird:
    Namensschranke, messen (O₂ nur vorne), Säure · Düngen · nur Wasser,
    Netz weg, Warteschlange, Netz da, die Stunde ist um.
    Aufruf:  CHROME=… NODE_PATH=… node pruefung/tank.js                      */
@@ -17,7 +18,7 @@ fs.mkdirSync(shots,{recursive:true});
    so, wie er nach der ersten Sitzung im Büro aussieht. */
 fs.mkdirSync(path.join(daten,'sicherungen'),{recursive:true});
 fs.writeFileSync(path.join(daten,'bestand.json'),JSON.stringify({version:3,geaendert:'2026-09-25T10:00:00Z',von:'admin',db:{
-  schema:10,analysen:[],ereignisse:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
+  schema:11,analysen:[],ereignisse:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
   messungen:[{id:'m0',datum:'2026-09-25',stelle:'Reservoir vorne',ph:6.1,ec:1.8,o2:7.9,temp:20,wer:'AK',quelle:'erfassen'}],
   stellen:{gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}},
   produkte:{biovin:{name:'Biovin Bio-Kraftdünger 9N',form:'fluessig'},epsotop:{name:'Magnesium (Epsotop, Bittersalz)',form:'fest',einheit:'g'},
@@ -27,8 +28,8 @@ fs.writeFileSync(path.join(daten,'bestand.json'),JSON.stringify({version:3,geaen
 
 function starten(){
   return new Promise((res,rej)=>{
-    const p=spawn(process.execPath,[path.join(__dirname,'..','server.js')],{env:Object.assign({},process.env,
-      {PORT:String(PORT),DATEN:daten,ADMIN_PASSWORT:'a',HINTEN_PASSWORT:'h'}),stdio:['ignore','pipe','pipe']});
+    const p=spawn(process.execPath,[path.join(__dirname,'..','server.js')],{env:(()=>{const e=Object.assign({},process.env,{PORT:String(PORT),DATEN:daten});
+      for(const k of ['ADMIN_PASSWORT','HINTEN_PASSWORT','MASKE_PASSWORT'])delete e[k];return e})(),stdio:['ignore','pipe','pipe']});
     let out='';p.stdout.on('data',d=>{out+=d;if(/läuft auf Port/.test(out))res(p)});p.stderr.on('data',d=>out+=d);
     setTimeout(()=>rej(new Error('Server startet nicht: '+out)),5000);
   });
@@ -39,8 +40,7 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
 (async()=>{
   const server=await starten();
   const b=await chromium.launch(process.env.CHROME?{executablePath:process.env.CHROME,args:['--no-sandbox']}:{});
-  const ctx=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2,
-    httpCredentials:{username:'hinten',password:'h'}});
+  const ctx=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   const p=await ctx.newPage();
   const stoerung=[];
   p.on('pageerror',e=>stoerung.push('pageerror: '+e.message));
@@ -49,8 +49,8 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/Failed to load resource|net::ERR_/.test(t))stoerung.push('console: '+t)});
 
   console.log('════ Wer misst? ════');
-  await p.goto(B+'/erfassen');await p.waitForTimeout(700);
-  ok(/Am Tank/.test(await p.title()),'Die Seite öffnet mit den Zugangsdaten der Rolle «hinten»');
+  await p.goto(B+'/maske');await p.waitForTimeout(700);
+  ok(/Am Tank/.test(await p.title()),'«/maske» öffnet ohne Anmeldung, ohne Passwort');
   ok(!(await p.$eval('#schranke',e=>e.hidden)),'Zuerst die Schranke: ohne Kürzel geht nichts');
   await p.screenshot({path:shots+'/tank-schranke.png'});
   await p.fill('#schrankeWer','m');await p.click('#schranke button:text-is("Weiter")');await p.waitForTimeout(200);
@@ -77,13 +77,19 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
   const neu=db.messungen[db.messungen.length-1];
   ok(db.messungen.length===2&&neu.ph===6.3&&neu.ec===1.9&&neu.o2===7.4&&neu.temp===21,'Der Eintrag ist im gemeinsamen Bestand – mit Komma wie mit Punkt');
   ok(neu.wer==='MK'&&neu.quelle==='erfassen'&&neu.stelle==='Reservoir vorne','Mit Kürzel, Herkunft und Stelle');
+  const uhrJetzt=await p.evaluate(()=>{const d=new Date();return d.getHours()*60+d.getMinutes()});
+  ok(/^\d\d:\d\d$/.test(neu.zeit||'')&&Math.abs((+neu.zeit.slice(0,2)*60+ +neu.zeit.slice(3))-uhrJetzt)<=2,'Mit der Uhrzeit des Handys, von selbst: '+neu.zeit);
+  ok(/läuft mit/.test(await p.$eval('#mZeitHinweis',e=>e.textContent)),'Das Uhrzeit-Feld sagt, dass es mitläuft');
   ok((await p.$eval('#mPh',e=>e.value))==='','Die Felder sind danach leer für die nächste Messung');
-  await p.fill('#mPh','8,4');
+  await p.fill('#mPh','8,4');await p.fill('#mZeit','07:30');
+  ok(/von Hand/.test(await p.$eval('#mZeitHinweis',e=>e.textContent)),'Von Hand gesetzt: das Feld läuft nicht mehr mit');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(400);
   ok(/grosser Sprung/.test(await p.$eval('#mMeld',e=>e.textContent)),'pH 8,4 nach 6,3: die Seite fragt nach');
   db=await bestand();ok(db.messungen.length===2,'Und hat noch nichts gespeichert');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(700);
   db=await bestand();ok(db.messungen.length===3&&db.messungen[2].ph===8.4,'Nochmals antippen bestätigt');
+  ok(db.messungen[2].zeit==='07:30','Eine von Hand gesetzte Uhrzeit gilt (Nachtrag)');
+  ok(/läuft mit/.test(await p.$eval('#mZeitHinweis',e=>e.textContent)),'Danach läuft das Feld wieder mit');
   await p.fill('#mPh','sechs');await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(300);
   ok(/keine Zahl/.test(await p.$eval('#mMeld',e=>e.textContent)),'«sechs» ist keine Zahl – gesagt, nicht geraten');
   await p.fill('#mPh','');
@@ -98,6 +104,7 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
   ok(/Eingetragen/.test(sm)&&/1.5 l vorne|1,5 l vorne/.test(sm)&&/1 l hinten/.test(sm),'Bestätigung: '+sm.replace(/\n/g,' '));
   db=await bestand();
   const sae=db.ereignisse.filter(e=>e.typ==='Säurezugabe');
+  ok(sae.length&&sae.every(e=>/^\d\d:\d\d$/.test(e.zeit||'')),'Beigaben tragen die Uhrzeit des Eintragens');
   ok(sae.length===2&&sae[0].stelle==='vorne'&&sae[0].menge===1.5&&sae[1].stelle==='hinten'&&sae[1].menge===1,'Zwei Einträge im Logbuch: vorne 1,5 l, hinten 1 l');
   ok(sae.every(e=>e.mittel==='schwefelsaeure25'&&e.einheit==='l'&&e.wer==='MK'&&e.notiz==='pH vorher 7,4'),'Beide mit Säure, Liter, Kürzel und Notiz');
   await p.screenshot({path:shots+'/tank-saeure.png'});
@@ -155,7 +162,7 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
 
   console.log('\n════ Die Stunde ist um ════');
   await p.evaluate(()=>{const w=JSON.parse(localStorage.getItem('tank.wer'));w.bis=Date.now()-1000;localStorage.setItem('tank.wer',JSON.stringify(w))});
-  await p.fill('#mPh','8,3');
+  await p.fill('#mPh','6,5');   /* nah am letzten Wert (nach Uhrzeit: 6,3) – sonst fragt die Seite zu Recht nach */
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(400);
   ok(!(await p.$eval('#schranke',e=>e.hidden)),'Nach Ablauf der Stunde: erst wieder das Kürzel, dann der Eintrag');
   ok(/Stunde ist um/.test(await p.$eval('#schrankeMeld',e=>e.textContent)),'Mit dem Grund');
@@ -167,9 +174,8 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
   await p.click('header button:text-is("wechseln")');await p.waitForTimeout(200);
   ok(!(await p.$eval('#schranke',e=>e.hidden)),'«wechseln» im Kopf öffnet die Schranke sofort');
 
-  console.log('\n════ Grenzen der Rolle ════');
-  const r=await p.evaluate(async()=>{const x=await fetch('/api/bestand');return x.status});
-  ok(r===401,'Auch aus der Seite heraus kommt «hinten» nicht an den Bestand');
+  console.log('\n════ Keine Tür ins Dashboard ════');
+  ok((await p.$$('a[href]')).length===0,'Auf der Maske gibt es keinen einzigen Link – auch nicht ins Dashboard');
   const roh=await p.$eval('body',e=>e.innerHTML);
   ok(!/Blattsaft|Analysen einlesen/.test(roh),'Die Seite enthält nichts vom Büro-Werkzeug');
   ok(!/<script src=|<link [^>]*href="http/.test(roh),'Sie lädt nichts von aussen');

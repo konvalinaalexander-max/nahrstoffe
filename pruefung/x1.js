@@ -217,8 +217,10 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   ok(!t.vorschlaege.some(x=>x.datum==='2026-09-16'&&x.typ==='Wasserzugabe'),'5000 l und 7000 l in der Klammer werden nicht zu Wasserzugaben');
   const zs=V('2026-08-31','Säurezugabe','zitronensaeure');
   ok(zs.length===1&&zs[0].menge===1&&zs[0].jeReservoir===true,'«je 1kg Zitronensäure RV + RH» → 1 kg je Reservoir');
-  const mk=t.vorschlaege.filter(x=>/MKBoden/.test(x.felder.text||''));
-  ok(mk.length===2&&mk.every(x=>x.typ==='Notiz'&&/kein hinterlegtes Produkt/.test(x.hinweis||'')),'«MKBoden» ist unbekannt: Notiz mit der Bitte, das Produkt anzulegen – nichts geraten');
+  /* Am 30.09. geklärt: «MKBoden» ist EM (Effektive Mikroorganismen). */
+  const mk=V('2026-09-17','Biologisches Präparat','em');
+  ok(mk.length===2&&mk.some(x=>x.stelle==='vorne'&&x.menge===5&&x.einheit==='l')&&mk.some(x=>x.stelle==='hinten'&&x.menge===10),'«5l MKBoden» vorne und «10l MKBoden» hinten → EM 5 l und 10 l');
+  ok(!t.vorschlaege.some(x=>x.typ==='Notiz'&&/MKBoden/.test((x.felder&&x.felder.text)||'')),'Keine MKBoden-Notiz mehr');
   const a=t.vorschlaege.find(x=>x.datum==='2026-08-18');
   ok(a&&a.typ==='Notiz'&&/ohne erkennbares Mittel/.test(a.hinweis||''),'«1.4l A» bleibt eine Notiz mit Nachfrage – «A» ist kein bekanntes Kürzel');
   ok(!t.vorschlaege.some(x=>x.datum==='2026-05-05'&&x.typ==='Notiz'),'«Wasser ohne Dünger» ergibt eine Wasserzugabe und keine zweite Notiz');

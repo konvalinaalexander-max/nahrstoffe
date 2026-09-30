@@ -10,7 +10,7 @@ console.log('════ Schema 9 ════');
 {
   const r=A.migriere({schema:8,analysen:[],ereignisse:[{id:'e1',datum:'2026-09-01',typ:'Düngergabe',mittel:'biovin',menge:20}],
     messungen:[{id:'m1',datum:'2026-09-01',ph:6.2,ec:1.8}],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},einst:{}});
-  ok(r.db.schema===10,'Schema auf 10 gehoben');
+  ok(r.db.schema===11,'Schema auf 11 gehoben');
   ok(r.db.messungen[0].o2===null&&r.db.messungen[0].o2sat===null&&r.db.messungen[0].wer===null,'Alte Messungen: Sauerstoff und Kürzel auf null – nichts geraten');
   ok(r.db.ereignisse[0].wer===null,'Alte Logbucheinträge: Kürzel auf null');
   ok(r.db.einst.hoeheM===440,'Die Höhenlage steht auf 440 m (Schwerzenbach) und ist einstellbar');
@@ -41,7 +41,7 @@ console.log('\n════ Messungen zu Stellen ════');
   ok(A.messStelle({stelle:'vorne'})==='Reservoir vorne','«vorne» aus Excel landet bei derselben Stelle');
   ok(A.messStelle({stelle:'hinten'})==='Reservoir hinten','«hinten» ebenso');
   ok(A.messStelle({})==='ohne Stelle','Ohne Angabe: «ohne Stelle», nicht geraten');
-  ok(A.messStelle({stelle:'wurzelraum'})==='wurzelraum','Fremde Angaben bleiben, wie sie sind');
+  ok(A.messStelle({stelle:'wurzelraum'})==='Wurzelraum'&&A.messStelle({stelle:'Tisch 3'})==='Tisch 3','Der Wurzelraum heisst gross geschrieben, fremde Angaben bleiben, wie sie sind');
 }
 
 console.log('\n════ Zwei Stände vereinigen ════');

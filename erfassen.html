@@ -10,9 +10,11 @@
      Diagramme, keine Reiter – wer auswerten will, nimmt den grossen
      Bildschirm. Sie lädt nichts von aussen, damit sie auch bei schlechtem
      Empfang sofort da ist.
-     Wer einträgt, sagt vorher, wer er ist. Das Kürzel gilt eine Stunde;
-     danach fragt die Seite wieder – ausnahmslos, damit jeder Eintrag einen
-     Namen trägt. -->
+     Wer einträgt, sagt vorher, wer er ist: nur der Name, kein Passwort. Er
+     gilt eine Stunde; danach fragt die Seite wieder – ausnahmslos, damit
+     jeder Eintrag einen Namen trägt.
+     Erreichbar unter «/maske», meist per QR-Code am Tank. Die Seite enthält
+     bewusst keinen Link ins Dashboard. -->
 <style>
 :root{--bg:#F3F6EF;--card:#fff;--card2:#F8FAF5;--ink:#141D17;--muted:#697A6C;--line:#DCE3D5;--line2:#EDF1E9;
   --ok:#2C7A4B;--ok-soft:#E3F0E1;--rand:#BE6F16;--rand-soft:#FBEEDC;--alarm:#A2432E;--alarm-soft:#F7E3DE;--blau:#3A6DA6;--lila:#7A4E8C;
@@ -36,7 +38,7 @@ main{padding:14px 14px 40px;max-width:560px;margin:0 auto}
 .tiny{font-size:12px}.muted{color:var(--muted)}.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,"JetBrains Mono",Menlo,monospace}
 label.lab{display:block;font-size:12.5px;color:var(--muted);font-weight:500;margin:0 0 4px}
 input,select,textarea,button{font:inherit;color:inherit}
-input[type=text],input[type=date],select{width:100%;padding:12px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px;min-height:48px}
+input[type=text],input[type=date],input[type=time],select{width:100%;padding:12px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px;min-height:48px}
 input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 .zeile{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .feld{position:relative}
@@ -72,19 +74,19 @@ button.gross.saeure{background:var(--lila)}button.gross.wasser{background:var(--
 .warte.an{display:flex}
 .warte button{border:1px solid var(--rand);background:#fff;color:var(--rand);border-radius:8px;padding:6px 10px;font-size:14px}
 details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
-/* Die Namensschranke: liegt über allem, bis ein Kürzel da ist. */
+/* Die Namensschranke: liegt über allem, bis ein Name da ist. */
 #schranke{position:fixed;inset:0;background:rgba(20,29,23,.55);z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
 #schranke[hidden]{display:none}
 #schranke .karte{width:100%;max-width:400px;margin:0}
-#schranke input{font-size:24px;text-align:center;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+#schranke input{font-size:24px;text-align:center;letter-spacing:.03em;font-weight:600}
 </style>
 </head>
 <body>
 <div id="schranke" hidden>
   <div class="karte">
     <h2>Wer misst?</h2>
-    <p class="tiny muted" style="margin:0 0 10px">Kürzel eintippen. Es steht dann an jedem Eintrag, den du in der nächsten Stunde machst – danach fragt die Seite wieder.</p>
-    <input type="text" id="schrankeWer" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="z.B. MK">
+    <p class="tiny muted" style="margin:0 0 10px">Namen eintippen – kein Passwort. Er steht dann an jedem Eintrag, den du in der nächsten Stunde machst; danach fragt die Seite wieder.</p>
+    <input type="text" id="schrankeWer" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="z.B. Marco oder MK">
     <div class="meld" id="schrankeMeld"></div>
     <button class="gross" data-tun="anmelden" style="margin-top:12px">Weiter</button>
   </div>
@@ -92,7 +94,7 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
 <header>
   <span class="stand" id="stand" title="Verbindung"></span>
   <h1>Am Tank</h1>
-  <span class="wer"><b id="werAnzeige">–</b><span id="werBis" class="tiny"></span><button data-tun="abmelden" title="Anderes Kürzel">wechseln</button></span>
+  <span class="wer"><b id="werAnzeige">–</b><span id="werBis" class="tiny"></span><button data-tun="abmelden" title="Anderer Name">wechseln</button></span>
 </header>
 <main>
   <div class="warte" id="warte"><span id="warteText"></span><button data-tun="senden">Erneut senden</button></div>
@@ -101,7 +103,7 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
     <h2>Messung <span class="tiny muted" id="heute"></span></h2>
     <div class="zeile">
       <div class="feld"><label class="lab" for="mDatum">Datum</label><input type="date" id="mDatum"></div>
-      <div class="feld mitEinh"><label class="lab" for="mTemp">Temperatur</label><input type="text" inputmode="decimal" id="mTemp" placeholder="–"><span class="einh">°C</span><div class="letzt" data-letzt="temp"></div></div>
+      <div class="feld"><label class="lab" for="mZeit">Uhrzeit</label><input type="time" id="mZeit" data-auto="1"><div class="letzt" id="mZeitHinweis">läuft mit – antippen zum Ändern</div></div>
     </div>
     <label class="lab">Stelle</label>
     <div class="seg" id="mStelle"></div>
@@ -112,6 +114,10 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
     <div class="zeile" id="o2Zeile">
       <div class="feld mitEinh"><label class="lab" for="mO2">Sauerstoff</label><input type="text" inputmode="decimal" id="mO2" placeholder="–"><span class="einh">mg/l</span><div class="letzt" data-letzt="o2"></div></div>
       <div class="feld"><div class="tiny muted" style="margin-top:22px">Das Gerät hängt im Reservoir vorne – deshalb nur dort.</div></div>
+    </div>
+    <div class="zeile">
+      <div class="feld mitEinh"><label class="lab" for="mTemp">Temperatur</label><input type="text" inputmode="decimal" id="mTemp" placeholder="–"><span class="einh">°C</span><div class="letzt" data-letzt="temp"></div></div>
+      <div class="feld"><div class="tiny muted" style="margin-top:22px">Freiwillig – erklärt aber viel, auch beim Sauerstoff.</div></div>
     </div>
     <div class="feld" style="margin-bottom:12px"><label class="lab" for="mNotiz">Notiz <span class="muted">(freiwillig)</span></label><input type="text" id="mNotiz" placeholder="z.B. nach Nachfüllen"></div>
     <button class="gross" data-tun="messung">Messung eintragen</button>
@@ -168,7 +174,7 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
     <h2>Zuletzt <span class="tiny muted">hier und von anderen</span></h2>
     <ul class="liste" id="zuletzt"><li class="muted">wird geladen …</li></ul>
     <details><summary>Was diese Seite tut und was nicht</summary>
-      <p class="tiny muted">Jeder Eintrag geht sofort an den gemeinsamen Bestand; das Büro sieht ihn im Reiter Giesswasser und im Logbuch, mit deinem Kürzel.
+      <p class="tiny muted">Jeder Eintrag geht sofort an den gemeinsamen Bestand; das Büro sieht ihn im Reiter Giesswasser und im Logbuch, mit deinem Namen und der Uhrzeit.
       Bricht das Netz weg, wartet der Eintrag hier auf dem Gerät und geht beim nächsten Öffnen oder auf «Erneut senden» hinaus.
       Ändern oder löschen geht nur im Büro – trag bei einem Fehler einfach eine Notiz dazu ein. Die Seite bewertet nichts und empfiehlt nichts.</p>
     </details>
@@ -184,12 +190,22 @@ const el=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const heute=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 const fmt=d=>d?d.slice(8,10)+'.'+d.slice(5,7)+'.':'';
+/* Uhrzeit: die des Geräts. Solange niemand das Feld anfasst, läuft sie mit
+   und gilt der Moment des Eintragens – nicht der, als die Seite aufging. */
+const jetztZeit=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const zeitOk=t=>/^([01]\d|2[0-3]):[0-5]\d$/.test(String(t||''));
+const fmtZ=x=>fmt(x.datum)+(x.zeit?' '+x.zeit:'');
+function zeitFeld(){
+  const f=el('mZeit');if(!f)return;
+  if(f.dataset.auto)f.value=jetztZeit();
+  el('mZeitHinweis').textContent=f.dataset.auto?'läuft mit – antippen zum Ändern':'von Hand gesetzt';
+}
 const zahl=v=>{if(v==null||String(v).trim()==='')return null;const n=+String(v).replace(',','.');return isFinite(n)?n:undefined};
 const nz=(v,d)=>v==null?'–':(+v).toLocaleString('de-CH',{minimumFractionDigits:0,maximumFractionDigits:d==null?2:d});
 const uhr=t=>new Date(t).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'});
 
 /* ── Was hier im Gerät liegt – und warum ──────────────────────────────────
-   Zwei Dinge, beide klein: das Kürzel mit seiner Gültigkeit (eine Stunde),
+   Zwei Dinge, beide klein: der Name mit seiner Gültigkeit (eine Stunde),
    und die Warteschlange für Einträge, die ohne Netz nicht rauskonnten.
    Der Bestand selbst liegt nie hier; diese Seite kennt ihn gar nicht. */
 const merk={
@@ -219,21 +235,23 @@ function werZeigen(){
   el('werAnzeige').textContent=w?w.kuerzel:'–';
   el('werBis').textContent=w?'bis '+uhr(w.bis):'';
 }
-/* Vor jedem Eintrag: gilt das Kürzel noch? Sonst zuerst die Schranke. */
+/* Vor jedem Eintrag: gilt der Name noch? Sonst zuerst die Schranke. */
 function werNoetig(){
   const w=wer();
   if(w)return w.kuerzel;
-  schrankeZeigen('Die Stunde ist um – bitte Kürzel noch einmal eintippen, dann geht der Eintrag raus.');
+  schrankeZeigen('Die Stunde ist um – bitte den Namen noch einmal eintippen, dann geht der Eintrag raus.');
   return null;
 }
 AKTION.anmelden=()=>{
-  const k=el('schrankeWer').value.trim().toUpperCase().slice(0,6);
+  /* Kurze Kürzel («mk») werden gross geschrieben, Namen («Marco») bleiben, wie getippt. */
+  const roh=el('schrankeWer').value.trim().replace(/\s+/g,' ').slice(0,20);
+  const k=/^[a-zäöü]{2,4}$/i.test(roh)?roh.toUpperCase():roh;
   if(k.length<2){el('schrankeMeld').className='meld warn';el('schrankeMeld').textContent='Mindestens zwei Zeichen.';return}
   merk.schreib('wer',{kuerzel:k,bis:Date.now()+KUERZEL_GILT});
   el('schranke').hidden=true;werZeigen();
 };
 AKTION.abmelden=()=>{merk.weg('wer');werZeigen();schrankeZeigen(null)};
-setInterval(()=>{werZeigen();if(!wer()&&el('schranke').hidden)schrankeZeigen('Die Stunde ist um – bitte Kürzel noch einmal eintippen.')},60*1000);
+setInterval(()=>{werZeigen();if(!wer()&&el('schranke').hidden)schrankeZeigen('Die Stunde ist um – bitte den Namen noch einmal eintippen.')},60*1000);
 
 /* ── Netz ───────────────────────────────────────────────────────────────── */
 async function api(pfad,methode,body){
@@ -265,6 +283,7 @@ const istVorne=name=>/vorn|\brv\b/i.test(name||'');
 function aufbauen(){
   el('heute').textContent=fmt(heute());el('bHeute').textContent=fmt(heute());
   if(!el('mDatum').value)el('mDatum').value=heute();
+  zeitFeld();
   const st=(kontext.stellen&&kontext.stellen.length)?kontext.stellen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}];
   if(!stelle||!st.some(x=>x.name===stelle))stelle=st[0].name;
   el('mStelle').innerHTML=st.map(x=>`<button class="${stelle===x.name?'on':''}" data-tun="stelle" data-v="${esc(x.name)}">${esc(x.name.replace('Reservoir ',''))}</button>`).join('');
@@ -288,17 +307,17 @@ function letzteZeigen(){
   const l=((kontext.letzte||{})[stelle]||[])[0];
   for(const d of document.querySelectorAll('[data-letzt]')){
     const k=d.dataset.letzt;
-    d.textContent=l&&l[k]!=null?`zuletzt ${nz(l[k],k==='ph'?1:2)} (${fmt(l.datum)}${l.wer?' · '+l.wer:''})`:'';
+    d.textContent=l&&l[k]!=null?`zuletzt ${nz(l[k],k==='ph'?1:2)} (${fmtZ(l)}${l.wer?' · '+l.wer:''})`:'';
   }
 }
 function zuletztZeigen(){
   const aus=[];
   for(const s of sitzung)aus.push(s);
-  for(const b of (kontext.beigaben||[]))aus.push({art:'beigabe',text:`${(produkt(b.mittel)||{}).name||b.mittel||'?'} ${nz(b.menge)} ${b.einheit||''}${b.jeReservoir?' je Reservoir':''}`,datum:b.datum,wer:b.wer});
+  for(const b of (kontext.beigaben||[]))aus.push({art:'beigabe',text:`${(produkt(b.mittel)||{}).name||b.mittel||'?'} ${nz(b.menge)} ${b.einheit||''}${b.jeReservoir?' je Reservoir':''}${b.stelle&&b.stelle!=='beide'?' · '+b.stelle:''}`,datum:b.datum,zeit:b.zeit,wer:b.wer});
   for(const st of Object.keys(kontext.letzte||{}))for(const m of kontext.letzte[st])
-    aus.push({art:'messung',text:`${st||'?'}: pH ${nz(m.ph,1)} · EC ${nz(m.ec)}${m.o2!=null?' · O₂ '+nz(m.o2,1):''}`,datum:m.datum,wer:m.wer});
-  aus.sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
-  el('zuletzt').innerHTML=aus.length?aus.slice(0,8).map(x=>`<li><span>${esc(x.text)}</span><span class="w">${fmt(x.datum)}${x.wer?' · '+esc(x.wer):''}</span></li>`).join('')
+    aus.push({art:'messung',text:`${st||'?'}: pH ${nz(m.ph,1)} · EC ${nz(m.ec)}${m.o2!=null?' · O₂ '+nz(m.o2,1):''}`,datum:m.datum,zeit:m.zeit,wer:m.wer});
+  aus.sort((a,b)=>String(b.datum).localeCompare(String(a.datum))||String(b.zeit||'').localeCompare(String(a.zeit||'')));
+  el('zuletzt').innerHTML=aus.length?aus.slice(0,8).map(x=>`<li><span>${esc(x.text)}</span><span class="w">${esc(fmtZ(x))}${x.wer?' · '+esc(x.wer):''}</span></li>`).join('')
     :'<li class="muted">Noch nichts eingetragen.</li>';
 }
 function zeigeWarte(){
@@ -355,13 +374,16 @@ AKTION.messung=async()=>{
     el('mPh').dataset.bestaetigt='1';
     return meld('mMeld','warn',`pH ${nz(werte.ph,1)} gegen zuletzt ${nz(l.ph,1)} – ein grosser Sprung. Stimmt das? Dann noch einmal auf «Messung eintragen».`);
   }
-  const body=Object.assign({datum:el('mDatum').value,stelle,notiz:el('mNotiz').value||null,wer:k},werte);
+  const zt=el('mZeit').dataset.auto?jetztZeit():el('mZeit').value;
+  if(zt&&!zeitOk(zt))return meld('mMeld','warn','Die Uhrzeit ist keine Uhrzeit.');
+  const body=Object.assign({datum:el('mDatum').value,zeit:zt||null,stelle,notiz:el('mNotiz').value||null,wer:k},werte);
   const e=await abschicken('messung',body);
   delete el('mPh').dataset.bestaetigt;
   if(e.ok||!e.dauerhaft){
-    sitzung.unshift({art:'messung',text:`${stelle}: pH ${nz(werte.ph,1)} · EC ${nz(werte.ec)}${werte.o2!=null?' · O₂ '+nz(werte.o2,1):''}`+(e.ok?'':' (wartet)'),datum:body.datum,wer:k});
+    sitzung.unshift({art:'messung',text:`${stelle}: pH ${nz(werte.ph,1)} · EC ${nz(werte.ec)}${werte.o2!=null?' · O₂ '+nz(werte.o2,1):''}`+(e.ok?'':' (wartet)'),datum:body.datum,zeit:body.zeit,wer:k});
     for(const id of ['mPh','mEc','mO2','mTemp','mNotiz'])el(id).value='';
-    meld('mMeld',e.ok?'ok':'warn',e.ok?`Eingetragen: ${stelle}, ${fmt(body.datum)}.`:e.fehler);
+    el('mZeit').dataset.auto='1';zeitFeld();
+    meld('mMeld',e.ok?'ok':'warn',e.ok?`Eingetragen: ${stelle}, ${fmtZ(body)}.`:e.fehler);
     if(e.ok)try{kontext=await api('/api/kontext')}catch(x){}
     aufbauen();
   }else meld('mMeld','alarm','Nicht angenommen: '+e.fehler);
@@ -371,15 +393,15 @@ AKTION.messung=async()=>{
    und Dünger). Jeder geht einzeln raus – und einzeln in die Warteschlange. */
 async function beigaben(liste,notizFeld,zusammenfassung){
   const k=werNoetig();if(!k)return;
-  const datum=heute();
+  const datum=heute(),zeit=jetztZeit();
   const notiz=el(notizFeld).value||null;
   let ok=0,wartet=0;const ab=[];
   for(const b of liste){
-    const body=Object.assign({datum,notiz,wer:k},b);
+    const body=Object.assign({datum,zeit,notiz,wer:k},b);
     const e=await abschicken('ereignis',body);
     if(e.ok)ok++;else if(!e.dauerhaft)wartet++;else ab.push(e.fehler);
   }
-  sitzung.unshift({art:'beigabe',text:zusammenfassung+(wartet?' (wartet)':''),datum,wer:k});
+  sitzung.unshift({art:'beigabe',text:zusammenfassung+(wartet?' (wartet)':''),datum,zeit,wer:k});
   if(ab.length)meld('bMeld','alarm','Nicht angenommen: '+ab.join(' · '));
   else meld('bMeld',wartet?'warn':'ok',(wartet?'Keine Verbindung – wartet auf dem Gerät.\n':'Eingetragen: ')+zusammenfassung);
   if(ok)try{kontext=await api('/api/kontext')}catch(x){}
@@ -433,6 +455,9 @@ document.addEventListener('click',ev=>{
   const f=AKTION[t.dataset.tun];if(f){ev.preventDefault();f(t.dataset,ev)}
 });
 el('schrankeWer').addEventListener('keydown',ev=>{if(ev.key==='Enter')AKTION.anmelden()});
+/* Wer die Uhrzeit anfasst, setzt sie von Hand – dann läuft sie nicht mehr mit. */
+el('mZeit').addEventListener('input',()=>{delete el('mZeit').dataset.auto;zeitFeld()});
+setInterval(zeitFeld,20000);
 window.addEventListener('online',()=>senden());
 laden();
 </script>

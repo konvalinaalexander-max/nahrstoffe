@@ -24,7 +24,7 @@ console.log('════ Schema 9 ════');
     ereignisse:[],messungen:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},
     einst:{systemLiter:20000}});
   r.notizen.filter(n=>/Nitrit|Herkunft|Systemvolumen/.test(n)).forEach(n=>console.log('   ·',n));
-  ok(r.db.schema===10,'Schema auf 10 gehoben');
+  ok(r.db.schema===11,'Schema auf 11 gehoben');
   ok(r.db.analysen[0].herkunft==='unbekannt','Herkunft der Probe angelegt, auf «unbekannt» – nichts geraten');
   ok(r.db.analysen[0].symptom==='unbekannt','Symptomatisch oder gesund: das Feld gibt es jetzt');
   ok(r.db.analysen[0].gewaschen===null,'Und ob das Blatt gewaschen war');

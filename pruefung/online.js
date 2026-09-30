@@ -16,8 +16,8 @@ const ADMIN=auth('admin','a'),HINTEN=auth('hinten','h');
 const ruf=async(pfad,opt)=>{opt=opt||{};const r=await fetch(B+pfad,{method:opt.method||'GET',headers:Object.assign({},opt.headers||{},opt.body?{'Content-Type':'application/json'}:{}),body:opt.body?JSON.stringify(opt.body):undefined});let j=null;try{j=await r.json()}catch(e){}return {status:r.status,json:j}};
 function starten(){
   return new Promise((res,rej)=>{
-    const p=spawn(process.execPath,[path.join(__dirname,'..','server.js')],{env:Object.assign({},process.env,
-      {PORT:String(PORT),DATEN:daten,ADMIN_PASSWORT:'a',HINTEN_PASSWORT:'h'}),stdio:['ignore','pipe','pipe']});
+    const p=spawn(process.execPath,[path.join(__dirname,'..','server.js')],{env:(()=>{const e=Object.assign({},process.env,{PORT:String(PORT),DATEN:daten});
+      for(const k of ['ADMIN_PASSWORT','HINTEN_PASSWORT','MASKE_PASSWORT'])delete e[k];return e})(),stdio:['ignore','pipe','pipe']});
     let out='';p.stdout.on('data',d=>{out+=d;if(/läuft auf Port/.test(out))res(p)});p.stderr.on('data',d=>out+=d);
     setTimeout(()=>rej(new Error('Server startet nicht: '+out)),5000);
   });
@@ -27,7 +27,7 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   const server=await starten();
   const b=await chromium.launch(process.env.CHROME?{executablePath:process.env.CHROME,args:['--no-sandbox']}:{});
-  const ctx=await b.newContext({viewport:{width:1280,height:1000},httpCredentials:{username:'admin',password:'a'}});
+  const ctx=await b.newContext({viewport:{width:1280,height:1000}});   /* ohne Passwort – so wird er betrieben */
   const p=await ctx.newPage();
   const stoerung=[];
   p.on('pageerror',e=>stoerung.push('pageerror: '+e.message));
@@ -38,7 +38,8 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const stand0=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand:',stand0);
   ok(/online/.test(stand0),'Die Seite merkt, dass sie vom Server kommt');
-  ok(await p.$eval('#erfassenLink',e=>!e.hidden),'Der Link zur Handy-Seite erscheint');
+  ok(await p.$eval('#erfassenLink',e=>!e.hidden&&e.getAttribute('href')==='/maske'),'Der Link zur Maske erscheint («/maske»)');
+  ok(!/Anmeldung/.test(await p.$eval('body',e=>e.textContent))&&/Basilikum/.test(await p.title()),'Direkt das Dashboard – kein Login');
   ok(await p.$eval('#knopfKopie',e=>e.hidden)&&await p.$eval('#knopfSichern',e=>e.hidden)&&await p.$eval('#knopfOeffnen',e=>e.hidden),
      'Keine Knöpfe zum Sichern oder Öffnen – online ist es eine Webseite');
   const toasts0=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
@@ -109,7 +110,7 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const d=await dl;const ziel=path.join(shots,d.suggestedFilename());await d.saveAs(ziel);
   const text=fs.readFileSync(ziel,'utf8');
   ok(/^<!doctype html>/.test(text)&&/"wer":"MK"/.test(text),'Die Kopie ist die ganze Seite mit dem aktuellen Bestand – auch der Messung vom Handy');
-  ok(text.indexOf('id="erfassenLink" href="/erfassen" hidden')>0,'Und trägt das unberührte Gerüst: vom Ordner geöffnet läuft sie im Datei-Modus');
+  ok(text.indexOf('id="erfassenLink" href="/maske" target="_blank" rel="noopener" hidden')>0,'Und trägt das unberührte Gerüst: vom Ordner geöffnet läuft sie im Datei-Modus');
 
   console.log('\n════ Satzpaare ════');
   await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(500);

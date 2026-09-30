@@ -40,7 +40,14 @@ button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--mute
 nav#nav{display:flex;align-items:center;flex-wrap:wrap}
 body.wesentlich #view>*:not(.haupt){display:none}
 body.wesentlich #view .haupt .werkzeug .wz:not(.haupt):not(.mitBeigaben){display:none}
-body.wesentlich #view .haupt .werkzeug .wz.mitBeigaben>*:not(.seg):not(.lab){display:none}
+#qrDruck{display:none}
+@media print{body.druckQr>*:not(#qrDruck){display:none!important}
+  body.druckQr #qrDruck{display:block;text-align:center;padding-top:30mm;font-family:sans-serif}
+  #qrDruck h1{font-size:26pt;margin:0 0 12mm}#qrDruck .qr svg{width:120mm;height:120mm}
+  #qrDruck p{font-size:16pt;margin:8mm 0 0}#qrDruck .klein{font-size:13pt;color:#444;margin-top:4mm}}
+body.wesentlich #view .haupt .werkzeug .wz.mitBeigaben>*:not(.seg):not(.lab):not(.mittelWahl){display:none}
+.mittelWahl{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mittelWahl .chip{padding:2px 9px 2px 7px;font-size:11.5px}
 body.wesentlich #view .haupt .note,body.wesentlich #view .haupt p.tiny,body.wesentlich #view .haupt .hd .sub{display:none}
 button.klein:hover{color:var(--ink)}
 button:disabled{opacity:.4;cursor:not-allowed}
@@ -215,7 +222,8 @@ details[open]>summary:before{content:'▾ '}
     </div>
     <div style="flex:1"></div>
     <span id="stand" class="tiny muted"></span>
-    <a id="erfassenLink" href="/erfassen" hidden title="Die Handy-Seite für Messungen und Beigaben am Tank" style="font-size:13px;margin-right:6px">Erfassen ↗</a>
+    <a id="erfassenLink" href="/maske" target="_blank" rel="noopener" hidden title="Die Eingabemaske fürs Handy am Tank" style="font-size:13px;margin-right:4px">Maske ↗</a>
+    <button data-tun="qr" id="knopfQr" hidden title="QR-Code zur Eingabemaske – zum Ausdrucken und an den Tank hängen">QR-Code</button>
     <button data-tun="dateiOeffnen" id="knopfOeffnen">Datei öffnen</button>
     <button data-tun="kopie" id="knopfKopie" hidden title="Diese Seite mit allen Daten als eine HTML-Datei herunterladen – zum Mitnehmen oder als Sicherung.">Kopie herunterladen</button>
     <button data-tun="sichern" id="knopfSichern" class="primary" title="Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.">Sichern</button>
@@ -254,12 +262,53 @@ const toNum=t=>{if(t==null||t==='')return null;const v=parseFloat(String(t).trim
 const isLim=t=>/^[<>]/.test(String(t).trim());
 const tk=l=>l.trim().split(/\s+/).filter(Boolean);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-const heute=()=>new Date().toISOString().slice(0,10);
+/* Das Datum des Geräts, nicht das in Greenwich: kurz nach Mitternacht
+   Schweizer Zeit ist in UTC noch gestern – mit Uhrzeiten fiele das auf. */
+const heute=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const fmt=d=>d?d.split('-').reverse().join('.'):'–';
 const fmtK=d=>d?d.slice(8,10)+'.'+d.slice(5,7)+'.':'';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const el=i=>document.getElementById(i);
 const tage=(a,b)=>Math.round((new Date(b)-new Date(a))/864e5);
+/* ── Uhrzeit ──
+   «HH:MM», Ortszeit des Geräts, das misst oder einträgt. Fehlt sie, ist sie
+   unbekannt – geraten wird sie nie. Auf den Zeitachsen liegt ein Tag bei
+   UTC-Mitternacht; die Uhrzeit wird in Minuten dazugezählt, damit dieselbe
+   Achse Tage und Stunden trägt. */
+const zeitNorm=t=>{if(t==null)return null;const m=String(t).trim().match(/^([01]?\d|2[0-3])\s*[:.hH]\s*([0-5]\d)(?:\s*(?:uhr|h))?$/i);return m?m[1].padStart(2,'0')+':'+m[2]:null};
+const jetztZeit=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const zeitMin=t=>{const z=zeitNorm(t);return z?(+z.slice(0,2))*60+(+z.slice(3)):null};
+const zeitpunkt=x=>+new Date(x.datum)+(zeitMin(x&&x.zeit)||0)*6e4;
+const fmtZ=x=>fmt(x.datum)+(x&&x.zeit?', '+x.zeit:'');
+const zeitTag=x=>x&&x.zeit?` <span class="tiny muted mono">${x.zeit}</span>`:'';
+/* Chronologisch: Datum, dann Uhrzeit. Ohne Uhrzeit steht ein Eintrag vor
+   denen mit – und untereinander in der Reihenfolge, in der er kam. */
+const chrono=(a,b)=>(a.datum||'').localeCompare(b.datum||'')||((zeitMin(a.zeit)??-1)-(zeitMin(b.zeit)??-1));
+const chronoAb=liste=>[...liste].reverse().sort((a,b)=>chrono(b,a));
+/* Wo auf der Zeitachse eine Messung steht. Mit Uhrzeit genau. Ohne Uhrzeit
+   und allein am Tag: auf dem Tag. Mehrere am selben Tag und derselben
+   Stelle ohne Uhrzeit (alte Tabellen: «morgens vor PS», «abends nach PS»):
+   in ihrer Reihenfolge zwischen 6 und 20 Uhr verteilt, damit sie nicht
+   übereinander liegen – das Kästchen sagt dann, dass die Uhrzeit fehlt. */
+function messLage(ms,stelleVon){
+  const x=new Map(),folge=new Map(),gruppen={};
+  for(const m of ms){
+    if(zeitNorm(m.zeit)){x.set(m,zeitpunkt(m));continue}
+    const k=m.datum+'|'+(stelleVon?stelleVon(m):(m.stelle||''));
+    (gruppen[k]=gruppen[k]||[]).push(m);
+  }
+  for(const k in gruppen){
+    const g=gruppen[k],n=g.length;
+    g.forEach((m,i)=>{
+      x.set(m,+new Date(m.datum)+(n>1?Math.round((6+14*i/(n-1))*60)*6e4:0));
+      if(n>1)folge.set(m,{i:i+1,n});
+    });
+  }
+  return {x,folge};
+}
+/* Name oder Kürzel: kurze Kürzel («mk») gross, Namen («Marco») wie getippt. */
+const werNorm=t=>{const k=String(t||'').trim().replace(/\s+/g,' ').slice(0,20);return /^[a-zäöü]{2,4}$/i.test(k)?k.toUpperCase():k};
+const zeitZeile=(m,folge)=>m.zeit?['Uhrzeit',m.zeit]:(folge&&folge.get(m)?['Uhrzeit',`nicht erfasst – ${folge.get(m).i}. von ${folge.get(m).n} Messungen an diesem Tag`]:null);
 const plus=(d,t)=>{const x=new Date(d);x.setUTCDate(x.getUTCDate()+t);return x.toISOString().slice(0,10)};
 const monat=d=>+String(d).slice(5,7);
 const summe=a=>a.reduce((x,y)=>x+y,0);
@@ -416,7 +465,8 @@ const EVTYPEN={
    hinweis:'Das Mittel ist der NEUE Dünger.'},
  'Dosierung geändert':{mittel:1,kreis:1,f:[['dosisAlt','vorher %','z'],['dosisNeu','neu %','z']]},
  'Zusatzdünger / Spurenelemente':{m:{l:'Menge',e:'auto'},mittel:1,kreis:1,f:[['ziel','Wogegen','t']]},
- 'Biologisches Präparat':{m:{l:'Menge',e:'l'},mittel:1,f:[['ziel','Ziel','t']]},
+ 'Biologisches Präparat':{m:{l:'Menge',e:'l'},mittel:1,kreis:1,f:[['ziel','Ziel','t']],
+   hinweis:'Zum Beispiel EM («MKBoden») ins Reservoir.'},
  'Gerätekalibrierung':{f:[['geraet','Gerät','w:pH|EC|pH und EC'],['befund','Abweichung vorher','t']],
    hinweis:'Wichtig: alle Messwerte davor sind mit Vorbehalt zu lesen.'},
  'Neues Substrat / Grunddüngung':{satz:1,f:[['substrat','Substrat','t'],['grund','Grunddüngung','t']]},
@@ -702,7 +752,12 @@ const PRODUKTE_VORGABE={
      unter «Sätze & Einstellungen» selbst ein. */
   phosphorsaeure:{name:'Phosphorsäure',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
   zitronensaeure:{name:'Zitronensäure',form:'fest',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
-  halades:{name:'Halades PE',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'}};
+  halades:{name:'Halades PE',form:'fluessig',dichte:null,gehalt:{},quelle:'Gehalt nicht hinterlegt'},
+  /* EM – Effektive Mikroorganismen, im Betrieb «MKBoden» genannt. Ein
+     Mikroorganismen-Präparat, kein Dünger: darum kein Gehalt. Es zählt als
+     Beigabe zum Kreislauf (eigener Balken), nicht zur Nährstoffbilanz. */
+  em:{name:'EM (Effektive Mikroorganismen, «MKBoden»)',form:'fluessig',einheit:'l',dichte:null,gehalt:{},
+    quelle:'Mikroorganismen-Präparat – «MKBoden» = EM laut Betrieb (Annahme vom 30.09.2026), kein Nährstoffgehalt'}};
 
 /* Der Betrieb hat zwei Reservoirs. Das Labor schreibt aber jedes Mal etwas
    anderes auf den Bericht: «Reservoir Vorne», «RV Basilikum», «Vorne, mitt
@@ -712,7 +767,7 @@ const PRODUKTE_VORGABE={
    zu[<Bezeichnung>] ist die Kennung der Stelle, null heisst ausdruecklich
    «gehoert zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
 const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
-const leer=()=>({schema:10,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],
+const leer=()=>({schema:11,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],pakete:{},
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   stellen:STELLEN_VORGABE(),
   /* Zielwochen 2 und 4: das Satzpaar-Schema. Alle zwei Wochen ein Satz in
@@ -866,7 +921,16 @@ function migriere(roh){
       notizen.push('Die Kulturdauer steht neu auf 4 Wochen (Sommer) und 6 Wochen (Winter) statt 7 und 10. Sie bestimmt, wann ein Satz als «laufend» gilt und wann Woche 4 erreicht ist. Unter «Sätze & Einstellungen» änderbar.')}
     for(const e of (d.ereignisse||[]))if(e.einheit===undefined&&e.mittel)e.einheit=evEinheitAlt(e);
   }
-  d.schema=10;
+  if(von<11){
+    /* Ab dem 30. September kennen Messungen und Logbucheinträge eine
+       Uhrzeit. Bisherige Einträge haben keine – sie bleibt leer, geraten
+       wird nichts. */
+    let n=0;
+    for(const m of (d.messungen||[]))if(m.zeit===undefined){m.zeit=null;n++}
+    for(const e of (d.ereignisse||[]))if(e.zeit===undefined){e.zeit=null;n++}
+    if(n)notizen.push('Messungen und Logbucheinträge tragen neu eine Uhrzeit. Die Handy-Seite setzt sie von selbst; bei den bisherigen Einträgen bleibt sie leer. Mehrere Messungen am selben Tag ohne Uhrzeit werden im Diagramm in ihrer Reihenfolge über den Tag verteilt.');
+  }
+  d.schema=11;
   return {db:d,notizen,von};
 }
 
@@ -1848,7 +1912,20 @@ function chartStapel(box,o){
 function zeitMarken(x0,x1){
   const t=(x1-x0)/864e5,out=[];
   const d0=new Date(x0);
-  if(t<=70){                                        /* Wochen */
+  if(t<=3){                                         /* Stunden – seit es Uhrzeiten gibt */
+    const schritt=t<=1.2?3:t<=2.2?6:12;
+    const d=new Date(Math.ceil(x0/36e5)*36e5);
+    while(d.getUTCHours()%schritt)d.setUTCHours(d.getUTCHours()+1);
+    for(;+d<=x1;d.setUTCHours(d.getUTCHours()+schritt)){
+      const h=d.getUTCHours();
+      out.push({x:+d,text:h===0?fmtK(d.toISOString().slice(0,10)):String(h).padStart(2,'0')+':00'});
+    }
+  }else if(t<=16){                                  /* Tage */
+    const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
+    const schritt=t<=9?1:2;
+    for(;+d<=x1;d.setUTCDate(d.getUTCDate()+schritt))
+      if(+d>=x0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+  }else if(t<=70){                                  /* Wochen */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
     while(d.getUTCDay()!==1)d.setUTCDate(d.getUTCDate()+1);
     for(;+d<=x1;d.setUTCDate(d.getUTCDate()+7))
@@ -2056,7 +2133,7 @@ function render(){
   const f=ANSICHT[tab]||ANSICHT.lage;
   DIAG=null;zoomHaken=null;
   if(letzterTab!==tab){diagAus.clear();koVon=koBis=null}
-  try{el('view').innerHTML=f()}
+  try{el('view').innerHTML=paketHinweis()+f()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
     <p class="muted">Die übrigen Reiter funktionieren weiter, und deine Daten sind unverändert. Sichere sie und schick mir die Meldung unten.</p>
     <pre class="tiny mono" style="white-space:pre-wrap;background:var(--card2);padding:12px;border-radius:8px;border:1px solid var(--line)">${esc(err&&err.stack||err)}</pre></div>`;
@@ -2912,9 +2989,10 @@ function vVerlauf(){
     /* Tankmessungen als dichte, kleine Ebene – dort ist das Wasser nicht leer */
     if(vlTank&&paar.wasser.includes('gw_pH')){
       const p=db.messungen.filter(m=>m.ph!=null&&m.datum);
+      const lage=messLage(p);
       if(p.length)out.push({id:'w|tank|ph',einh:'',name:'pH am Tank',farbe:'#8C9A88',form:'kreis',klein:true,
-        punkte:p.map(m=>({x:+new Date(m.datum),y:m.ph,
-          tipp:tippBau('pH am Tank','#8C9A88',[['Datum',fmt(m.datum)],
+        punkte:p.map(m=>({x:lage.x.get(m),y:m.ph,
+          tipp:tippBau('pH am Tank','#8C9A88',[['Datum',fmt(m.datum)],zeitZeile(m,lage.folge),
             m.stelle?['Stelle',m.stelle]:null,['pH',nz(m.ph,2)],
             m.ec!=null?['EC',nz(m.ec,2)+' mS/cm']:null],m.notiz||'')}))});
     }
@@ -3628,8 +3706,10 @@ AKTION.messung=()=>{
   const o2=el('mO2')?toNum(el('mO2').value):null,o2s=el('mO2s')?toNum(el('mO2s').value):null;
   if(ph==null&&ec==null&&ecF==null&&tp==null&&o2==null)return toast('Bitte mindestens einen Wert eintragen.');
   if(ph!=null&&(ph<0||ph>14))return toast('Der pH liegt ausserhalb 0–14 – Tippfehler?');
-  db.messungen.push({id:uid(),datum:d,stelle:(el('mStelle')&&el('mStelle').value)||null,ph,ec,ecFrisch:ecF,temp:tp,o2,o2sat:o2s,
-    wer:(el('mWer')&&el('mWer').value.trim().toUpperCase())||null,notiz:el('mNotiz').value||null,quelle:'hand'});
+  const zt=el('mZeit')?el('mZeit').value:'';
+  if(zt&&!zeitNorm(zt))return toast('Die Uhrzeit ist keine Uhrzeit (HH:MM).');
+  db.messungen.push({id:uid(),datum:d,zeit:zeitNorm(zt),stelle:(el('mStelle')&&el('mStelle').value)||null,ph,ec,ecFrisch:ecF,temp:tp,o2,o2sat:o2s,
+    wer:(el('mWer')&&werNorm(el('mWer').value))||null,notiz:el('mNotiz').value||null,quelle:'hand'});
   aend();render();toast('Messung eingetragen.');
 };
 AKTION.tkStelle=d=>{tkStelle=d.v;diagAus.clear();diagFrisch()};
@@ -3639,7 +3719,7 @@ AKTION.tkZeit=d=>{
   tkZeit=d.v;
   if(d.v==='alles'){koVon=koBis=null}
   else{
-    const alle=db.messungen.filter(m=>m.datum).map(m=>+new Date(m.datum));
+    const alle=db.messungen.filter(m=>m.datum).map(zeitpunkt);
     const bis=alle.length?Math.max(...alle):Date.now();
     koBis=bis+2*864e5;koVon=bis-(+d.v)*864e5;
   }
@@ -3872,6 +3952,7 @@ let tkStelle='alle',tkZeit='alles',tkLinien='keine',tkBeigaben=true;
 function messStelle(m){
   const st=(m&&m.stelle)?String(m.stelle):'';
   if(!st)return 'ohne Stelle';
+  if(st==='wurzelraum')return 'Wurzelraum';
   const g=stellenDb().gruppen.find(x=>x.name===st);
   if(g)return g.name;
   const t=st.toLowerCase();
@@ -3888,8 +3969,8 @@ function vGiess(){
      draussen - sie würden den Verlauf verfälschen. */
   const sicht=alle.filter(gwSichtbar);
   const stellen=[...new Set(sicht.map(stelleSchluessel))].sort((a,b)=>stelleTitel(a).localeCompare(stelleTitel(b)));
-  const messungen=[...db.messungen].sort((a,b)=>b.datum.localeCompare(a.datum));
-  const rel=db.ereignisse.filter(e=>EVTYPEN[e.typ]&&EVTYPEN[e.typ].kreis).sort((a,b)=>b.datum.localeCompare(a.datum));
+  const messungen=chronoAb(db.messungen.filter(m=>m.datum));
+  const rel=chronoAb(db.ereignisse.filter(e=>e.datum&&EVTYPEN[e.typ]&&EVTYPEN[e.typ].kreis));
   const altFormat=alle.filter(a=>a.einheitAlt);
 
   if(!alle.length&&!messungen.length)return leerHinweis('Noch kein Giesswasser erfasst',
@@ -3975,26 +4056,27 @@ function vGiess(){
     zoomHaken=art=>{tkZeit=art==='reset'?'alles':null};
     const stellen=tkStellen(),form={};stellen.forEach((st,i)=>form[st]=FORMEN[i%FORMEN.length]);
     const ms=tkMess();
+    const lage=messLage(ms,messStelle),mx=m=>lage.x.get(m);
     const reihe=(k,name,farbe,extra)=>stellen.map(st=>{
-      const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+      const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>mx(a)-mx(b));
       return {id:'t|'+k+'|'+st,name:name+(stellen.length>1?' · '+st:''),farbe,form:form[st],
-        punkte:pk.map(m=>({x:+new Date(m.datum),y:m[k],kennung:null,
-          tipp:tippBau(name,farbe,[['Stelle',st],['Datum',fmt(m.datum)],[name,nz(m[k],k==='ph'?2:k==='o2'?1:2)+(k==='ph'?'':k==='o2'?' mg/l':' mS/cm')],
+        punkte:pk.map(m=>({x:mx(m),y:m[k],kennung:null,
+          tipp:tippBau(name,farbe,[['Stelle',st],['Datum',fmt(m.datum)],zeitZeile(m,lage.folge),[name,nz(m[k],k==='ph'?2:k==='o2'?1:2)+(k==='ph'?'':k==='o2'?' mg/l':' mS/cm')],
             (k==='o2'&&m.temp!=null)?['Sättigungsgrenze bei '+nz(m.temp,1)+' °C',nz(o2Saettigung(m.temp,db.einst.hoeheM),1)+' mg/l (Annahme)']:null,
             (k==='o2'&&m.o2sat!=null)?['Sättigung laut Gerät',nz(m.o2sat,0)+' %']:null,
             m.temp!=null&&k!=='o2'?['Temperatur',nz(m.temp,1)+' °C']:null,
-            m.wer?['gemessen von',m.wer]:null],m.notiz||'')}))};
+            m.wer?['gemessen von',m.wer]:null,m.beleg?['Beleg',m.beleg]:null],m.notiz||'')}))};
     }).concat(extra||[]).filter(x=>x.punkte.length);
     const ecFrisch=stellen.map(st=>{
-      const pk=ms.filter(m=>messStelle(m)===st&&m.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+      const pk=ms.filter(m=>messStelle(m)===st&&m.ecFrisch!=null).sort((a,b)=>mx(a)-mx(b));
       return {id:'t|ecf|'+st,name:'EC frisch angesetzt'+(stellen.length>1?' · '+st:''),farbe:FARBSTOFF[2],form:'ring',
-        punkte:pk.map(m=>({x:+new Date(m.datum),y:m.ecFrisch,tipp:tippBau('EC frisch angesetzt',FARBSTOFF[2],[['Stelle',st],['Datum',fmt(m.datum)],['EC frisch',nz(m.ecFrisch,2)+' mS/cm'],
+        punkte:pk.map(m=>({x:mx(m),y:m.ecFrisch,tipp:tippBau('EC frisch angesetzt',FARBSTOFF[2],[['Stelle',st],['Datum',fmt(m.datum)],zeitZeile(m,lage.folge),['EC frisch',nz(m.ecFrisch,2)+' mS/cm'],
           m.ec!=null?['Aufnahme bis zum Rücklauf',nz(m.ecFrisch-m.ec,2)+' mS/cm']:null])}))};
     });
     const ph=reihe('ph','pH',FARBSTOFF[0]),ec=reihe('ec','EC',FARBSTOFF[1],ecFrisch),o2=reihe('o2','Sauerstoff',FARBSTOFF[3]);
     /* Die Sättigungsgrenze als Band in der O₂-Spur: aus der zuletzt
        gemessenen Temperatur, als physikalische Obergrenze gekennzeichnet. */
-    const mitTemp=ms.filter(m=>m.o2!=null&&m.temp!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
+    const mitTemp=ms.filter(m=>m.o2!=null&&m.temp!=null).sort((a,b)=>mx(a)-mx(b)).slice(-1)[0];
     const grenze=mitTemp?o2Saettigung(mitTemp.temp,db.einst.hoeheM):null;
     const spuren=[
       {titel:'pH im Rücklauf',serien:ph,yTyp:'wert',yLabel:'pH',hoehe:150,leerText:'kein pH in diesem Zeitraum'},
@@ -4003,8 +4085,8 @@ function vGiess(){
        bandLabel:grenze?`Sättigungsgrenze bei ${nz(mitTemp.temp,1)} °C, ${nz(db.einst.hoeheM,0)} m (Annahme)`:'',
        leerText:o2.length?'kein Sauerstoff in diesem Zeitraum':'noch nie gemessen – neu am Tank erfassbar'}];
     chartStapel(el('cTank'),{von:koVon,bis:koBis,linien:tkLinien==='reihe',spuren,spannen:beigabenFuer([],{}),
-      ereignisse:tkBeigaben?rel.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),farbe:evFarbe(e.typ),
-        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmt(e.datum)],e.mittel?['Mittel',evMittelName(e.mittel)]:null,
+      ereignisse:tkBeigaben?rel.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({x:zeitpunkt(e),farbe:evFarbe(e.typ),
+        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmtZ(e)],e.mittel?['Mittel',evMittelName(e.mittel)]:null,
           e.menge!=null?['Menge',evMenge(e)]:null,e.stelle&&e.stelle!=='beide'?['Wohin',e.stelle]:null,e.wer?['eingetragen von',e.wer]:null],e.notiz||'')})):[]});
     el('legTank').innerHTML=legende(ph.concat(ec,o2),diagAus,stellen.length>1?'Form = Stelle · jede Grösse hat ihre eigene Achse':'jede Grösse hat ihre eigene Achse');
   }
@@ -4012,13 +4094,13 @@ function vGiess(){
      Ampelurteil – für den Rücklauf-pH gibt es keinen vereinbarten Sollbereich,
      und die App erfindet keinen. */
   function tkKachel(k,name,einheit,dez){
-    const ms=tkMess().filter(m=>m[k]!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+    const ms=tkMess().filter(m=>m[k]!=null).sort(chrono);
     if(!ms.length)return `<div class="kpi"><h4>${esc(name)}</h4><b class="muted">–</b><span class="tiny muted">noch nicht gemessen</span></div>`;
     const l=ms[ms.length-1];
     const vor=ms.filter(m=>tage(m.datum,l.datum)>=6).slice(-1)[0];
     const d=vor?l[k]-vor[k]:null;
     return `<div class="kpi"><h4>${esc(name)}</h4><b>${nz(l[k],dez)}<span class="tiny muted" style="font-weight:400;margin-left:4px">${esc(einheit)}</span></b>
-      <span class="tiny muted">${fmt(l.datum)}${tkStelle==='alle'?' · '+esc(messStelle(l)):''}${l.wer?' · '+esc(l.wer):''}${
+      <span class="tiny muted">${fmtZ(l)}${tkStelle==='alle'?' · '+esc(messStelle(l)):''}${l.wer?' · '+esc(l.wer):''}${
         vor?`<br>vor ${tage(vor.datum,l.datum)} Tagen ${nz(vor[k],dez)} ${d>0.05*Math.max(1,Math.abs(vor[k]))?'↗':d<-0.05*Math.max(1,Math.abs(vor[k]))?'↘':'→'}`:''}</span></div>`;
   }
   function tkKopf(){
@@ -4031,7 +4113,7 @@ function vGiess(){
       <div class="werkzeug"><div class="wz haupt mitBeigaben">
         ${stellen.length>1?`<span class="lab">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace('Reservoir ','')])).map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${esc(l)}</button>`).join('')}</span>`:''}
         <span class="lab" style="min-width:0;margin-left:${stellen.length>1?8:0}px">Zeitraum</span>
-        <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen']].map(([v,l])=>`<button class="${tkZeit===v?'on':''}" data-tun="tkZeit" data-v="${v}">${l}</button>`).join('')}</span>
+        <span class="seg">${[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']].map(([v,l])=>`<button class="${tkZeit===v?'on':''}" data-tun="tkZeit" data-v="${v}">${l}</button>`).join('')}</span>
         <span class="lab" style="min-width:0;margin-left:8px">Linien</span>
         <span class="seg">${[['keine','keine'],['reihe','je Reihe']].map(([v,l])=>`<button class="${tkLinien===v?'on':''}" data-tun="tkLinien" data-v="${v}">${l}</button>`).join('')}</span>
         <span class="chip ${tkBeigaben?'on':''}" data-tun="tkBeigaben" style="margin-left:8px">Marken</span>${beigabenSchalter()}
@@ -4169,8 +4251,8 @@ function vGiess(){
   s+=bilanzKarte(alle);
 
   /* ── Kreislauf ── */
-  const letzt=db.messungen.filter(x=>x.ec!=null&&x.ecFrisch!=null).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(-1)[0];
-  const ecReihe=db.messungen.filter(x=>x.ec!=null).sort((a,b)=>a.datum.localeCompare(b.datum));
+  const letzt=db.messungen.filter(x=>x.datum&&x.ec!=null&&x.ecFrisch!=null).sort(chrono).slice(-1)[0];
+  const ecReihe=db.messungen.filter(x=>x.datum&&x.ec!=null).sort(chrono);
   let trend='';
   if(ecReihe.length>=4){
     const h=ecReihe.slice(-3),v=ecReihe.slice(0,3);
@@ -4180,9 +4262,10 @@ function vGiess(){
   }
   if(messungen.length)s+=`<div class="card haupt" id="tkKarte">${tkKopf()}</div>`;
   s+=`<div class="card"><div class="hd"><div><h2>${messungen.length?'Messung von Hand eintragen':'Der Kreislauf selbst'}</h2>
-    <p class="sub">${messungen.length?'Hinten am Tank geht das bequemer über die Handy-Seite «erfassen» – hier für Nachträge und den Import.':'pH, EC und Sauerstoff im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.'}</p></div></div>
+    <p class="sub">${messungen.length?'Hinten am Tank geht das bequemer über die Eingabemaske fürs Handy (Adresse mit «/maske», QR-Code oben rechts) – hier für Nachträge und den Import.':'pH, EC und Sauerstoff im Rücklauf, gemessen im Tank vor der neuen Düngergabe. Alle Tische hängen am selben Kreislauf.'}</p></div></div>
     <div class="row">
       <div><label class="lab">Datum</label><input type="date" id="mDatum" value="${heute()}"></div>
+      <div><label class="lab">Uhrzeit</label><input type="time" id="mZeit" value="${jetztZeit()}"></div>
       <div><label class="lab">Stelle</label><select id="mStelle">${stellenDb().gruppen.map(g=>`<option>${esc(g.name)}</option>`).join('')}<option value="">ohne</option></select></div>
       <div><label class="lab">pH</label><input id="mPh" class="mono" size="5" inputmode="decimal"></div>
       <div><label class="lab">EC Rücklauf</label><input id="mEc" class="mono" size="5" inputmode="decimal"></div>
@@ -4190,7 +4273,7 @@ function vGiess(){
       <div><label class="lab">O₂ mg/l</label><input id="mO2" class="mono" size="5" inputmode="decimal"></div>
       <div><label class="lab">Sättigung % <span class="muted">(falls angezeigt)</span></label><input id="mO2s" class="mono" size="4" inputmode="decimal"></div>
       <div><label class="lab">Temperatur °C</label><input id="mTemp" class="mono" size="5" inputmode="decimal"></div>
-      <div><label class="lab">Kürzel</label><input id="mWer" class="mono" size="4" maxlength="6"></div>
+      <div><label class="lab">Name</label><input id="mWer" size="8" maxlength="20"></div>
       <div style="flex:1;min-width:150px"><label class="lab">Notiz</label><input id="mNotiz" style="width:100%"></div>
       <button class="primary" data-tun="messung">Eintragen</button>
       <button data-tun="tabWaehlen">Excel oder CSV einlesen</button></div>
@@ -4206,17 +4289,17 @@ function vGiess(){
     <p class="sub">Dieselben Einträge wie im Logbuch, gefiltert auf das, was pH und EC bewegt.</p></div>
     <button class="primary" data-tun="evNeu" data-vor="Säurezugabe">Eingriff erfassen</button></div>
     ${rel.length?`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Angaben</th><th></th></tr></thead><tbody>
-    ${rel.map(e=>`<tr><td class="mono">${fmt(e.datum)}</td><td>${esc(e.typ)}</td><td class="small">${esc(felderText(e))}</td>
+    ${rel.map(e=>`<tr><td class="mono">${fmt(e.datum)}${zeitTag(e)}</td><td>${esc(e.typ)}</td><td class="small">${esc(felderText(e))}</td>
       <td><button class="ghost" data-tun="evNeu" data-id="${esc(e.id)}">bearbeiten</button></td></tr>`).join('')}
     </tbody></table></div>`:'<p class="muted small">Noch keine Eingriffe erfasst.</p>'}</div>`;
 
   if(messungen.length)s+=`<div class="card"><h2>Messungen (${messungen.length})</h2>
     <div class="scroll"><table><thead><tr><th>Datum</th><th>Stelle</th><th>pH</th><th>EC Rücklauf</th><th>EC frisch</th><th>Aufnahme</th><th>O₂</th><th>Temp</th><th>wer</th><th>Notiz</th><th></th></tr></thead><tbody>
-    ${messungen.map(x=>`<tr><td class="mono">${fmt(x.datum)}</td><td class="tiny">${esc(messStelle(x))}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
+    ${messungen.map(x=>`<tr><td class="mono">${fmt(x.datum)}${zeitTag(x)}</td><td class="tiny">${esc(messStelle(x))}</td><td class="mono">${nz(x.ph,2)}</td><td class="mono">${nz(x.ec,2)}</td>
       <td class="mono">${nz(x.ecFrisch,2)}</td><td class="mono">${x.ec!=null&&x.ecFrisch!=null?nz(x.ecFrisch-x.ec,2):'–'}</td>
       <td class="mono">${x.o2!=null?nz(x.o2,1)+(x.o2sat!=null?' <span class="tiny muted">'+nz(x.o2sat,0)+' %</span>':''):'–'}</td>
       <td class="mono">${x.temp!=null?nz(x.temp,1)+' °C':'–'}</td>
-      <td class="mono tiny">${esc(x.wer||'')}${x.quelle==='erfassen'?' <span class="tag" title="vom Handy hinten">Tank</span>':x.quelle==='excel'?' <span class="tag">Excel</span>':''}</td>
+      <td class="mono tiny">${esc(x.wer||'')}${x.quelle==='erfassen'?' <span class="tag" title="vom Handy hinten">Tank</span>':x.quelle==='excel'?' <span class="tag">Excel</span>':x.quelle==='paket'?` <span class="tag" title="${esc(x.beleg||'')}">Paket</span>`:''}</td>
       <td class="small muted">${esc(x.notiz||'')}</td>
       <td><button class="ghost" data-tun="messungWeg" data-id="${esc(x.id)}">entfernen</button></td></tr>`).join('')}
     </tbody></table></div></div>`;
@@ -4332,9 +4415,16 @@ function beigabeSpannen(k){
     if(!akt||tage(akt.bis,g.datum)>BEIGABE_LUECKE){akt={k,von:g.datum,bis:g.datum,n:0,gaben:[],produkte:new Set()};out.push(akt)}
     akt.bis=g.datum;akt.n++;akt.gaben.push(g);akt.produkte.add(g.mittel);
   }
-  const h=heute();
-  for(const sp of out){sp.laeuft=tage(sp.bis,h)<=BEIGABE_LUECKE;sp.produkte=[...sp.produkte];}
+  for(const sp of out){sp.laeuft=beigabeLaeuft(sp.bis);sp.produkte=[...sp.produkte];}
   return out;
+}
+/* Läuft eine Beigabe noch? Nur, wenn die letzte Gabe keine vier Wochen her
+   ist UND die Tanks seither nicht neu angesetzt wurden – mit dem Wasser ist
+   auch das Mittel weg. Sonst stünde die Zitronensäure vom 9. September noch
+   Wochen nach dem Abpumpen als «seit 31.08.» da. */
+function beigabeLaeuft(bis){
+  if(tage(bis,heute())>BEIGABE_LUECKE)return false;
+  return !db.ereignisse.some(e=>e.typ==='Tank neu angesetzt'&&e.datum&&e.datum>bis&&e.datum<=heute());
 }
 /* ── Je Mittel statt je Nährstoff ─────────────────────────────────────────
    Die Geschichte für den Chef ist eine Zeile je Mittel: Halades vom 6. bis
@@ -4342,7 +4432,7 @@ function beigabeSpannen(k){
    seit 16. September. Ohne Etikett «Versuch» – einfach, was gegeben wurde,
    von wann bis wann. Dieselbe Lückenregel wie bei den Nährstoffen. */
 const MITTEL_FARBE={biovin:'#2C7A4B',epsotop:'#8A7118',kali:'#A2432E',zink:'#3F7F7A',phosphorsaeure:'#7A4E8C',
-  zitronensaeure:'#BE6F16',schwefelsaeure25:'#B0446F',halades:'#3A6DA6'};
+  zitronensaeure:'#BE6F16',schwefelsaeure25:'#B0446F',halades:'#3A6DA6',em:'#6D5C3D'};
 const mittelKurz=id=>String(evMittelName(id)||id).replace(/\s*\(.*?\)\s*/g,' ').replace(' Bio-Kraftdünger 9N','').replace(/\s+/g,' ').trim();
 function beigabeSpannenMittel(id){
   const gaben=db.ereignisse.filter(x=>x.datum&&x.mittel===id&&!isNaN(+new Date(x.datum))).sort((a,b)=>a.datum.localeCompare(b.datum));
@@ -4351,22 +4441,40 @@ function beigabeSpannenMittel(id){
     if(!akt||tage(akt.bis,g.datum)>BEIGABE_LUECKE){akt={id,von:g.datum,bis:g.datum,n:0,gaben:[]};out.push(akt)}
     akt.bis=g.datum;akt.n++;akt.gaben.push(g);
   }
-  const h=heute();
-  for(const sp of out)sp.laeuft=tage(sp.bis,h)<=BEIGABE_LUECKE;
+  for(const sp of out)sp.laeuft=beigabeLaeuft(sp.bis);
   return out;
 }
-function beigabeBalkenMittel(){
-  const ids=[...new Set(db.ereignisse.filter(x=>x.mittel).map(x=>x.mittel))];
+/* Summe der Mengen einer Spanne, je Einheit – Gramm und Kilogramm (oder
+   Milliliter und Liter) zusammengezählt, sobald beide vorkommen. Gaben ohne
+   Menge werden genannt, nicht geschätzt. */
+function beigabeSumme(gaben){
+  const m={};let ohne=0;
+  for(const g of gaben){if(g.menge==null){ohne++;continue}const e=g.einheit||'';m[e]=(m[e]||0)+g.menge*(g.jeReservoir?2:1)}
+  if(m.g!=null&&m.kg!=null){m.kg+=m.g/1000;delete m.g}
+  if(m.ml!=null&&m.l!=null){m.l+=m.ml/1000;delete m.ml}
+  const t=Object.keys(m).map(e=>nz(m[e])+' '+e).join(' + ');
+  return (t||'–')+(ohne?` (dazu ${ohne} Gabe${ohne>1?'n':''} ohne notierte Menge)`:'');
+}
+/* Alle Mittel, die je gegeben wurden – in der Reihenfolge der Stammdaten,
+   jedes mit seiner festen Farbe. Dieselbe Liste für Balken und Schalter. */
+function beigabeMittelListe(){
+  const ids=[...new Set(db.ereignisse.filter(x=>x.mittel&&x.datum).map(x=>x.mittel))];
   const reihenfolge=Object.keys(db.produkte||{});
   ids.sort((a,b)=>{const ia=reihenfolge.indexOf(a),ib=reihenfolge.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
+  return ids.map((id,i)=>({id,name:mittelKurz(id),farbe:MITTEL_FARBE[id]||FARBEN[i%FARBEN.length]}));
+}
+/* Welche Mittel ausgeblendet sind: persönlich, wie die übrige Ansicht.
+   Gemerkt wird, was AUS ist – ein neues Mittel erscheint also von selbst. */
+let mittelAus=new Set();
+function beigabeBalkenMittel(){
   const out=[];
-  ids.forEach((id,i)=>{
-    const farbe=MITTEL_FARBE[id]||FARBEN[i%FARBEN.length],name=mittelKurz(id);
+  beigabeMittelListe().forEach(({id,name,farbe})=>{
+    if(mittelAus.has(id))return;
     for(const sp of beigabeSpannenMittel(id)){
       const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:(sp.von===sp.bis?`${name} ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`);
       out.push({k:null,mittel:id,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
         tipp:tippBau(name,farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],['Gaben',String(sp.n)],
-          ['Menge gesamt',(function(){const m={};for(const g of sp.gaben)if(g.menge!=null){const e=g.einheit||'';m[e]=(m[e]||0)+g.menge*(g.jeReservoir?2:1)}return Object.keys(m).map(e=>nz(m[e])+' '+e).join(' + ')||'–'})()]],
+          ['Menge gesamt',beigabeSumme(sp.gaben)]],
           'Anklicken zeigt jede Gabe.')});
     }
   });
@@ -4382,10 +4490,18 @@ function beigabenFuer(keys,farbe){
   return beigabeBalkenMittel();
 }
 function beigabenSchalter(){
-  return `<span class="lab" style="min-width:0;margin-left:8px">Beigaben</span><span class="seg" title="Balken unter der Zeitachse: seit wann etwas dazugegeben wird, und bis wann.">${
-    [['mittel','alle Mittel'],['auswahl','zur Auswahl'],['aus','keine']].map(([v,l])=>`<button class="${beigabenModus===v?'on':''}" data-tun="beigabenModus" data-v="${v}">${l}</button>`).join('')}</span>`;
+  let t=`<span class="lab" style="min-width:0;margin-left:8px">Beigaben</span><span class="seg" title="Balken unter der Zeitachse: seit wann etwas dazugegeben wird, und bis wann.">${
+    [['mittel','je Mittel'],['auswahl','zur Auswahl'],['aus','keine']].map(([v,l])=>`<button class="${beigabenModus===v?'on':''}" data-tun="beigabenModus" data-v="${v}">${l}</button>`).join('')}</span>`;
+  /* Je Mittel ein Knopf: ein Klick blendet seinen Balken aus oder wieder ein. */
+  const liste=beigabenModus==='mittel'?beigabeMittelListe():[];
+  if(liste.length>1)t+=`<span class="mittelWahl"><span class="tiny muted">Balken:</span>${liste.map(m=>{const an=!mittelAus.has(m.id);
+    return `<span class="chip stoff ${an?'on':''}" data-tun="mittelBand" data-id="${esc(m.id)}" title="${an?'ausblenden':'einblenden'}"><span class="dot" style="background:${an?m.farbe:'#C3CDBF'}"></span>${esc(m.name)}</span>`}).join('')}
+    ${mittelAus.size?`<button class="ghost" data-tun="mittelBandAlle">alle zeigen</button>`:''}</span>`;
+  return t;
 }
 AKTION.beigabenModus=d=>{beigabenModus=d.v;diagFrisch()};
+AKTION.mittelBand=d=>{mittelAus.has(d.id)?mittelAus.delete(d.id):mittelAus.add(d.id);diagFrisch()};
+AKTION.mittelBandAlle=()=>{mittelAus.clear();diagFrisch()};
 
 /* Für die Diagramme: eine Spanne je Nährstoff, in seiner Farbe, mit Text
    und Infokästchen. Ein Klick öffnet die Liste der Gaben. */
@@ -4410,7 +4526,7 @@ AKTION.spanne=d=>{
   dialog(`${titel} · ${fmt(sp.von)} bis ${sp.laeuft?'heute':fmt(sp.bis)}`,
     `<p class="small muted">${sp.n} Gabe${sp.n>1?'n':''}, aus dem Logbuch. Mengen wie eingetragen; ob und wieviel davon in der Pflanze ankommt, sagt nur die Analyse.</p>
      <div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Mittel</th><th>Menge</th><th>Wohin</th><th>wer</th><th>Notiz</th></tr></thead><tbody>
-     ${sp.gaben.slice().reverse().map(g=>`<tr><td class="mono">${fmt(g.datum)}</td><td>${esc(g.typ)}</td><td>${esc(evMittelName(g.mittel))}</td>
+     ${chronoAb(sp.gaben).map(g=>`<tr><td class="mono">${fmt(g.datum)}${zeitTag(g)}</td><td>${esc(g.typ)}</td><td>${esc(evMittelName(g.mittel))}</td>
        <td class="mono">${g.menge!=null?esc(evMenge(g)):'–'}</td><td class="tiny">${esc(g.stelle||'')}</td><td class="mono tiny">${esc(g.wer||'')}</td><td class="small muted">${esc(g.notiz||'')}</td></tr>`).join('')}
      </tbody></table></div>`,
     `<button data-tun="reiter" data-reiter="logbuch">Zum Logbuch</button><button class="primary" data-tun="dlgZu">Schliessen</button>`);
@@ -4588,6 +4704,7 @@ function bilanzKarte(alle){
 
 const TAB_KOPF=[
   ['datum',      /^datum|^tag$/i],
+  ['zeit',       /^(uhr)?zeit$|^uhrzeit|^uhr$/i],
   ['ecVorne',    /ec.*vorn|vorn.*ec/i],
   ['ecHinten',   /ec.*hint|hint.*ec/i],
   ['phVorne',    /ph.*vorn|vorn.*ph/i],
@@ -4621,7 +4738,8 @@ function tabDatum(v,letzt){
     return isNaN(+d)?null:d.toISOString().slice(0,10);
   }
   if(v instanceof Date&&!isNaN(+v))return new Date(Date.UTC(v.getFullYear(),v.getMonth(),v.getDate())).toISOString().slice(0,10);
-  const t=zelle(v);
+  /* «17.09.2026 09:05»: die Uhrzeit liest tabZeit, hier zählt das Datum. */
+  const t=zelle(v).replace(/\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:uhr|h)?$/i,'');
   let m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(m)return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
   /* «17,06», «2,7», «12,8»: in der Datumsspalte ein Datum mit Komma statt
@@ -4643,6 +4761,24 @@ function tabDatum(v,letzt){
   const probe=new Date(Date.UTC(jahr,mon-1,tag));
   if(probe.getUTCMonth()!==mon-1||probe.getUTCDate()!==tag)return null;
   return `${jahr}-${String(mon).padStart(2,'0')}-${String(tag).padStart(2,'0')}`;
+}
+/* Uhrzeit aus einer Zelle: Text «09:05» / «9.05 Uhr», Excel-Bruchteil
+   eines Tages (0,375 = 09:00) oder ein Datum mit Uhrzeit. Eine Uhrzeit
+   00:00 aus einem reinen Datum ist keine Uhrzeit. */
+function tabZeit(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'&&isFinite(v)){
+    const f=v-Math.floor(v);if(f<=0)return null;
+    const min=Math.round(f*1440)%1440;
+    return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0');
+  }
+  if(v instanceof Date&&!isNaN(+v)){
+    if(!v.getHours()&&!v.getMinutes())return null;
+    return String(v.getHours()).padStart(2,'0')+':'+String(v.getMinutes()).padStart(2,'0');
+  }
+  const t=zelle(v);
+  const m=t.match(/(?:^|[\sT])(\d{1,2}[:.]\d{2})(?::\d{2})?\s*(?:uhr|h)?$/i);
+  return m?zeitNorm(m[1]):zeitNorm(t);
 }
 const tabZahl=v=>{
   if(v==null||v==='')return null;
@@ -4674,7 +4810,9 @@ const MITTEL_MUSTER=[
   {re:/(?:^|[^A-Za-zÄÖÜäöü])ZS(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Säurezugabe',mittel:'zitronensaeure',streng:1},
   {re:/hal[a-z]{0,3}des/i,typ:'Desinfektion',mittel:'halades'},
   {re:/(?:^|[^A-Za-zÄÖÜäöü])HA(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Desinfektion',mittel:'halades',streng:1},
-  {re:/mk\s*boden/i,typ:'Notiz',mittel:null,unbekannt:'MKBoden'},
+  /* «MKBoden» heisst im Betrieb EM (Effektive Mikroorganismen). */
+  {re:/mk\s*boden|effektive\s*mikroorganismen/i,typ:'Biologisches Präparat',mittel:'em'},
+  {re:/(?:^|[^A-Za-zÄÖÜäöü])EM(?:$|[^A-Za-zÄÖÜäöü])/,typ:'Biologisches Präparat',mittel:'em',streng:1},
   {re:/säurezugabe|\bsäure\b|\bsaeure\b/i,typ:'Säurezugabe',mittel:null,allgemein:1},
   {re:/dünger|duenger/i,typ:'Düngergabe',mittel:null,allgemein:1},
   {re:/wasser|zudosiert|zudosieren|nachgefüllt|nachgefuellt|aufgefüllt/i,typ:'Wasserzugabe',mittel:null,allgemein:1}];
@@ -4863,6 +5001,8 @@ function tabBlatt(zeilen){
         const dat=d||letztDatum;
         if(!dat)continue;
         const bem=b.bemerkung!==undefined?zelle(w[b.bemerkung]):'';
+        /* Uhrzeit: aus einer eigenen Spalte, sonst aus der Datumszelle. */
+        const zeit=(b.zeit!==undefined?tabZeit(w[b.zeit]):null)||(typeof w[b.datum]==='number'||w[b.datum] instanceof Date||/\d:\d\d/.test(zelle(w[b.datum]))?tabZeit(w[b.datum]):null);
         /* Ohne Datum in der Zeile gilt das der Zeile davor – aber gesagt,
            nicht stillschweigend. Ein Datum, das dasteht und nicht lesbar
            ist, ebenso. */
@@ -4888,7 +5028,7 @@ function tabBlatt(zeilen){
             const warn=[];
             if(ph!=null&&(ph<3||ph>10))warn.push(`pH ${nz(ph,2)} liegt ausserhalb 3–10 – Tippfehler?`);
             if(ec!=null&&(ec<0||ec>10))warn.push(`EC ${nz(ec,2)} ist für einen Rücklauf unwahrscheinlich – Tippfehler?`);
-            mess.push({id:uid(),datum:dat,stelle,ec,ph,ecFrisch:null,o2:o2hier,o2sat:null,wer:null,
+            mess.push({id:uid(),datum:dat,zeit,stelle,ec,ph,ecFrisch:null,o2:o2hier,o2sat:null,wer:null,
               temp:b.temp!==undefined?tabZahl(w[b.temp]):null,
               notiz:bem||null,quelle:'excel',dabei:true,zeile:z+1,warnung:warn.length?warn.join(' '):null});
           }
@@ -4901,7 +5041,7 @@ function tabBlatt(zeilen){
           if(werte.length)wurzel.push({id:uid(),datum:dat,satz:satz||null,werte,
             schnitt:b.schnitt!==undefined?tabZahl(w[b.schnitt]):null,dabei:true,zeile:z+1});
         }
-        if(bem)vorschlaege.push(...bemerkungLesen(bem,dat).map(v=>Object.assign(v,{zeile:z+1})));
+        if(bem)vorschlaege.push(...bemerkungLesen(bem,dat).map(v=>Object.assign(v,{zeile:z+1,zeit})));
       }
     }
     if(r>=zeilen.length-1)break;
@@ -4914,7 +5054,7 @@ function tabZusammen(teile){
   const gesehen=new Set();
   for(const t of teile){
     for(const m of t.mess){
-      const k=m.datum+'|'+m.stelle+'|'+m.ec+'|'+m.ph+'|'+(m.notiz||'')+'|'+m.zeile;
+      const k=m.datum+'|'+(m.zeit||'')+'|'+m.stelle+'|'+m.ec+'|'+m.ph+'|'+(m.notiz||'')+'|'+m.zeile;
       if(gesehen.has(k))continue;gesehen.add(k);mess.push(m);
     }
     for(const x of t.wurzel){
@@ -5002,10 +5142,11 @@ function tabDialog(){
     <p class="sub">Zwei Entnahmestellen ergeben zwei Messungen je Zeile. Mehrere Zeilen mit demselben Datum bleiben erhalten – die Bemerkung unterscheidet sie.</p></div></div>`;
   const warnMess=t.mess.filter(m=>m.warnung).length;
   if(warnMess)h+=`<div class="note warn">${warnMess} Messwert${warnMess>1?'e sind':' ist'} unwahrscheinlich und rot markiert – bitte prüfen, bevor du übernimmst. Sie sind angehakt, damit nichts stillschweigend wegfällt.</div>`;
-  h+=t.mess.length?`<div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Stelle</th><th>EC</th><th>pH</th><th>O₂</th><th>Bemerkung</th></tr></thead><tbody>
+  h+=t.mess.length?`<div class="scroll"><table><thead><tr><th></th><th>Zeile</th><th>Datum</th><th>Uhrzeit</th><th>Stelle</th><th>EC</th><th>pH</th><th>O₂</th><th>Bemerkung</th></tr></thead><tbody>
     ${t.mess.map((m,i)=>`<tr><td><input type="checkbox" data-aend="tabAn" data-k="mess" data-i="${i}"${m.dabei?' checked':''}></td>
       <td class="tiny muted">${m.zeile}</td>
       <td><input type="date" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="datum" value="${esc(m.datum)}"></td>
+      <td><input type="time" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="zeit" value="${esc(m.zeit||'')}"></td>
       <td><select data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="stelle">${STELLEN.map(x=>`<option${m.stelle===x?' selected':''}>${esc(x)}</option>`).join('')}</select></td>
       <td><input class="mono" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ec" value="${m.ec==null?'':m.ec}"></td>
       <td><input class="mono${m.warnung&&/pH/.test(m.warnung)?' val-off':''}" size="5" data-aend="tabFeld" data-k="mess" data-i="${i}" data-f="ph" value="${m.ph==null?'':m.ph}"${m.warnung?` title="${esc(m.warnung)}"`:''}></td>
@@ -5052,7 +5193,8 @@ AKTION.tabAn=(d,ev)=>{const x=TABPRUEF[d.k][+d.i];if(x)x.dabei=ev.target.checked
 AKTION.tabFeld=(d,ev)=>{
   const x=TABPRUEF[d.k][+d.i];if(!x)return;
   if(d.f==='jeReservoir'){x.jeReservoir=ev.target.checked;return tabDialog()}
-  if(d.f==='menge'||d.f==='ec'||d.f==='ph'){x[d.f]=ev.target.value===''?null:toNum(ev.target.value);return}
+  if(d.f==='menge'||d.f==='ec'||d.f==='ph'||d.f==='o2'){x[d.f]=ev.target.value===''?null:toNum(ev.target.value);return}
+  if(d.f==='zeit'){x.zeit=zeitNorm(ev.target.value);return}
   x[d.f]=ev.target.value;
   if(d.f==='typ'||d.f==='mittel'){x.einheit=evEinheit(x.typ,x.mittel)||null;tabDialog()}
 };
@@ -5061,8 +5203,10 @@ AKTION.tabUeber=()=>{
   let nm=0,nw=0,nv=0;
   for(const m of t.mess.filter(x=>x.dabei)){
     if(!m.datum)continue;
-    db.messungen.push({id:uid(),datum:m.datum,stelle:m.stelle,ph:m.ph,ec:m.ec,ecFrisch:null,
-      temp:m.temp==null?null:m.temp,notiz:m.notiz||null,quelle:'excel'});nm++;
+    /* O₂ und Uhrzeit gehen mit – bis zum 30.09. fiel der Sauerstoff hier
+       stillschweigend weg, obwohl der Dialog ihn zeigte. */
+    db.messungen.push({id:uid(),datum:m.datum,zeit:zeitNorm(m.zeit),stelle:m.stelle,ph:m.ph,ec:m.ec,ecFrisch:null,
+      temp:m.temp==null?null:m.temp,o2:m.o2==null?null:m.o2,o2sat:null,wer:null,notiz:m.notiz||null,quelle:'excel'});nm++;
   }
   for(const x of t.wurzel.filter(y=>y.dabei)){
     const s=x.schnitt!=null?x.schnitt:mittel(x.werte);
@@ -5073,7 +5217,7 @@ AKTION.tabUeber=()=>{
   }
   for(const v of t.vorschlaege.filter(x=>x.dabei)){
     if(!v.datum)continue;
-    db.ereignisse.push({id:uid(),datum:v.datum,typ:v.typ,titel:v.titel||null,mittel:v.mittel||null,
+    db.ereignisse.push({id:uid(),datum:v.datum,zeit:zeitNorm(v.zeit),typ:v.typ,titel:v.titel||null,mittel:v.mittel||null,
       menge:v.menge,einheit:v.menge!=null?(v.einheit||evEinheit(v.typ,v.mittel)):null,
       jeReservoir:!!(v.menge!=null&&v.jeReservoir),stelle:v.stelle||'beide',
       notiz:v.roh,felder:Object.assign({},v.felder||{}),geltung:'alle',saetze:[],quelle:'excel'});nv++;
@@ -5083,6 +5227,311 @@ AKTION.tabUeber=()=>{
   toast(`${nm} Messungen, ${nw} Wurzel-EC und ${nv} Logbucheinträge übernommen. Nicht vergessen zu sichern.`);
 };
 AKTION.tabWaehlen=()=>el('fileTab').click();
+/* ══════════ 12b2 · Vorbereitete Daten ══════════
+   Die Reservoir-Tabelle von April bis September und der Bericht über die
+   Säure vom 31. August bis 10. September – einmal von Hand gelesen,
+   bereinigt und so eingetragen, wie es der Betrieb am 30. September
+   entschieden hat. Der Import aus Excel kann vieles, aber nicht nachfragen;
+   hier ist nachgefragt worden. Ein Klick auf «Aktivieren» übernimmt alles
+   als ganz normale Einträge – mit fester Kennung, damit zweimal Aktivieren
+   nichts doppelt einträgt, und mit dem Beleg (Tabellenzeile, Berichtsteil)
+   an jedem Eintrag. Nichts davon heisst «Versuch»: es sind die Daten.   */
+const PAKET_RES26=(()=>{
+  const P='reservoir-2026',M=[],E=[],zm={},ze={};
+  const T=(z,roh)=>'Tabelle «pH/EC Reservoir», Zeile '+z+(roh?': «'+roh+'»':'');
+  const B=t=>'Bericht «pH und Säure» vom 10.09.2026, '+t;
+  const mid=(d,st)=>{const k=d+st;zm[k]=(zm[k]||0)+1;return 'p26m-'+d.slice(5)+'-'+st+zm[k]};
+  const eid=d=>{ze[d]=(ze[d]||0)+1;return 'p26e-'+d.slice(5)+'-'+ze[d]};
+  const mess=(d,zeit,stelle,ec,ph,o2,notiz,beleg)=>M.push({id:mid(d,stelle[0]),datum:d,zeit:zeit||null,stelle,
+    ec:ec??null,ph:ph??null,ecFrisch:null,temp:null,o2:o2??null,o2sat:null,wer:null,notiz:notiz||null,quelle:'paket',paket:P,beleg});
+  /* Eine Tabellenzeile: [EC, pH] vorne und hinten. Sauerstoff gehört nach
+     vorne – dort hängt das Gerät. notiz: Text für beide oder [vorne, hinten]. */
+  const zeile=(d,zeit,v,h,o2,notiz,beleg)=>{
+    const nv=Array.isArray(notiz)?notiz[0]:notiz,nh=Array.isArray(notiz)?notiz[1]:notiz;
+    if((v&&(v[0]!=null||v[1]!=null))||o2!=null)mess(d,zeit,'vorne',v?v[0]:null,v?v[1]:null,o2,nv,beleg);
+    if(h&&(h[0]!=null||h[1]!=null))mess(d,zeit,'hinten',h[0],h[1],null,nh,beleg);
+  };
+  const wurzel=(d,satz,werte,beleg)=>M.push({id:mid(d,'w'),datum:d,zeit:null,stelle:'wurzelraum',ph:null,
+    ec:Math.round(werte.reduce((a,b)=>a+b,0)/werte.length*100)/100,ecFrisch:null,temp:null,o2:null,o2sat:null,wer:null,
+    notiz:'EC im Wurzelraum · Satz '+satz+' · Einzelwerte '+werte.map(x=>String(x).replace('.',',')).join(' / '),quelle:'paket',paket:P,beleg});
+  const ev=(d,zeit,typ,mittel,menge,einheit,stelle,notiz,beleg,felder,titel)=>E.push({id:eid(d),datum:d,zeit:zeit||null,typ,
+    titel:titel||null,mittel:mittel||null,menge:menge??null,einheit:menge!=null?einheit:null,jeReservoir:false,
+    stelle:stelle||'beide',notiz:notiz||null,felder:felder||{},geltung:'alle',saetze:[],wer:null,quelle:'paket',paket:P,beleg});
+  const vh=(d,zeit,typ,mittel,v,h,einheit,notiz,beleg,felder)=>{
+    if(v!=null)ev(d,zeit,typ,mittel,v,einheit,'vorne',notiz,beleg,felder);
+    if(h!=null)ev(d,zeit,typ,mittel,h,einheit,'hinten',notiz,beleg,felder)};
+  const ZD='Zusatzdünger / Spurenelemente';
+  /* «BioV-Wasser»: Wasser, mit Biovin angesetzt. Die Menge Biovin steht
+     nicht da – die Gabe ist trotzdem eine Gabe, nur ohne Zahl. */
+  const bioV=(d,liter,kgEt,beleg,stelle)=>{
+    ev(d,null,'Wasserzugabe',null,liter,'l',stelle||'beide','«BioV-Wasser»: Wasser mit Biovin angesetzt',beleg,{mitDuenger:'ja'});
+    ev(d,null,'Düngergabe','biovin',null,null,stelle||'beide','mit dem BioV-Wasser – wieviel Biovin, ist nicht notiert',beleg);
+    if(kgEt!=null)ev(d,null,ZD,'epsotop',kgEt,'kg',stelle||'beide','«ET» / «EPT» = Epsotop',beleg);
+  };
+  const s25=(d,beleg)=>vh(d,null,'Säurezugabe','schwefelsaeure25',1,1,'l','nach der Messung. Reservoir vorne ca. 5000 l, hinten ca. 7000 l',beleg);
+  const S52='RV (ca. 5000l) + 1l H2S04 RH(ca.7000l) + 1l H2SO4';
+  const ZSn='nach der Zitronensäure';
+
+  /* ── April bis Juni ── */
+  zeile('2026-04-30',null,[0.87,8.11],[0.85,8.02],null,null,T(4));
+  ev('2026-05-05',null,'Wasserzugabe',null,3000,'l','beide','über das Wochenende, ohne Dünger, «ca. 3000 l» – vor der Messung',T(5,'über Wochenende Wasser ohne Dünger zudosiert ca 3000l'),{mitDuenger:'nein'});
+  zeile('2026-05-05',null,[0.62,8],[0.64,7.97],null,'nach Wasser ohne Dünger übers Wochenende',T(5));
+  const r6=T(6,'nach Säurezugabe (ca. 3l je Reservoir) und Düngerzugabe (3kg Epsotop + 5l Biovin je Reservoir)');
+  vh('2026-05-06',null,'Säurezugabe','phosphorsaeure',3,3,'l','«ca. 3 l je Reservoir». Welche Säure, steht nicht da – Phosphorsäure angenommen, bis Ende August die übliche.',r6);
+  vh('2026-05-06',null,ZD,'epsotop',3,3,'kg','«3 kg Epsotop je Reservoir»',r6);
+  vh('2026-05-06',null,'Düngergabe','biovin',5,5,'l','«5 l Biovin je Reservoir»',r6);
+  zeile('2026-05-06',null,[0.94,6.53],[0.9,6.41],null,'nach Säure und Dünger',T(6));
+  zeile('2026-05-07',null,[0.98,6.72],[0.91,6.58],null,null,T(7));
+  zeile('2026-05-12',null,[0.9,7.24],[0.91,7.26],null,null,T(8));
+  const r9=T(9,"danach, am 20.5. 15'000l (je Reservoir ca. 7500l) mit 0,1% Dünger Biovin zudosiert (15l)");
+  zeile('2026-05-19',null,[0.83,6.68],[0.82,6.71],null,"danach, am 20.5.: 15'000 l mit 0,1 % Biovin",T(9));
+  vh('2026-05-20',null,'Wasserzugabe',null,7500,7500,'l',"«15'000 l, je Reservoir ca. 7500 l», mit Biovin angesetzt",r9,{mitDuenger:'ja'});
+  vh('2026-05-20',null,'Düngergabe','biovin',7.5,7.5,'l','«0,1 % Biovin, 15 l» – je Reservoir die Hälfte',r9,{dosis:'0.1'});
+  zeile('2026-05-21',null,[0.73,7.26],[0.74,6.94],null,'danach je Reservoir 2 kg Epsotop',T(10));
+  vh('2026-05-21',null,ZD,'epsotop',2,2,'kg','nach der Messung',T(10,'danach je Reservoir 2kg Epsotop zugegeben.'));
+  const r11=T(11,'danach im vorderen Reservoir 10l Dünger zudosiert (aus vershen mit 0,2%), danach zusätzlich 3kg Epsotop (wird etwas zu hoch sein)');
+  zeile('2026-05-26',null,[0.78,7.64],[0.79,7.63],null,'danach vorne 10 l Dünger (0,2 %) und 3 kg Epsotop',T(11));
+  ev('2026-05-26',null,'Düngergabe','biovin',10,'l','vorne','«10 l Dünger, aus Versehen mit 0,2 %». Ohne Namen – Biovin angenommen, der einzige flüssige Dünger.',r11,{dosis:'0.2'});
+  ev('2026-05-26',null,ZD,'epsotop',3,'kg','vorne','«danach zusätzlich 3 kg Epsotop (wird etwas zu hoch sein)»',r11);
+  const r12=T(12,'vor der Messung wurde das hintere Reservoir ins vordere gepumpt, weil eine Reperatur am Ventil gemacht werden muss, hinteres Reservoir ist deshalb zurzeit leer');
+  ev('2026-06-02',null,'Umpumpen',null,null,null,'beide','hinteres Reservoir ins vordere gepumpt – Reparatur am Ventil; hinten danach leer',r12,{von:'hinten',nach:'vorne'},'hinten → vorne');
+  zeile('2026-06-02',null,[0.7,7.02],null,null,'hinteres Reservoir leer (ins vordere gepumpt)',T(12));
+  zeile('2026-06-08',null,[0.82,7.67],null,null,'hinteres Reservoir immer noch leer',T(13));
+  wurzel('2026-06-08','19-434',[1.8,1.63,1.55],T(13));
+  wurzel('2026-06-08','20-207',[1,1.08,1.06],T(14));
+  wurzel('2026-06-08','21-311',[1,1.35,1.04],T(15));
+  zeile('2026-06-10',null,[0.96,7.52],[1,7.38],null,null,T(16));
+  zeile('2026-06-17',null,[0.96,8.2],[1.01,8.12],null,null,T(17));
+  zeile('2026-06-25',null,[0.78,8],[0.8,8.05],null,null,T(18));
+
+  /* ── Juli ── */
+  zeile('2026-07-02',null,[0.61,7.73],[0.64,7.93],null,null,T(19));
+  zeile('2026-07-09',null,[0.58,7.61],[0.58,7.65],null,null,T(20));
+  zeile('2026-07-14',null,[0.5,7.77],[0.56,7.81],null,'Dünger leer',T(21));
+  ev('2026-07-14',null,'Notiz',null,null,null,'beide',null,T(21,'Dünger leer, neue Lieferung am 15.7. geplant'),{text:'Dünger leer, neue Lieferung am 15.7. geplant'},'Dünger leer');
+  zeile('2026-07-21',null,[null,8.03],[null,7.86],null,'morgens, vor der Phosphorsäure',T(22,'Morgens, vor PS'));
+  vh('2026-07-21',null,'Säurezugabe','phosphorsaeure',2100,2100,'ml','«PS» = Phosphorsäure, zwischen Morgen- und Abendmessung',T(23,'Abends, nach PS (vorne 2100ml tot., hinten 2100ml tot.)'));
+  zeile('2026-07-21',null,[0.68,6.55],[0.73,6.67],null,'abends, nach der Phosphorsäure',T(23));
+  zeile('2026-07-27',null,[0.59,7.41],[0.58,7.29],null,null,T(24));
+  zeile('2026-07-28',null,[0.59,7.27],[0.59,7.23],null,"10'000 l BioV-Wasser + 3 kg Epsotop",T(25));
+  bioV('2026-07-28',10000,3,T(25,'+ 10000l BioV-Wasser + 3kg ET'));
+  bioV('2026-07-30',10000,3,T(26,'+ 10000l BioV-Wasser + 3kg ET'));
+  /* Zeile 27: dieselbe Bemerkung ohne Datum – laut Betrieb ein Versehen. */
+
+  /* ── August ── */
+  bioV('2026-08-04',3000,1,T(28,'+ 3000l BioV-Wasser + 1kg ET'));
+  const r29=T(29,'EC + pH-Gerät neu kalbriert! (war sehr falsch)');
+  ev('2026-08-06',null,'Gerätekalibrierung',null,null,null,'beide','Messwerte davor mit Vorbehalt lesen',r29,{geraet:'pH und EC',befund:'war sehr falsch'},'Gerät neu kalibriert');
+  zeile('2026-08-06',null,[0.86,7.8],[0.82,7.81],null,'Gerät neu kalibriert (war sehr falsch)',T(29));
+  ev('2026-08-06',null,'Desinfektion','halades',1,'l','vorne','«Haldes PE» = Halades PE',T(30,'Zugabe 1l Haldes PE in Reservoir vorne'));
+  zeile('2026-08-07',null,[0.79,8.11],[0.72,7.77],null,null,T(31));
+  const r32=T(32,'Zugabe 1.7l P-Säure --> alles nach hinten gepumpt');
+  ev('2026-08-07',null,'Säurezugabe','phosphorsaeure',1.7,'l','vorne','Stelle nicht genannt – vorne angenommen, dort wurde danach gemessen',r32);
+  zeile('2026-08-07',null,[null,6.76],null,null,'nach 1,7 l Phosphorsäure',T(32));
+  ev('2026-08-07',null,'Umpumpen',null,null,null,'beide','«alles nach hinten gepumpt»',r32,{von:'vorne',nach:'hinten'},'vorne → hinten');
+  const r33=T(33,'Reservoir vorne: 8000l BioV-Wasser + 2.5kg ET + 900ml Halades PE');
+  bioV('2026-08-07',8000,2.5,r33,'vorne');
+  ev('2026-08-07',null,'Desinfektion','halades',900,'ml','vorne',null,r33);
+  zeile('2026-08-07',null,[0.77,7.07],[0.73,6.87],null,'vorne neu: 8000 l BioV-Wasser, 2,5 kg Epsotop, 900 ml Halades',T(33));
+  zeile('2026-08-12',null,[0.7,7.49],[0.69,7.44],null,null,T(34));
+  const r35=T(35,'+ 10000l BioV-Wasser + 5kg EPT + 1.5l HA');
+  bioV('2026-08-13',10000,5,r35);
+  ev('2026-08-13',null,'Desinfektion','halades',1.5,'l','beide','«HA» = Halades',r35);
+  zeile('2026-08-13',null,[null,6.33],[null,6.3],null,"10'000 l BioV-Wasser, 5 kg Epsotop, 1,5 l Halades",T(35));
+  zeile('2026-08-13',null,[0.8,6.22],[0.82,6.2],null,null,T(36));
+  zeile('2026-08-14',null,[0.95,null],[0.9,7.25],null,['pH «1,36» in der Tabelle – Tippfehler, weggelassen',null],T(37));
+  zeile('2026-08-17',null,[0.96,7.78],[0.92,7.94],null,null,T(38));
+  ev('2026-08-18',null,'Desinfektion','halades',1.4,'l','vorne','«A» steht für HA, Halades (laut Betrieb)',T(39,'RV: + 1.4l A'));
+  const r40=T(40,'+ 10000l BioV-Wasser + 5kg EPT + 1.5l HA');
+  bioV('2026-08-19',10000,5,r40);
+  ev('2026-08-19',null,'Desinfektion','halades',1.5,'l','beide','«HA» = Halades',r40);
+  zeile('2026-08-19',null,[0.54,5.22],[0.91,7],null,"10'000 l BioV-Wasser, 5 kg Epsotop, 1,5 l Halades",T(40));
+  zeile('2026-08-21',null,[0.95,6.96],[0.99,6.98],null,null,T(41));
+  zeile('2026-08-25',null,[0.96,7.77],[0.96,7.54],null,'danach 1,2 l Phosphorsäure',T(42));
+  ev('2026-08-25',null,'Säurezugabe','phosphorsaeure',1.2,'l','beide','«PS» = Phosphorsäure, Stelle nicht genannt',T(42,'+1,2l PS'));
+  zeile('2026-08-25',null,[null,6.62],[null,6.51],null,'nach der Phosphorsäure',T(43));
+  const r44=T(44,'+7000l BioV-Wasser + 3kg EPT + 1,7kg KS + 6g Zn');
+  bioV('2026-08-26',7000,3,r44);
+  ev('2026-08-26',null,ZD,'kali',1.7,'kg','beide','«KS» = Kalisulfat',r44);
+  ev('2026-08-26',null,ZD,'zink',6,'g','beide','«Zn» = Zink',r44);
+  zeile('2026-08-26',null,[0.76,7.11],[1,7.17],null,'7000 l BioV-Wasser, 3 kg Epsotop, 1,7 kg Kalisulfat, 6 g Zink',T(44));
+  zeile('2026-08-27',null,[0.93,6.96],[1.03,7.25],null,null,T(45));
+  zeile('2026-08-28',null,[0.96,7.25],[1.02,7.46],null,null,T(46));
+
+  /* ── Zitronensäure, 31. August bis 10. September ──
+     Die erste Zeile steht in der Tabelle UND im Bericht (gleiche pH-Werte,
+     in der Tabelle mit EC) – sie wird einmal eingetragen. */
+  const r47=T(47,'+ je 1kg Zitronensäure RV + RH')+' · '+B('Tabelle 1');
+  zeile('2026-08-31',null,[1,7.49],[0.99,7.19],null,'danach je 1 kg Zitronensäure',r47);
+  vh('2026-08-31',null,'Säurezugabe','zitronensaeure',1,1,'kg',null,r47);
+  zeile('2026-08-31',null,[null,6.57],[null,6.1],null,ZSn,B('Tabelle 1'));
+  zeile('2026-08-31',null,[null,6.74],[null,6.61],null,null,B('Tabelle 1'));
+  zeile('2026-09-01',null,[null,7.14],[null,7.24],null,null,B('Tabelle 1'));
+  ev('2026-09-01',null,'Säurezugabe','zitronensaeure',0.5,'kg','vorne',null,B('Tabelle 1'));
+  zeile('2026-09-01',null,[null,6.79],null,null,'nach 0,5 kg Zitronensäure',B('Tabelle 1'));
+  ev('2026-09-01',null,'Säurezugabe','zitronensaeure',0.5,'kg','vorne',null,B('Tabelle 1'));
+  zeile('2026-09-01',null,[null,6.53],null,null,'nach weiteren 0,5 kg',B('Tabelle 1'));
+  zeile('2026-09-02',null,[null,6.92],null,null,null,B('Tabelle 1'));
+  /* 9. September: mit Uhrzeiten. Sauerstoff laut Bericht den ganzen Tag
+     unverändert 0,2 mg/l – am ersten und am letzten Messpunkt eingetragen. */
+  const O2n=['Sauerstoff laut Bericht den ganzen Tag unverändert 0,2 mg/l',null];
+  zeile('2026-09-09','09:00',[null,7.54],[null,7.65],0.2,O2n,B('Tabelle 2 und Text'));
+  ev('2026-09-09','09:05','Säurezugabe','zitronensaeure',1,'kg','hinten',null,B('Tabelle 2'));
+  zeile('2026-09-09','10:20',[null,7.56],[null,6.42],null,null,B('Tabelle 2'));
+  ev('2026-09-09','10:25','Säurezugabe','zitronensaeure',1,'kg','vorne',null,B('Tabelle 2'));
+  zeile('2026-09-09','11:45',[null,6.62],[null,6.87],null,null,B('Tabelle 2'));
+  zeile('2026-09-09','14:30',[null,6.75],[null,7],null,null,B('Tabelle 2'));
+  zeile('2026-09-09','16:00',[null,6.95],[null,7],null,null,B('Tabelle 2'));
+  ev('2026-09-09','16:05','Säurezugabe','zitronensaeure',1,'kg','hinten',null,B('Tabelle 2'));
+  zeile('2026-09-09','17:15',[null,6.95],[null,6.3],0.2,O2n,B('Tabelle 2 und Text'));
+  zeile('2026-09-10','07:45',[null,7.14],[null,6.5],null,null,B('Tabelle 2'));
+  ev('2026-09-10',null,'Notiz',null,null,null,'beide',null,B('Text'),
+    {text:'Morgens starker Geruch nach faulen Eiern (Schwefelwasserstoff) im Gewächshaus. Sauerstoff zuvor 0,2 mg/l. Keine Zitronensäure mehr, weiter mit Schwefelsäure.'},'Geruch nach faulen Eiern');
+  ev('2026-09-10',null,'Tank neu angesetzt',null,null,null,'beide','Wasser abgepumpt, beide Tanks neu gefüllt (10. und 11.09.). Füllmenge nicht notiert; am 16.09. standen vorne ca. 5000 l, hinten ca. 7000 l.',
+    B('Text')+' · '+T('49 und 50'),{},'Tanks neu gefüllt');
+
+  /* ── Schwefelsäure und EM, 16. und 17. September ──
+     Die Bemerkung einer Zeile beschreibt, was NACH der Messung geschah: der
+     pH fällt jeweils in der nächsten Zeile. */
+  zeile('2026-09-16',null,[1.36,8.04],[1.34,8.02],null,null,T(51));
+  zeile('2026-09-16',null,[1.29,8.11],[1.29,8.21],5.6,'danach 1 l Schwefelsäure je Reservoir',T(52));
+  s25('2026-09-16',T(52,S52));
+  zeile('2026-09-17',null,[1.35,8.07],[1.31,8.08],6,'danach 1 l Schwefelsäure je Reservoir',T(53));
+  s25('2026-09-17',T(53,S52));
+  zeile('2026-09-17',null,[null,7.57],[null,7.69],6.2,'danach 1 l Schwefelsäure je Reservoir',T(54));
+  s25('2026-09-17',T(54,S52));
+  zeile('2026-09-17',null,[null,7.22],[null,7.28],5.9,'danach EM: vorne 5 l, hinten 10 l',T(55));
+  vh('2026-09-17',null,'Biologisches Präparat','em',5,10,'l','«MKBoden» = EM (laut Betrieb). Reservoir vorne ca. 5000 l, hinten ca. 7000 l.',
+    T(55,'RV (ca. 5000l) + 5l MKBoden, RH (ca. 7000l) + 10l MKBoden'));
+  zeile('2026-09-17',null,[null,7.35],[null,7.53],5.1,'danach 1 l Schwefelsäure je Reservoir',T(56));
+  s25('2026-09-17',T(56,S52));
+  zeile('2026-09-17',null,[null,7.3],[null,7.38],null,null,T(57));
+
+  return {id:P,titel:'Reservoir April bis September 2026',
+    kurz:'pH, EC und Sauerstoff im Rücklauf, dazu jede Gabe – aus der Reservoir-Tabelle und dem Bericht über die Säure',
+    quellen:['Tabelle «pH/EC Reservoir», 30.04.–17.09.2026','Bericht «pH und Säure», 31.08.–10.09.2026 (mit Uhrzeiten am 9.9.)'],
+    entscheide:[
+      '«RV: + 1.4l A» am 18.08. ist Halades, 1,4 l vorne – «A» steht für HA.',
+      '«MKBoden» am 17.09. ist EM (Effektive Mikroorganismen): vorne 5 l, hinten 10 l – mit eigenem Balken.',
+      'Die Zeile ohne Datum nach dem 30.07. (ein zweites «10000l BioV-Wasser + 3kg ET») war ein Versehen und fehlt.',
+      'pH vorne «1,36» am 14.08. ist ein Tippfehler und fehlt; der EC dieser Zeile bleibt.',
+      '«neu jeweils 1 kg Kalisulfat pro 10\'000 l, kein Halades mehr, keine PS mehr» ist eine Betriebsregel, keine Gabe – nicht übernommen.',
+      '«BioV-Wasser» ist eine Wasserzugabe mit Dünger und eine Biovin-Gabe ohne Menge – wieviel Biovin, ist nicht notiert.',
+      'Säure ohne Namen am 06.05. gilt als Phosphorsäure, «Dünger» ohne Namen am 26.05. als Biovin (Annahmen).',
+      '1,7 l Phosphorsäure am 07.08. ohne Stelle gilt als vorne – dort wurde danach gemessen (Annahme).',
+      'Die Messreihen vom 31.08. bis 10.09. stammen aus dem Bericht, am 9.9. mit Uhrzeit. Die erste Zeile vom 31.08. steht in beiden und ist einmal eingetragen.',
+      'Sauerstoff 0,2 mg/l am 9.9. vorne, am ersten und letzten Messpunkt – laut Bericht den ganzen Tag unverändert.',
+      '«Wasser abgepumpt, Tanks neu gefüllt» am 10.09. ist ein Neuansatz; die leeren Zeilen 10. und 11.09. in der Tabelle gehören dazu.',
+      'Ohne Uhrzeit stehen mehrere Messungen eines Tages in der Reihenfolge der Tabelle – im Diagramm über den Tag verteilt, im Kästchen als «Uhrzeit nicht erfasst» bezeichnet.'],
+    messungen:M,ereignisse:E};
+})();
+const PAKETE=[PAKET_RES26];
+const paketVon=id=>PAKETE.find(p=>p.id===id)||null;
+function paketStand(p){
+  const ids=new Set(db.messungen.map(x=>x.id).concat(db.ereignisse.map(x=>x.id)));
+  const alle=p.messungen.concat(p.ereignisse),da=alle.filter(x=>ids.has(x.id)).length;
+  const merk=(db.pakete||{})[p.id]||null;
+  return {da,gesamt:alle.length,aktiv:da>0,voll:da===alle.length,merk};
+}
+function paketZeitraum(p){const d=p.messungen.concat(p.ereignisse).map(x=>x.datum).sort();return {von:d[0],bis:d[d.length-1]}}
+/* Was ein früherer Tabellenimport im selben Zeitraum schon eingetragen hat.
+   Das Paket ersetzt es auf Wunsch – sonst stünde alles doppelt. Von Hand
+   oder vom Handy Erfasstes bleibt immer unberührt. */
+function paketAltImport(p){
+  const z=paketZeitraum(p),im=x=>x.quelle==='excel'&&x.datum>=z.von&&x.datum<=z.bis;
+  return {mess:db.messungen.filter(im),ev:db.ereignisse.filter(im)};
+}
+/* Der Hinweis oben in Überblick, Giesswasser und Logbuch – bis das Paket
+   aktiviert oder ausdrücklich abgelehnt ist. */
+function paketHinweis(){
+  if(!['lage','giess','logbuch'].includes(tab))return '';
+  const offen=PAKETE.filter(p=>{const s=paketStand(p);return !s.aktiv&&!(s.merk&&s.merk.abgelehnt)});
+  return offen.map(p=>`<div class="note gut paketHinweis"><strong>Bereit zum Aktivieren: ${esc(p.titel)}.</strong>
+    ${p.messungen.length} Messungen und ${p.ereignisse.length} Logbucheinträge, bereinigt und fertig eingetragen – ein Klick übernimmt sie.
+    <div class="row" style="margin-top:8px"><button class="primary" data-tun="paketZeigen" data-id="${esc(p.id)}">Ansehen und aktivieren</button>
+    <button class="ghost" data-tun="paketNein" data-id="${esc(p.id)}">Nicht verwenden</button></div></div>`).join('');
+}
+function paketKarte(){
+  return `<div class="card"><h2>Vorbereitete Daten</h2>
+    <p class="small muted" style="max-width:70ch">Von Hand gelesen und bereinigt, fertig zum Übernehmen. Nach dem Aktivieren sind es ganz normale Einträge –
+    bearbeiten und entfernen wie jeden anderen. Jeder trägt seinen Beleg: die Tabellenzeile oder den Teil des Berichts.</p>
+    ${PAKETE.map(p=>{const s=paketStand(p),z=paketZeitraum(p);
+      return `<div class="row" style="align-items:center;gap:12px;margin-top:8px">
+        <div style="flex:1;min-width:220px"><strong>${esc(p.titel)}</strong><div class="tiny muted">${fmt(z.von)} bis ${fmt(z.bis)} · ${p.messungen.length} Messungen · ${p.ereignisse.length} Logbucheinträge</div></div>
+        <span class="pill ${s.voll?'ok':s.aktiv?'na':''}">${s.voll?'aktiv':s.aktiv?`teilweise aktiv (${s.da} von ${s.gesamt})`:'nicht aktiv'}</span>
+        <button data-tun="paketZeigen" data-id="${esc(p.id)}">${s.aktiv?'Ansehen':'Ansehen und aktivieren'}</button></div>`}).join('')}</div>`;
+}
+AKTION.paketZeigen=d=>{
+  const p=paketVon(d.id);if(!p)return;
+  const s=paketStand(p),z=paketZeitraum(p),alt=paketAltImport(p);
+  const tank=p.messungen.filter(m=>m.stelle!=='wurzelraum'),wz=p.messungen.filter(m=>m.stelle==='wurzelraum');
+  /* Die Balken, die der Chef danach sieht – aus dem Paket allein gerechnet. */
+  const mittel=[...new Set(p.ereignisse.filter(e=>e.mittel).map(e=>e.mittel))];
+  const reihen=Object.keys(db.produkte||{});
+  mittel.sort((a,b)=>reihen.indexOf(a)-reihen.indexOf(b));
+  const balken=mittel.map(id=>{
+    const g=p.ereignisse.filter(e=>e.mittel===id).sort(chrono);
+    const sp=[];let akt=null;
+    for(const x of g){if(!akt||tage(akt.bis,x.datum)>BEIGABE_LUECKE){akt={von:x.datum,bis:x.datum,n:0};sp.push(akt)}akt.bis=x.datum;akt.n++}
+    return `<tr><td><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MITTEL_FARBE[id]||'#697A6C'};margin-right:6px"></span>${esc(mittelKurz(id))}</td>
+      <td class="small">${sp.map(x=>x.von===x.bis?fmt(x.von):fmt(x.von)+' – '+fmt(x.bis)).join(' · ')}</td><td class="mono">${g.length}</td></tr>`}).join('');
+  const zeileE=e=>`<tr><td class="mono">${fmt(e.datum)}${zeitTag(e)}</td><td>${esc(e.typ)}</td><td>${esc(e.mittel?mittelKurz(e.mittel):(e.titel||''))}</td>
+    <td class="mono">${e.menge!=null?esc(evMenge(e)):'–'}</td><td class="tiny">${esc(e.stelle)}</td>
+    <td class="small">${esc(e.notiz||(e.felder&&e.felder.text)||'')}</td><td class="tiny muted">${esc(e.beleg)}</td></tr>`;
+  const zeileM=m=>`<tr><td class="mono">${fmt(m.datum)}${zeitTag(m)}</td><td class="tiny">${esc(m.stelle)}</td>
+    <td class="mono">${nz(m.ec,2)}</td><td class="mono">${nz(m.ph,2)}</td><td class="mono">${m.o2!=null?nz(m.o2,1):'–'}</td>
+    <td class="small">${esc(m.notiz||'')}</td><td class="tiny muted">${esc(m.beleg)}</td></tr>`;
+  dialog(p.titel,
+    `<p class="small">${esc(p.kurz)}. Zeitraum ${fmt(z.von)} bis ${fmt(z.bis)}.</p>
+     <div class="kpis"><div class="kpi"><h4>Messungen am Tank</h4><b>${tank.length}</b><span class="tiny muted">davon ${tank.filter(m=>m.o2!=null).length} mit Sauerstoff, ${tank.filter(m=>m.zeit).length} mit Uhrzeit</span></div>
+       <div class="kpi"><h4>EC im Wurzelraum</h4><b>${wz.length}</b><span class="tiny muted">drei Sätze am 08.06.</span></div>
+       <div class="kpi"><h4>Logbucheinträge</h4><b>${p.ereignisse.length}</b><span class="tiny muted">${p.ereignisse.filter(e=>e.mittel).length} Gaben mit Mittel</span></div></div>
+     ${s.aktiv?`<div class="note ${s.voll?'gut':''}">${s.voll?'Das Paket ist aktiv – alle Einträge stehen im Bestand.':`Teilweise aktiv: ${s.da} von ${s.gesamt} Einträgen stehen im Bestand. «Fehlende ergänzen» trägt den Rest nach; Bearbeitetes bleibt, wie es ist.`}</div>`:''}
+     <h3 style="margin:14px 0 6px">Balken je Mittel, wie sie danach unter den Diagrammen stehen</h3>
+     <div class="scroll"><table><thead><tr><th>Mittel</th><th>gegeben</th><th>Gaben</th></tr></thead><tbody>${balken}</tbody></table></div>
+     <h3 style="margin:14px 0 6px">Was dabei entschieden wurde</h3>
+     <ul class="small" style="margin:0;padding-left:18px">${p.entscheide.map(t=>`<li style="margin:3px 0">${esc(t)}</li>`).join('')}</ul>
+     <p class="tiny muted" style="margin-top:6px">Quellen: ${esc(p.quellen.join(' · '))}</p>
+     <details style="margin-top:10px"><summary>Alle ${p.ereignisse.length} Logbucheinträge</summary>
+       <div class="scroll" style="margin-top:8px"><table><thead><tr><th>Datum</th><th>Art</th><th>Mittel</th><th>Menge</th><th>Stelle</th><th>Notiz</th><th>Beleg</th></tr></thead><tbody>
+       ${p.ereignisse.map(zeileE).join('')}</tbody></table></div></details>
+     <details style="margin-top:6px"><summary>Alle ${p.messungen.length} Messungen</summary>
+       <div class="scroll" style="margin-top:8px"><table><thead><tr><th>Datum</th><th>Stelle</th><th>EC</th><th>pH</th><th>O₂</th><th>Notiz</th><th>Beleg</th></tr></thead><tbody>
+       ${p.messungen.map(zeileM).join('')}</tbody></table></div></details>
+     ${(!s.voll&&(alt.mess.length||alt.ev.length))?`<div class="note warn" style="margin-top:12px"><label class="small"><input type="checkbox" id="paketErsetzen" checked>
+       Die ${alt.mess.length} Messungen und ${alt.ev.length} Logbucheinträge aus einem früheren Tabellenimport im selben Zeitraum ersetzen – sonst steht alles doppelt.</label>
+       <div class="tiny muted" style="margin-top:4px">Von Hand oder vom Handy Eingetragenes bleibt in jedem Fall unberührt.</div></div>`:''}`,
+    `${s.voll?'':`<button class="primary" data-tun="paketAn" data-id="${esc(p.id)}">${s.aktiv?'Fehlende ergänzen':'Aktivieren'}</button>`}
+     ${s.aktiv?`<button data-tun="paketWeg" data-id="${esc(p.id)}">Wieder entfernen</button>`:''}
+     <button data-tun="dlgZu">Schliessen</button>`);
+};
+AKTION.paketAn=d=>{
+  const p=paketVon(d.id);if(!p)return;
+  let weg=0;
+  if(el('paketErsetzen')&&el('paketErsetzen').checked){
+    const a=paketAltImport(p),w=new Set(a.mess.concat(a.ev).map(x=>x.id));weg=w.size;
+    db.messungen=db.messungen.filter(x=>!w.has(x.id));db.ereignisse=db.ereignisse.filter(x=>!w.has(x.id));
+  }
+  const ids=new Set(db.messungen.map(x=>x.id).concat(db.ereignisse.map(x=>x.id)));
+  let nm=0,ne=0;
+  for(const m of p.messungen)if(!ids.has(m.id)){db.messungen.push(JSON.parse(JSON.stringify(m)));nm++}
+  for(const e of p.ereignisse)if(!ids.has(e.id)){db.ereignisse.push(JSON.parse(JSON.stringify(e)));ne++}
+  db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:heute(),abgelehnt:false};
+  aend();if(el('dlg').open)el('dlg').close();setTab('giess');
+  toast(`Aktiviert: ${nm} Messungen und ${ne} Logbucheinträge${weg?`, ${weg} Einträge aus dem früheren Tabellenimport ersetzt`:''}.`);
+};
+AKTION.paketWeg=d=>{
+  const p=paketVon(d.id);if(!p)return;
+  const n=db.messungen.filter(x=>x.paket===p.id).length+db.ereignisse.filter(x=>x.paket===p.id).length;
+  if(!confirm(`Alle ${n} Einträge aus «${p.titel}» entfernen? Auch bearbeitete. Aktivieren geht danach wieder.`))return;
+  db.messungen=db.messungen.filter(x=>x.paket!==p.id);db.ereignisse=db.ereignisse.filter(x=>x.paket!==p.id);
+  db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:null,abgelehnt:true};
+  aend();if(el('dlg').open)el('dlg').close();render();toast(`${n} Einträge entfernt.`);
+};
+AKTION.paketNein=d=>{
+  db.pakete=Object.assign({},db.pakete||{});db.pakete[d.id]={aktiviert:null,abgelehnt:true};
+  aend();render();toast('Ausgeblendet. Unter «Sätze & Einstellungen» → «Vorbereitete Daten» lässt es sich jederzeit aktivieren.');
+};
 
 /* ══════════ 12c · Fotos ══════════
    Ein Foto ist der schnellste Weg, eine Managementaenderung mit einer
@@ -5453,7 +5902,7 @@ function evMittelListe(){
 }
 
 let lbNeu=null,lbFilter=new Set();
-const lbFrisch=()=>({datum:heute(),typ:'Düngergabe',mittel:'biovin',menge:'',stelle:'beide',
+const lbFrisch=()=>({datum:heute(),zeit:jetztZeit(),typ:'Düngergabe',mittel:'biovin',menge:'',stelle:'beide',
   jeReservoir:false,notiz:'',titel:'',felder:{},geltung:'alle',saetze:[]});
 const SCHNELL=[
  ['Biovin',        {typ:'Düngergabe',mittel:'biovin'}],
@@ -5466,7 +5915,7 @@ const SCHNELL=[
 
 function vLogbuch(){
   if(!lbNeu)lbNeu=lbFrisch();
-  const alle=[...db.ereignisse].sort((a,b)=>(b.datum||'').localeCompare(a.datum||''));
+  const alle=chronoAb(db.ereignisse);
   const typen=[...new Set(alle.map(e=>e.typ))].sort();
   const sicht=lbFilter.size?alle.filter(e=>lbFilter.has(e.typ)):alle;
   const mitVergleich=alle.filter(x=>x.geltung==='saetze'&&x.saetze&&x.saetze.length).length;
@@ -5503,12 +5952,13 @@ function vLogbuch(){
       const fo=db.fotos.filter(f=>f.datum===e.datum);
       s+=`<div class="zs"><span class="pkt" style="background:${evFarbe(e.typ)}"></span>
         <div class="row" style="gap:10px;align-items:baseline">
-          <span class="mono" style="min-width:82px">${fmt(e.datum)}</span>
+          <span class="mono" style="min-width:82px">${fmt(e.datum)}${zeitTag(e)}</span>
           <strong>${esc(e.typ)}</strong>
           ${e.titel?`<span class="tag">${esc(e.titel)}</span>`:''}
           ${e.stelle&&e.stelle!=='beide'?`<span class="pill na">${esc(e.stelle)}</span>`:''}
           ${e.geltung==='saetze'?`<span class="pill ok">${esc((e.saetze||[]).join(', '))}</span>`:''}
           ${e.quelle==='excel'?'<span class="tag schaetz">aus Excel-Import</span>':''}
+          ${e.paket?`<span class="tag" title="${esc(e.beleg||'')}">aus dem Datenpaket</span>`:''}
           <div style="flex:1"></div>
           ${fo.length?`<span class="chip" data-tun="fotoTag" data-datum="${esc(e.datum)}">${fo.length} Foto${fo.length>1?'s':''}</span>`:''}
           <button class="ghost" data-tun="wirkung" data-id="${esc(e.id)}">Wirkung prüfen</button>
@@ -5541,6 +5991,7 @@ function lbFormular(){
   const mittel=evMittelListe();
   let h=`<div class="wz">
     <div><label class="lab">Datum</label><input type="date" data-aend="lbFeld" data-f="datum" value="${esc(lbNeu.datum)}"></div>
+    <div><label class="lab">Uhrzeit</label><input type="time" data-aend="lbFeld" data-f="zeit" value="${esc(lbNeu.zeit||'')}"></div>
     <div><label class="lab">Art</label><select data-aend="lbFeld" data-f="typ">
       ${Object.keys(EVTYPEN).map(t=>`<option${t===lbNeu.typ?' selected':''}>${esc(t)}</option>`).join('')}</select></div>
     ${d.mittel?`<div><label class="lab">Mittel</label><select data-aend="lbFeld" data-f="mittel">
@@ -5614,7 +6065,8 @@ AKTION.lbSpeichern=()=>{
     if(menge<0)return toast('Eine negative Menge ergibt keinen Sinn.');
   }
   if(n.geltung==='saetze'&&!(n.saetze||[]).length)return toast('Bitte mindestens einen Satz wählen – oder «ganzes Gewächshaus».');
-  db.ereignisse.push({id:uid(),datum:n.datum,typ:n.typ,titel:(n.titel||'').trim()||null,
+  if(n.zeit&&!zeitNorm(n.zeit))return toast('Die Uhrzeit ist keine Uhrzeit (HH:MM).');
+  db.ereignisse.push({id:uid(),datum:n.datum,zeit:zeitNorm(n.zeit),typ:n.typ,titel:(n.titel||'').trim()||null,
     mittel:mittel||null,menge,einheit:menge!=null?evEinheit(n.typ,mittel):null,
     jeReservoir:!!(menge!=null&&n.jeReservoir),stelle:n.stelle||'beide',
     notiz:(n.notiz||'').trim()||null,felder:Object.assign({},n.felder||{}),
@@ -5627,7 +6079,7 @@ AKTION.lbSpeichern=()=>{
 AKTION.lbWieder=d=>{
   const e=db.ereignisse.find(x=>x.id===d.id);if(!e)return;
   lbNeu=Object.assign(lbFrisch(),{
-    datum:heute(),typ:e.typ,mittel:e.mittel,menge:e.menge==null?'':String(e.menge),
+    datum:heute(),zeit:jetztZeit(),typ:e.typ,mittel:e.mittel,menge:e.menge==null?'':String(e.menge),
     stelle:e.stelle||'beide',jeReservoir:!!e.jeReservoir,notiz:e.notiz||'',titel:e.titel||'',
     felder:Object.assign({},e.felder||{}),geltung:e.geltung||'alle',saetze:(e.saetze||[]).slice()});
   render();
@@ -5646,11 +6098,12 @@ AKTION.evNeu=d=>evDialog(d&&d.id,d&&d.vor);
 function evDialog(id,vor){
   const e=id?db.ereignisse.find(x=>x.id===id):null;
   const typ=e?e.typ:(vor&&EVTYPEN[vor]?vor:'Düngergabe');
-  EV=e?JSON.parse(JSON.stringify(e)):{id:uid(),datum:heute(),typ,felder:{},geltung:'alle',saetze:[],
+  EV=e?JSON.parse(JSON.stringify(e)):{id:uid(),datum:heute(),zeit:jetztZeit(),typ,felder:{},geltung:'alle',saetze:[],
     stelle:'beide',menge:null,einheit:null,mittel:null,jeReservoir:false,quelle:'hand'};
   dialog(e?'Eintrag bearbeiten':'Änderung erfassen',
     `<div class="row">
       <div><label class="lab">Datum</label><input type="date" id="eDatum" value="${esc(EV.datum)}"></div>
+      <div><label class="lab">Uhrzeit <span class="muted">(falls bekannt)</span></label><input type="time" id="eZeit" value="${esc(EV.zeit||'')}"></div>
       <div><label class="lab">Art der Änderung</label><select id="eTyp" data-aend="evTyp">
         ${Object.keys(EVTYPEN).map(t=>`<option${t===typ?' selected':''}>${esc(t)}</option>`).join('')}
         ${EVTYPEN[typ]?'':`<option selected>${esc(typ)}</option>`}</select></div>
@@ -5658,7 +6111,8 @@ function evDialog(id,vor){
         <input id="eTitel" value="${esc(EV.titel||'')}" placeholder="z.B. Dosis auf 0,15 %" style="width:100%"></div></div>
     <div id="eFelder" style="margin-top:14px"></div>
     <div style="margin-top:14px"><label class="lab">Notiz</label><textarea id="eNotiz" rows="2" style="width:100%">${esc(EV.notiz||'')}</textarea></div>
-    ${EV.quelle==='excel'?'<p class="tiny muted" style="margin-top:8px">Dieser Eintrag stammt aus dem Excel-Import. Änderst du ihn, bleibt die Herkunft vermerkt.</p>':''}`,
+    ${EV.quelle==='excel'?'<p class="tiny muted" style="margin-top:8px">Dieser Eintrag stammt aus dem Excel-Import. Änderst du ihn, bleibt die Herkunft vermerkt.</p>':''}
+    ${EV.beleg?`<p class="tiny muted" style="margin-top:8px">Beleg: ${esc(EV.beleg)}</p>`:''}`,
     `<button class="primary" data-tun="evSpeichern">Speichern</button><button data-tun="dlgZu">Abbrechen</button>`);
   evFelder(typ);
 }
@@ -5700,6 +6154,9 @@ AKTION.evGeltung=(d,ev)=>{const b=el('eSaetze');if(b)b.hidden=ev.target.value!==
 AKTION.evSpeichern=()=>{
   const ev=EV,box=el('eFelder');
   ev.datum=el('eDatum').value;ev.typ=el('eTyp').value;
+  const zt=el('eZeit')?el('eZeit').value:'';
+  if(zt&&!zeitNorm(zt))return toast('Die Uhrzeit ist keine Uhrzeit (HH:MM).');
+  ev.zeit=zeitNorm(zt);
   ev.titel=el('eTitel').value||null;ev.notiz=el('eNotiz').value||null;
   ev.felder={};box.querySelectorAll('[data-ef]').forEach(i=>{if(i.value)ev.felder[i.dataset.ef]=i.value});
   const g=n=>box.querySelector(`[data-em="${n}"]`);
@@ -6322,6 +6779,11 @@ function vSaetze(){
       </div></div>`}).join('')}
     <div class="note neutral">Ein Gehalt von 9 % Stickstoff heisst: 100 kg Produkt enthalten 9 kg Stickstoff. Bei flüssigen Produkten rechnet die App über die Dichte von Litern in Kilogramm um – fehlt sie, bleibt das Produkt aus der Bilanz draussen und sagt das.</div></div>
 
+  ${paketKarte()}
+  ${ONLINE.an?`<div class="card"><h2>Eingabemaske fürs Handy</h2>
+    <p class="small" style="max-width:70ch">Hinten am Tank: <span class="mono">${esc(maskeAdresse())}</span> – ohne Passwort, nur mit Namen. Die Maske hat keinen Link ins Dashboard.
+    Am einfachsten per QR-Code, ausgedruckt am Tank.</p>
+    <div class="row"><button class="primary" data-tun="qr">QR-Code zeigen und drucken</button><a href="/maske" target="_blank" rel="noopener" style="align-self:center">Maske öffnen ↗</a></div></div>`:''}
   <div class="card"><h2>Datenstand</h2>
     <p class="small">${db.analysen.length} Analysen · ${db.ereignisse.length} Einträge im Logbuch · ${db.messungen.length} Messungen · ${db.fotos.length} Fotos · ${db.rundgaenge.length} Rundgänge · ${alleSaetze().length} Sätze · Schema ${db.schema}</p>
     <p class="small">${ONLINE.an?'Bestand auf dem Server':'Gesicherte Datei'} rund ${mb(dbBytes()+(SEITE_ROH?SEITE_ROH.length:0))} – davon ${mb(dbBytes())} Daten und ${mb(SEITE_ROH?SEITE_ROH.length:0)} Werkzeug.</p>
@@ -6528,7 +6990,7 @@ function ansichtMerken(){
   try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({tab,wesentlich,
     nsWahl,nsAchse,nsSkala,nsLinien,nsBlatt,nsLog,
     vlPaar,vlBlatt,vlWasser,vlSkala,vlTank,vlLog,vlEtage,vlLinien,
-    gwWahl,gwSkala,gwLinien,gwLog,tkStelle,tkLinien,tkBeigaben,ueParams,ueLinien,ueLog,beigabenModus}))}catch(e){}
+    gwWahl,gwSkala,gwLinien,gwLog,tkStelle,tkLinien,tkBeigaben,ueParams,ueLinien,ueLog,beigabenModus,mittelAus:[...mittelAus]}))}catch(e){}
 }
 function ansichtLaden(){
   let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
@@ -6553,12 +7015,69 @@ function ansichtLaden(){
   if(liste(a.ueParams)&&a.ueParams.length)ueParams=liste(a.ueParams);
   ueLinien=wort(a.ueLinien,['aus','satz','alle'])||ueLinien;if(typeof a.ueLog==='boolean')ueLog=a.ueLog;
   beigabenModus=wort(a.beigabenModus,['mittel','auswahl','aus'])||beigabenModus;
+  if(liste(a.mittelAus))mittelAus=new Set(liste(a.mittelAus));
 }
 /* Wesentlich oder alles: der eine Schalter, mit dem man vor einem Chef die
    Tabellen und Vorbehalte wegnimmt und nur das Diagramm stehen lässt –
    und danach alles wieder hat. */
 let wesentlich=false;
 AKTION.wesentlich=()=>{wesentlich=!wesentlich;document.body.classList.toggle('wesentlich',wesentlich);ansichtMerken();render()};
+
+/* ══════════ 17a2 · QR-Code zur Maske ══════════
+   Hinten kommt man per QR-Code auf die Maske – ausgedruckt am Tank. Die
+   Bibliothek (qrcode-generator, MIT) kommt wie pdf.js von cdnjs, aber erst,
+   wenn jemand den Code öffnet; die Prüfsumme sorgt dafür, dass genau diese
+   Datei läuft und keine andere. Gezeichnet wird selbst, als SVG: scharf in
+   jeder Grösse, auch auf dem Drucker. */
+const QR_SKRIPT='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+const QR_PRUEF='sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==';
+const maskeAdresse=()=>location.origin+'/maske';
+function qrLaden(){
+  return new Promise((ok,nein)=>{
+    if(typeof window.qrcode==='function')return ok();
+    const s=document.createElement('script');
+    s.src=QR_SKRIPT;s.integrity=QR_PRUEF;s.crossOrigin='anonymous';s.referrerPolicy='no-referrer';
+    s.onload=()=>typeof window.qrcode==='function'?ok():nein(new Error('QR-Bibliothek unvollständig'));
+    s.onerror=()=>nein(new Error('QR-Bibliothek nicht erreichbar'));
+    document.head.appendChild(s);
+  });
+}
+function qrSvg(text,modul){
+  const q=window.qrcode(0,'M');q.addData(text);q.make();
+  const n=q.getModuleCount(),rand=4,g=(n+2*rand)*modul;
+  let d='';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))d+=`M${(c+rand)*modul} ${(r+rand)*modul}h${modul}v${modul}h-${modul}z`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${g}" height="${g}" viewBox="0 0 ${g} ${g}" shape-rendering="crispEdges" role="img" aria-label="QR-Code: ${esc(text)}"><rect width="${g}" height="${g}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+AKTION.qr=async()=>{
+  const url=maskeAdresse();
+  try{await qrLaden()}catch(e){
+    return dialog('QR-Code zur Maske',`<p class="small">Die QR-Bibliothek liess sich nicht laden (${esc(e.message)}). Die Adresse zum Abtippen:</p>
+      <p class="mono" style="font-size:20px">${esc(url)}</p>`,'<button data-tun="dlgZu">Schliessen</button>');
+  }
+  dialog('QR-Code zur Maske',
+    `<div style="text-align:center"><div id="qrBild" style="display:inline-block;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">${qrSvg(url,8)}</div>
+      <p class="mono" style="font-size:17px;margin:10px 0 2px">${esc(url)}</p>
+      <p class="small muted" style="max-width:52ch;margin:6px auto 0">Ausdrucken und an den Tank hängen. Wer ihn mit dem Handy scannt, kommt direkt in die Eingabemaske – dort nur den Namen eintippen, kein Passwort.
+      Die Maske hat keinen Link hierher ins Dashboard.</p></div>`,
+    `<button class="primary" data-tun="qrDruck">Drucken</button><button data-tun="qrBildSpeichern">Als Bild speichern</button><button data-tun="dlgZu">Schliessen</button>`);
+};
+/* Drucken: nur das Blatt mit dem Code, gross, mit Titel und Adresse. */
+AKTION.qrDruck=()=>{
+  const url=maskeAdresse();
+  let b=el('qrDruck');if(b)b.remove();
+  b=document.createElement('div');b.id='qrDruck';
+  b.innerHTML=`<h1>Basilikum · Messen und Beigaben</h1><div class="qr">${qrSvg(url,10)}</div><p>${esc(url)}</p><p class="klein">Scannen, Namen eintippen, eintragen.</p>`;
+  document.body.appendChild(b);document.body.classList.add('druckQr');
+  const weg=()=>{document.body.classList.remove('druckQr');const x=el('qrDruck');if(x)x.remove();window.removeEventListener('afterprint',weg)};
+  window.addEventListener('afterprint',weg);
+  setTimeout(()=>{window.print();setTimeout(weg,1500)},50);
+};
+AKTION.qrBildSpeichern=()=>{
+  const blob=new Blob([qrSvg(maskeAdresse(),10)],{type:'image/svg+xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='basilikum-maske-qr.svg';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+};
 
 /* ══════════ 17b · Online ══════════
    Läuft die Seite von einem Server (http oder https statt file), holt sie
@@ -6585,8 +7104,9 @@ function kopfStand(){
   /* Online ist es eine Webseite: kein Sichern-Knopf, kein Datei-Knopf. Was
      eingetragen ist, ist eingetragen. Sicherung einspielen und Kopie holen
      stehen unter «Sätze & Einstellungen», wo sie hingehören. */
-  const link=el('erfassenLink'),kopie=el('knopfKopie'),sich=el('knopfSichern'),oeff=el('knopfOeffnen');
+  const link=el('erfassenLink'),kopie=el('knopfKopie'),sich=el('knopfSichern'),oeff=el('knopfOeffnen'),qr=el('knopfQr');
   if(link)link.hidden=!ONLINE.an;
+  if(qr)qr.hidden=!ONLINE.an;
   if(kopie)kopie.hidden=true;
   if(sich)sich.hidden=ONLINE.an;
   if(oeff)oeff.hidden=ONLINE.an;

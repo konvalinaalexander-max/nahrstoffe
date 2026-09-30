@@ -14,7 +14,7 @@ io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)
 node --check pruefung/app.js
 
 # 2 · Logikprüfungen (kein Netz nötig) – schlagen mit Exitcode 1 fehl
-for t in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 server1; do node pruefung/$t.js; done
+for t in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 z1 server1; do node pruefung/$t.js; done
 
 # 3 · Statistik-Nachweise (Belege für BEFUNDE-STATISTIK.md, kein Pass/Fail)
 for t in s1 s2 s3 s4; do node pruefung/$t.js; done
@@ -23,8 +23,9 @@ for t in s1 s2 s3 s4; do node pruefung/$t.js; done
 npm install playwright
 node pruefung/browser.js                     # Datei-Modus, alle Reiter
 BILDER=…/bilder node pruefung/rundreise.js   # sichern → Datei öffnen → weiterarbeiten
-node pruefung/tank.js                        # Handy-Seite gegen den echten server.js
-node pruefung/online.js                      # Admin-Seite vom Server: laufend sichern, Konflikt, Auffrischen
+node pruefung/tank.js                        # Maske gegen den echten server.js (offen)
+node pruefung/online.js                      # Dashboard vom Server: laufend sichern, Konflikt, Auffrischen
+node pruefung/paket.js                       # erster Tag online: Sicherung, Paket, QR, Handy, Neustart
 
 # 5 · Der Upload-Weg mit echten PDFs
 npm install pdfjs-dist@3.11.174
@@ -58,11 +59,13 @@ Jedes Skript endet mit Exitcode 1, sobald eine Prüfung fehlschlägt.
 | `d1.js` | Selbstsicherung als HTML: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
 | `st1.js` | Entnahmestellen zuordnen, gegen die vier echten Wasserberichte |
 | `o1.js` | Schema 9, Sauerstoff-Sättigungsgrenze, `vereinigen` zweier Stände, Satzpaare, Stand in der Kopfzeile |
-| `server1.js` | `server.js` als eigener Prozess über HTTP: Rollen, Anhängen mit Prüfung, 409 bei veralteter Version, Sicherungskopien, Neustart |
+| `server1.js` | `server.js` als eigener Prozess über HTTP: offen ohne Passwort (der Betrieb), nur Dashboard geschützt, beide Passwörter; `/maske`, noindex, Anhängen mit Prüfung, Uhrzeit, 409 bei veralteter Version, Sicherungskopien, Neustart |
+| `z1.js` | Schema 11: Uhrzeit, EM, Balken je Mittel (einzeln schaltbar, Ende beim Neuansatz), das Datenpaket April–September mit jedem Entscheid, Aktivieren/Ergänzen/Entfernen |
 | `browser.js` | Echte App in Chromium: elf Reiter leer und gefüllt, Datei laden, Detaildialog, Nährstoff- und Achsenwechsel, Verlauf mit Ziehen und Zoomen, Stellen zuordnen, Planer, Logbuch, Rundgang, Einstellungen, Offline-Verhalten, Escaping |
 | `gwupload.js` | Drei echte Wasserberichte in Chromium einlesen, Proben vom selben Tag unterscheidbar |
 | `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
-| `tank.js` | Chromium im Handy-Format gegen `server.js`: messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da, Grenzen der Rolle |
+| `tank.js` | Chromium im Handy-Format gegen `server.js` (offen): Name statt Login, Uhrzeit, messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da, kein Link ins Dashboard |
+| `paket.js` | Chromium: der erste Tag online – Sicherung einspielen, Datenpaket aktivieren, Balken und Uhrzeiten, QR-Code (mit jsQR zurückgelesen), Messung vom Handy, Neustart. Braucht `jsqr`, `pngjs` im NODE_PATH und `qrcode.min.js` (cdnjs qrcode-generator 1.4.4) daneben oder unter `QRJS` |
 | `online.js` | Chromium gegen `server.js`: Admin-Seite lädt vom Server, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen, Server weg |
 
 ## Fixtures
