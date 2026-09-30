@@ -299,3 +299,9 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
     bereinigt, mit Uhrzeiten aus dem Bericht, als Paket in der Anwendung;
     online ein Klick auf «Aktivieren». Jeder Balken lässt sich je Mittel
     ein- und ausblenden, auch EM und Halades.
+15. **Balken von Hand, Logbuch ruhiger** (Nachtrag). Magnesium, Kalisulfat
+    und Zink werden weiterhin gegeben: ihre Balken laufen bis heute. Jeder
+    Balken lässt sich anklicken und mit Beginn und Ende versehen, oder mit
+    «wird weiterhin gegeben»; das gilt für alle. Das Logbuch steht in den
+    Diagrammen als eigene Zeile mit gebündelten Marken statt als Linien mit
+    Text quer durchs Bild.

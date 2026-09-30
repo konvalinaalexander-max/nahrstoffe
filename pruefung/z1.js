@@ -130,7 +130,7 @@ console.log('\n════ Aktivieren ════');
   ok(/nicht aktiv/.test(A.paketKarte()),'Einstellungen: «nicht aktiv»');
   A.AKTION.paketAn({id:'reservoir-2026'});
   const db=A.getDb();
-  ok(db.messungen.length===111&&db.ereignisse.length===70,'Aktivieren trägt alles ein');
+  ok(db.messungen.length===111&&db.ereignisse.length===70&&db.beigabeZeiten.length===3,'Aktivieren trägt alles ein, dazu drei laufende Beigaben');
   ok(A.getTab()==='giess','… und öffnet den Reiter Giesswasser');
   ok(db.pakete['reservoir-2026'].aktiviert,'Der Bestand weiss, dass das Paket aktiv ist');
   A.AKTION.paketAn({id:'reservoir-2026'});
@@ -145,7 +145,7 @@ console.log('\n════ Aktivieren ════');
   let render=true;try{A.setTab('giess');A.vGiess();A.vLogbuch();A.vSaetze();A.nachRenderRun()}catch(e){render=false;console.log('   ',e.stack)}
   ok(render,'Giesswasser, Logbuch und Einstellungen bauen sich mit dem Paket fehlerfrei auf');
   A.AKTION.paketWeg({id:'reservoir-2026'});
-  ok(A.getDb().messungen.length===0&&A.getDb().ereignisse.length===0,'«Wieder entfernen» nimmt alles heraus');
+  ok(A.getDb().messungen.length===0&&A.getDb().ereignisse.length===0&&A.getDb().beigabeZeiten.length===0,'«Wieder entfernen» nimmt alles heraus, auch die laufenden Beigaben');
   ok(A.getDb().pakete['reservoir-2026'].abgelehnt,'… und merkt sich das: kein Hinweis mehr');
 }
 {
@@ -174,13 +174,15 @@ console.log('\n════ Balken je Mittel ════');
   console.log('   '+texte.join(' | '));
   const hat=re=>texte.some(t=>re.test(t));
   ok(hat(/^Biovin 06\.05\.–26\.05\.$/)&&hat(/^Biovin 28\.07\.–26\.08\.$/),'Biovin: Mai, dann wieder Ende Juli bis August');
-  ok(hat(/^Magnesium 06\.05\.–26\.05\.$/)&&hat(/^Magnesium 28\.07\.–26\.08\.$/),'Magnesium ebenso');
-  ok(hat(/^Kalisulfat 26\.08\.$/)&&hat(/^Zink 26\.08\.$/),'Kalisulfat und Zink am 26.08.');
+  ok(hat(/^Magnesium 06\.05\.–26\.05\.$/)&&hat(/^Magnesium seit 28\.07\.$/),'Magnesium im Mai, dann seit 28.07. – läuft weiter (laut Betrieb)');
+  ok(hat(/^Kalisulfat seit 26\.08\.$/)&&hat(/^Zink seit 26\.08\.$/),'Kalisulfat und Zink seit 26.08. – laufen weiter');
+  const mg=A.beigabeBalkenMittel().find(b=>/^Magnesium seit/.test(b.text));
+  ok(mg.x1===+new Date(A.heute()),'Der laufende Balken reicht bis heute');
   ok(hat(/^Phosphorsäure 21\.07\.–25\.08\.$/),'Phosphorsäure bis 25.08. und dann nicht mehr');
   ok(hat(/^Halades PE 06\.08\.–19\.08\.$/),'Halades vom 06.08. bis 19.08. – mit der Gabe «A» vom 18.08.');
   ok(hat(/^Zitronensäure 31\.08\.–09\.09\.$/),'Zitronensäure 31.08.–09.09. – endet mit dem Neuansatz der Tanks, läuft nicht weiter');
   ok(hat(/^EM /)&&hat(/^Schwefelsäure 25 % /),'EM und Schwefelsäure haben ihren Balken');
-  const tipp=A.beigabeBalkenMittel().find(b=>/^Magnesium 28/.test(b.text)).tipp;
+  const tipp=A.beigabeBalkenMittel().find(b=>/^Magnesium seit 28/.test(b.text)).tipp;
   ok(/22\.5 kg|22,5 kg/.test(tipp),'Menge gesamt Magnesium 28.07.–26.08.: 22,5 kg');
   ok(/7\.1 l|7,1 l/.test(A.beigabeBalkenMittel().find(b=>/^Phosphorsäure 21/.test(b.text)).tipp),'Phosphorsäure: 4,2 l in ml und 2,9 l zusammengezählt – 7,1 l');
   ok(/ohne notierte Menge/.test(A.beigabeBalkenMittel().find(b=>/^Biovin 28/.test(b.text)).tipp),'Biovin im August: Gaben ohne Menge werden genannt, nicht geschätzt');
@@ -203,6 +205,96 @@ console.log('\n════ Balken je Mittel ════');
   A.setMittelAus(new Set());A.ansichtLaden();
   ok(A.getMittelAus().has('halades'),'Ausgeblendete Mittel werden im Browser gemerkt');
   delete global.localStorage;
+}
+
+console.log('\n════ Balken von Hand: Beginn, Ende, läuft ════');
+{
+  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setModus('mittel');A.setMittelAus(new Set());
+  const T=()=>A.beigabeBalkenMittel().map(b=>b.text);
+  const $=id=>document.getElementById(id);
+  const setze=(von,bis,laeuft,notiz)=>{$('spVon').value=von;$('spBis').value=bis||'';$('spLaeuft').checked=!!laeuft;$('spNotiz').value=notiz||''};
+  A.AKTION.spanne({id:'m|halades|2026-08-06'});
+  const dlgHtml=['dlgBody','dlgFoot'].map(id=>$(id).innerHTML||'').join('');
+  ok(/Zeitraum des Balkens/.test(dlgHtml)&&/spLaeuft/.test(dlgHtml)&&/spanneSpeichern/.test(dlgHtml),'Klick auf den Balken öffnet den Dialog mit Beginn, Ende und «wird weiterhin gegeben»');
+  setze('2026-08-06','',true,'jede Woche');
+  A.AKTION.spanneSpeichern({id:'m|halades|2026-08-06'});
+  ok(T().includes('Halades PE seit 06.08.'),'Halades «wird weiterhin gegeben»: Balken seit 06.08. bis heute');
+  const h=A.beigabeHand(x=>x.mittel==='halades');
+  ok(h.length===1&&h[0].bis===null&&h[0].notiz==='jede Woche'&&h[0].gesetzt===A.heute(),'Im Bestand: ein Zeitraum von Hand, mit Notiz und Datum');
+  const sp=A.beigabeSpannenMittel('halades');
+  ok(sp.length===1&&sp[0].n===5&&sp[0].hand,'Die fünf Gaben aus dem Logbuch stecken im Balken');
+  setze('2026-08-10','2026-08-12',false);
+  A.AKTION.spanneSpeichern({id:'m|halades|2026-08-06'});
+  ok(T().includes('Halades PE 10.08.–12.08.')&&A.beigabeHand(x=>x.mittel==='halades').length===1,'Beginn und Ende geändert – derselbe Zeitraum, kein zweiter');
+  ok(T().filter(t=>/^Halades/.test(t)).length===1&&A.getDb().ereignisse.filter(e=>e.mittel==='halades').length===5,'Es gilt der gesetzte Balken – kein zweiter daneben; die Gaben selbst bleiben im Logbuch');
+  const vorher=JSON.stringify(A.getDb().beigabeZeiten);
+  setze('2026-08-20','2026-08-10',false);
+  A.AKTION.spanneSpeichern({id:'m|halades|2026-08-10'});
+  ok(JSON.stringify(A.getDb().beigabeZeiten)===vorher,'Ende vor Beginn: nichts gespeichert');
+  setze('2026-08-10','',false);
+  A.AKTION.spanneSpeichern({id:'m|halades|2026-08-10'});
+  ok(JSON.stringify(A.getDb().beigabeZeiten)===vorher,'Ohne Ende und ohne «weiterhin»: nichts gespeichert');
+  A.AKTION.spanneAuto({id:A.beigabeHand(x=>x.mittel==='halades')[0].id});
+  ok(T().includes('Halades PE 06.08.–19.08.')&&!A.beigabeHand(x=>x.mittel==='halades').length,'«Wieder automatisch»: der Balken kommt wieder aus dem Logbuch');
+  setze('2026-08-26','2026-09-20',false);
+  A.AKTION.spanneSpeichern({id:'m|kali|2026-08-26'});
+  ok(T().includes('Kalisulfat 26.08.–20.09.')&&A.beigabeHand(x=>x.mittel==='kali').length===1,'Kalisulfat mit Ende 20.09. – ersetzt das «läuft» aus dem Paket');
+  setze('2026-09-01','',true);
+  A.AKTION.spanneSpeichern({id:'m|zink|2026-08-26'});
+  ok(T().includes('Zink seit 01.09.'),'Zink: Beginn verschoben auf 01.09.');
+  /* Der Nährstoffbalken rechnet die Zeiträume der Produkte mit. */
+  const mgk=Object.keys(A.NAME).find(k=>A.beigabeProdukte(k).includes('epsotop')&&/^Mg$|Magnes/.test(k+A.NAME[k]));
+  const nsp=A.beigabeSpannen(mgk);
+  ok(nsp.length&&nsp[nsp.length-1].laeuft&&nsp[nsp.length-1].von==='2026-07-28','Auch der Nährstoffbalken Magnesium läuft seit 28.07. ('+mgk+')');
+  /* Zeiträume ohne jede Gabe: das Mittel erscheint trotzdem im Schalter. */
+  A.getDb().beigabeZeiten.push({id:'t1',mittel:'phosphorsaeure',von:'2026-09-25',bis:null});
+  ok(T().includes('Phosphorsäure seit 25.09.'),'Ein Zeitraum ohne Gabe im Logbuch ist trotzdem ein Balken');
+  /* Wer das Paket nach dem Setzen nochmals «ergänzt», überschreibt nichts. */
+  A.AKTION.paketAn({id:'reservoir-2026'});
+  ok(T().includes('Kalisulfat 26.08.–20.09.')&&A.beigabeHand(x=>x.mittel==='kali').length===1,'Paket ergänzen lässt von Hand Gesetztes stehen');
+  const r=A.migriere(JSON.parse(JSON.stringify(A.getDb())));
+  ok(r.db.beigabeZeiten.length===A.getDb().beigabeZeiten.length,'Die Zeiträume überstehen Sichern und Laden');
+  ok(Array.isArray(A.migriere({schema:10,analysen:[],ereignisse:[],messungen:[]}).db.beigabeZeiten),'Alte Bestände bekommen eine leere Liste');
+}
+
+console.log('\n════ Balken in Zeilen: je Mittel eine ════');
+{
+  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setModus('mittel');A.setMittelAus(new Set());
+  const bal=A.beigabeBalkenMittel();
+  const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01'),X=v=>100+(v-x0)/(x1-x0)*900;
+  const Z=A.spannenZeilen(bal,X,x0,x1);
+  const mittel=new Set(bal.map(b=>b.mittel));
+  ok(Z.n===mittel.size,`${bal.length} Balken in ${Z.n} Zeilen – eine je Mittel (${mittel.size})`);
+  const zeileVon=t=>Z.liste.find(x=>x.sp.text===t).z;
+  ok(zeileVon('Biovin 06.05.–26.05.')===zeileVon('Biovin 28.07.–26.08.'),'Biovin Mai und Biovin August teilen sich eine Zeile');
+  for(const a of Z.liste)for(const b of Z.liste)if(a!==b&&a.z===b.z&&a.xa<b.xa&&a.xa+7+a.sp.text.length*5.3>b.xa){ok(false,'Beschriftung stösst an den nächsten Balken: '+a.sp.text);break}
+  const eng=A.spannenZeilen(bal,v=>100+(v-x0)/(x1-x0)*250,x0,x1);
+  ok(eng.n>Z.n,'Wird es eng, bekommt ein Mittel eine zweite Zeile, statt dass Text übereinanderliegt');
+}
+
+console.log('\n════ Logbuch im Diagramm: eine Zeile, gebündelt ════');
+{
+  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});
+  const items=A.logbuchPunkte(A.getDb().ereignisse.concat([{datum:'kaputt',typ:'Notiz'}]));
+  ok(items.length===70,'logbuchPunkte nimmt nur Einträge mit gültigem Datum');
+  const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01'),X=v=>100+(v-x0)/(x1-x0)*800;
+  const b=A.logbuchBuendel(items,X,x0,x1);
+  ok(b.length<40&&b.reduce((s,x)=>s+x.eintraege.length,0)===70,`70 Einträge in ${b.length} Marken – nichts geht verloren`);
+  for(let i=1;i<b.length;i++)if(b[i].x-b[i-1].x<10){ok(false,'Zwei Marken näher als 10 Bildpunkte');break}
+  const tag=b.find(x=>x.eintraege.some(e=>e.datum==='2026-09-09'));
+  ok(/Logbucheinträge/.test(tag.tipp)&&/09:05/.test(tag.tipp)&&/Zitronensäure/.test(tag.tipp),'Das Kästchen nennt jeden Eintrag mit Uhrzeit und Mittel');
+  const eins=A.logbuchBuendel([{x:x0+864e5*10,e:{datum:'2026-04-30',typ:'Säurezugabe',mittel:'phosphorsaeure',menge:3,einheit:'l'}}],X,x0,x1);
+  ok(eins.length===1&&eins[0].eintraege.length===1&&/Säurezugabe/.test(eins[0].tipp)&&eins[0].farbe!=='#4F5E53'&&/<circle/.test(A.logbuchMarke(eins[0],300,20,294)),'Ein einzelner Eintrag: ein Punkt in der Farbe seiner Art');
+  const svg=A.logbuchMarke(tag,300,20,294);
+  ok(/class="lbm"/.test(svg)&&/class="lbl"/.test(svg)&&/>\d+<\/text>/.test(svg),'Mehrere Einträge: Marke mit Zahl, Hilfslinie dahinter');
+  const box=document.getElementById('probeDiagramm');
+  A.chartPunkte(box,{serien:[{id:'s',name:'s',farbe:'#000',form:'kreis',punkte:[{x:+new Date('2026-05-01'),y:1},{x:+new Date('2026-09-15'),y:2}]}],
+    xTyp:'datum',ereignisse:items});
+  const h=box.innerHTML;
+  const nMarken=(h.match(/class="lbm"/g)||[]).length;
+  ok(/>Logbuch</.test(h)&&nMarken>5&&nMarken<40,'Das Diagramm zeichnet die Logbuch-Zeile mit gebündelten Marken ('+nMarken+' für 70 Einträge)');
+  ok(!/stroke-dasharray="3 4"/.test(h),'Keine gestrichelten Linien mehr über das ganze Diagramm');
+  ok(!/font-size="10" fill="#141D17">(Düngergabe|Säurezugabe|Wasserzugabe)/.test(h),'Keine Titel mehr oben im Diagramm');
 }
 
 console.log('\n════ Ergebnis ════');

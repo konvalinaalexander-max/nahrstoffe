@@ -40,6 +40,7 @@ button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--mute
 nav#nav{display:flex;align-items:center;flex-wrap:wrap}
 body.wesentlich #view>*:not(.haupt){display:none}
 body.wesentlich #view .haupt .werkzeug .wz:not(.haupt):not(.mitBeigaben){display:none}
+.lbm .lbl{opacity:.06;pointer-events:none;transition:opacity .12s}.lbm:hover .lbl{opacity:.75}
 #qrDruck{display:none}
 @media print{body.druckQr>*:not(#qrDruck){display:none!important}
   body.druckQr #qrDruck{display:block;text-align:center;padding-top:30mm;font-family:sans-serif}
@@ -767,7 +768,7 @@ const PRODUKTE_VORGABE={
    zu[<Bezeichnung>] ist die Kennung der Stelle, null heisst ausdruecklich
    «gehoert zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
 const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
-const leer=()=>({schema:11,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],pakete:{},
+const leer=()=>({schema:11,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],rundgaenge:[],pakete:{},beigabeZeiten:[],
   fotos:[],produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),
   stellen:STELLEN_VORGABE(),
   /* Zielwochen 2 und 4: das Satzpaar-Schema. Alle zwei Wochen ein Satz in
@@ -804,6 +805,9 @@ function migriere(roh){
     ? {gruppen:roh.stellen.gruppen.map(g=>Object.assign({},g)),zu:Object.assign({},roh.stellen.zu||{})}
     : STELLEN_VORGABE();
   d.analysen=(roh.analysen||[]).map(a=>Object.assign({},a));
+  /* Beigabe-Zeiträume von Hand (seit 30.09.): Beginn und Ende eines Balkens,
+     vom Betrieb gesetzt. Ein neues, freiwilliges Feld – fehlt es, ist es leer. */
+  d.beigabeZeiten=Array.isArray(roh.beigabeZeiten)?roh.beigabeZeiten.filter(x=>x&&x.mittel&&x.von).map(x=>Object.assign({},x)):[];
   if(von<4){
     let u=0,s=0,al=0;
     const UM={pH:'sub_pH',Salz:'sub_Salz',Nmin:'sub_Nmin',Mn:'sub_Mn',Cu:'sub_Cu',Zn:'sub_Zn',Fe:'sub_Fe',B:'sub_B'};
@@ -1611,8 +1615,9 @@ function chartPunkte(box,o){
   const spur=(xTyp==='datum'&&o.fotos&&o.fotos.length)?o.fotos:null;
   /* Beigabe-Spannen: nur auf der Zeitachse, als eigene Zeilen im unteren Rand. */
   const spannen=(xTyp==='datum'&&o.spannen&&o.spannen.length)?o.spannen:[];
-  const spH=spannen.length?14+spannen.length*16:0;
-  const W=Math.max(box.clientWidth||820,540),H=hoehe+(spur?30:0)+spH,ml=lageSkala?100:66,mr=22,mt=26,mb=48+(spur?30:0)+spH;
+  /* Logbuch: eine eigene Zeile unter den Datumsmarken. */
+  const lbH=(xTyp==='datum'&&ereignisse.length)?24:0;
+  const W=Math.max(box.clientWidth||820,540),ml=lageSkala?100:66,mr=22,mt=26;
   /* Die Zeitachse reicht so weit wie die Messungen – und so weit wie die
      Beigabe-Spannen: eine Gabe nach der letzten Analyse gehört ins Bild,
      gerade weil noch keine Analyse dazu vorliegt. */
@@ -1620,6 +1625,10 @@ function chartPunkte(box,o){
   let x0=Math.min(...xs),x1=Math.max(...xs);
   if(x0===x1){const d=xTyp==='datum'?6048e5:1;x0-=d;x1+=d}
   const sp=(x1-x0)*0.07;x0-=sp;x1+=sp;
+  const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
+  const SZ=spannenZeilen(spannen,X,x0,x1);
+  const spH=SZ.n?14+SZ.n*16:0;
+  const H=hoehe+(spur?30:0)+spH+lbH,mb=48+(spur?30:0)+spH+lbH;
   let y0,y1;
   if(lageSkala){y0=0;y1=3}
   else{
@@ -1631,7 +1640,7 @@ function chartPunkte(box,o){
     const pad=((y1-y0)||Math.abs(y1)||1)*0.14;y0-=pad;y1+=pad;
     if(y0>0&&y0<pad*3)y0=0;
   }
-  const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr),Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(H-mt-mb);
+  const Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(H-mt-mb);
 
   /* Punkte auf derselben Senkrechten auffaechern, damit Proben vom selben
      Tag sichtbar nebeneinander stehen statt sich zu verdecken. */
@@ -1668,13 +1677,12 @@ function chartPunkte(box,o){
   }
   if(yLabel)s+=`<text x="${ml}" y="${mt-9}" font-size="10.5" fill="#697A6C">${esc(yLabel)}</text>`;
   let davor=0,danach=0;
-  for(const ev of ereignisse){
-    if(ev.x<x0){davor++;continue}
-    if(ev.x>x1){danach++;continue}
-    const x=X(ev.x);
-    s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${H-mb}" stroke="#141D17" stroke-dasharray="3 4" opacity=".45"/>`;
-    s+=`<rect x="${x-5}" y="${mt}" width="10" height="${H-mb-mt}" fill="transparent" data-tipp="${esc(`<b>Logbuch</b><span class="z">${esc(ev.label)}</span>`)}" style="cursor:help"/>`;
-    s+=`<text x="${x+3}" y="${mt+10}" font-size="10" fill="#141D17">${esc(String(ev.label).slice(0,20))}</text>`;
+  for(const ev of ereignisse){if(ev.x<x0)davor++;else if(ev.x>x1)danach++}
+  if(lbH){
+    const yL=H-mb+34;
+    s+=`<text x="${ml-8}" y="${yL+3.5}" text-anchor="end" font-size="10" fill="#697A6C">Logbuch</text>`;
+    s+=`<line x1="${ml}" x2="${W-mr}" y1="${yL}" y2="${yL}" stroke="#EDF1E9"/>`;
+    for(const b of logbuchBuendel(ereignisse,X,x0,x1))s+=logbuchMarke(b,yL,mt,yL-6);
   }
   /* Eintraege ausserhalb des Zeitraums gehoeren an die Zeitachse, nicht an
      den oberen Rand – dort stiessen sie mit der Achsenbeschriftung zusammen. */
@@ -1711,12 +1719,11 @@ function chartPunkte(box,o){
   }
   s+=`<text x="${(ml+W-mr)/2}" y="${H-(spur?36:6)}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(xLabel)}${ausserhalb?' · '+esc(ausserhalb):''}</text>`;
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
-  if(spannen.length){
-    const spO=H-mb+24;
+  if(SZ.n){
+    const spO=H-mb+24+lbH;
     s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
-    spannen.forEach((sp,i)=>{
-      const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)return;
-      const xa=X(a),xb=Math.max(X(b),xa+4),y=spO+2+i*16;
+    SZ.liste.forEach(({sp,z,xa,xb})=>{
+      const y=spO+2+z*16;
       s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
         <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
         <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
@@ -1756,11 +1763,6 @@ function chartStapel(box,o){
   if(!spuren.length)return leerBox(box,'Nichts ausgewählt.');
   const W=Math.max(box.clientWidth||900,560),ml=104,mr=44;
   const spannen=(o.spannen||[]);
-  const spH=spannen.length?14+spannen.length*16:0;
-  const evH=((o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0)+spH;
-  const achseH=34;
-  const hoehen=spuren.map(sp=>sp.hoehe||190);
-  const H=hoehen.reduce((a,b)=>a+b,0)+evH+achseH+10;
   let x0=o.von,x1=o.bis;
   if(x0==null||x1==null||!(x1>x0)){
     const alle=spuren.flatMap(sp=>(sp.serien||[]).flatMap(se=>se.punkte.map(p=>p.x)));
@@ -1771,6 +1773,12 @@ function chartStapel(box,o){
     const sp=(x1-x0)*0.05;x0-=sp;x1+=sp;
   }
   const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
+  const SZ=spannenZeilen(spannen,X,x0,x1);
+  const spH=SZ.n?14+SZ.n*16:0;
+  const evH=((o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0)+spH;
+  const achseH=34;
+  const hoehen=spuren.map(sp=>sp.hoehe||190);
+  const H=hoehen.reduce((a,b)=>a+b,0)+evH+achseH+10;
   let s=svgAuf(W,H,'Blattsaft und Giesswasser auf gemeinsamer Zeitachse');
   let oben=6;
   const treffer=[];
@@ -1854,12 +1862,10 @@ function chartStapel(box,o){
   /* Ereignis- und Fotospur */
   const evO=oben;
   if(evH){
-    s+=`<text x="${ml-8}" y="${evO+14}" text-anchor="end" font-size="10" fill="#697A6C">Logbuch</text>`;
-    for(const ev of (o.ereignisse||[])){
-      if(ev.x<x0||ev.x>x1)continue;
-      const x=X(ev.x);
-      s+=`<line x1="${x}" x2="${x}" y1="6" y2="${evO+18}" stroke="${ev.farbe||'#141D17'}" stroke-dasharray="3 4" opacity=".45"/>`;
-      s+=`<circle cx="${x}" cy="${evO+11}" r="4.5" fill="${ev.farbe||'#141D17'}" style="cursor:help" data-tipp="${esc(ev.tipp||'')}"/>`;
+    if((o.ereignisse||[]).length){
+      s+=`<text x="${ml-8}" y="${evO+14}" text-anchor="end" font-size="10" fill="#697A6C">Logbuch</text>`;
+      s+=`<line x1="${ml}" x2="${W-mr}" y1="${evO+11}" y2="${evO+11}" stroke="#EDF1E9"/>`;
+      for(const b of logbuchBuendel(o.ereignisse,X,x0,x1))s+=logbuchMarke(b,evO+11,6,evO+5);
     }
     if((o.fotos||[]).length){
       s+=`<text x="${ml-8}" y="${evO+32}" text-anchor="end" font-size="10" fill="#697A6C">Fotos</text>`;
@@ -1880,12 +1886,11 @@ function chartStapel(box,o){
 
   /* Beigabe-Spannen: ein Balken je Nährstoff, seit wann er dazugegeben
      wird. Nur auf der Zeitachse sinnvoll; die Mengen stehen im Kästchen. */
-  if(spannen.length){
+  if(SZ.n){
     const spO=evO+evH-spH;
     s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
-    spannen.forEach((sp,i)=>{
-      const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)return;
-      const xa=X(a),xb=Math.max(X(b),xa+4),y=spO+2+i*16;
+    SZ.liste.forEach(({sp,z,xa,xb})=>{
+      const y=spO+2+z*16;
       s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
         <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
         <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
@@ -2001,6 +2006,75 @@ function stapelBedienung(box,g){
 
 /* Baustein fuer den Inhalt des Infokaestchens. Alles wird hier maskiert,
    damit ein Satzname mit spitzer Klammer kein Markup einschleusen kann. */
+/* ── Logbuch in den Zeitdiagrammen ─────────────────────────────────────
+   Früher: je Eintrag eine gestrichelte Linie über das ganze Diagramm und
+   sein Titel oben dran – bei siebzig Einträgen ein Textbrei. Jetzt: eine
+   eigene Zeile «Logbuch» unter der Zeitachse. Je Tag eine Marke in der
+   Farbe der Art; was näher als 10 Bildpunkte beieinanderliegt, wird eine
+   Marke mit Zahl. Das Kästchen nennt jeden Eintrag. Die Hilfslinie hinauf
+   ins Diagramm ist kaum zu sehen und wird deutlich, wenn man auf die Marke
+   zeigt. Aufrufer geben logbuchPunkte(liste) mit. */
+const logbuchPunkte=liste=>(liste||[]).filter(e=>e&&e.datum&&!isNaN(+new Date(e.datum))).map(e=>({x:zeitpunkt(e),e}));
+function logbuchBuendel(items,X,x0,x1){
+  const sicht=(items||[]).filter(it=>it&&it.e&&it.x>=x0&&it.x<=x1).sort((a,b)=>a.x-b.x);
+  const out=[];
+  for(const it of sicht){
+    const px=X(it.x),letzt=out[out.length-1];
+    if(letzt&&px-letzt.bis<10){letzt.eintraege.push(it.e);letzt.bis=px;continue}
+    out.push({von:px,bis:px,eintraege:[it.e]});
+  }
+  for(const b of out){
+    b.x=(b.von+b.bis)/2;
+    const typen=[...new Set(b.eintraege.map(e=>e.typ))];
+    b.farbe=typen.length===1?evFarbe(typen[0]):'#4F5E53';
+    b.tipp=logbuchTipp(b.eintraege);
+  }
+  return out;
+}
+function logbuchTipp(liste){
+  const l=[...liste].sort(chrono);
+  if(l.length===1){const e=l[0];
+    return tippBau(e.typ+(e.titel&&e.titel!==e.typ?' · '+e.titel:''),evFarbe(e.typ),[['Datum',fmtZ(e)],
+      e.mittel?['Mittel',evMittelName(e.mittel)]:null,e.menge!=null?['Menge',evMenge(e)]:null,
+      e.stelle&&e.stelle!=='beide'?['Stelle',e.stelle]:null,e.wer?['eingetragen von',e.wer]:null],
+      e.notiz||(e.felder&&e.felder.text)||'');
+  }
+  const tage=[...new Set(l.map(e=>e.datum))];
+  const kopf=`${l.length} Logbucheinträge · ${tage.length>1?fmtK(tage[0])+'–'+fmtK(tage[tage.length-1]):fmt(tage[0])}`;
+  const zeilen=l.slice(0,12).map(e=>{
+    const wann=((tage.length>1?fmtK(e.datum):'')+(e.zeit?' '+e.zeit:'')).trim();
+    const was=[e.typ,e.mittel?mittelKurz(e.mittel):null,e.menge!=null?evMenge(e):null,e.stelle&&e.stelle!=='beide'?e.stelle:null].filter(Boolean).join(' · ');
+    return wann?[wann,was]:was;
+  });
+  if(l.length>12)zeilen.push(`… und ${l.length-12} weitere – im Logbuch`);
+  return tippBau(kopf,'#4F5E53',zeilen,'');
+}
+/* Beigabe-Balken in Zeilen legen: Zeiträume desselben Mittels teilen sich
+   eine Zeile, solange Balken und Beschriftung nicht aneinanderstossen.
+   Vorher bekam jeder Zeitraum seine eigene Zeile – vierzehn Zeilen für
+   neun Mittel. */
+function spannenZeilen(spannen,X,x0,x1){
+  const zeilen=[],liste=[];
+  for(const sp of spannen){
+    const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)continue;
+    const xa=X(a),xb=Math.max(X(b),xa+4),ende=Math.max(xb,xa+7+String(sp.text||'').length*5.3)+10;
+    const key=sp.zeile||sp.kennung;
+    let z=zeilen.findIndex(r=>r.key===key&&r.ende<=xa);
+    if(z<0){zeilen.push({key,ende});z=zeilen.length-1}else zeilen[z].ende=ende;
+    liste.push({sp,z,xa,xb});
+  }
+  return {liste,n:zeilen.length};
+}
+function logbuchMarke(b,y,oben,unten){
+  const n=b.eintraege.length,x=b.x,w=n>9?22:18;
+  const marke=n>1
+    ? `<rect x="${x-w/2}" y="${y-7}" width="${w}" height="14" rx="7" fill="${b.farbe}"/><text x="${x}" y="${y+3.4}" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">${n}</text>`
+    : `<circle cx="${x}" cy="${y}" r="5" fill="${b.farbe}" stroke="#fff" stroke-width="1.5"/>`;
+  /* Die unsichtbare Trefferfläche liegt zuoberst: sie fängt den Zeiger für
+     die ganze Marke, samt Zahl. */
+  return `<g class="lbm" data-tipp="${esc(b.tipp)}" style="cursor:help"><line class="lbl" x1="${x}" x2="${x}" y1="${oben}" y2="${unten}" stroke="${b.farbe}" stroke-width="1.3"/>`+
+    `${marke}<rect class="lbt" x="${x-w/2-2}" y="${y-9}" width="${w+4}" height="18" fill="transparent"/></g>`;
+}
 function tippBau(kopf,farbe,zeilen,fuss){
   let t=`<b><i style="background:${farbe}"></i>${esc(kopf)}</b>`;
   for(const z of zeilen.filter(Boolean)){
@@ -2284,7 +2358,7 @@ function vLage(){
     const serien=ueSerien();
     chartPunkte(el('cBand'),{serien,yTyp:'lage',xTyp:'datum',xLabel:'Probendatum',hoehe:320,spannen:beigabenFuer(ueParams,ueFarben()),
       linien:ueLinien!=='aus',aufKlick:true,fotos:fotoSpur?fotoGruppen():null,
-      ereignisse:ueLog?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+      ereignisse:ueLog?logbuchPunkte(db.ereignisse):[]});
     el('legBand').innerHTML=legende(serien,diagAus,'Skala 0–3: 1 bis 2 ist der Sollbereich');
   }
   function ueKopf(){
@@ -3087,12 +3161,7 @@ function vVerlauf(){
          yLabel:vlSkala==='lage'?'Lage auf der Skala 0–3':[...new Set(paar.blatt.map(einheit))].join(' · '),
          hoehe:wSpuren.length>=3?150:200,leerText:paar.blatt.length?'keine Blattsaftprobe in diesem Zeitraum':'kein Nährstoff ausgewählt – wähle oben einen aus'}
       ].concat(wSpuren),
-      ereignisse:vlLog?db.ereignisse.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({
-        x:+new Date(e.datum),farbe:evFarbe(e.typ),
-        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmt(e.datum)],
-          e.titel?['Titel',e.titel]:null,e.mittel?['Mittel',evMittelName(e.mittel)]:null,
-          e.menge!=null?['Menge',evMenge(e)]:null,
-          e.stelle&&e.stelle!=='beide'?['Stelle',e.stelle]:null],e.notiz||'')})):[],
+      ereignisse:vlLog?logbuchPunkte(db.ereignisse):[],
       fotos:fotoSpur?fotoGruppen():[]});
     el('legVl').innerHTML=legende(bs.concat(ws.filter(x=>!x.klein)),diagAus,
       vlSkala==='lage'?'oben Lage 0–3 · unten Messwerte des Labors':'oben und unten je eigene Achse');
@@ -3417,8 +3486,7 @@ function vNaehr(){
       xLabel:nsAchse==='woche'?'Kulturwoche bei der Probenahme':'Probendatum',
       yLabel:Z.skala==='lage'?'Lage auf der Skala 0–3':Z.einheiten.join(' · '),
       linien:nsLinien!=='aus',hoehe:340,aufKlick:true,fotos:(fotoSpur&&nsAchse==='datum')?fotoGruppen():null,
-      ereignisse:(nsLog&&nsAchse==='datum')?db.ereignisse.filter(x=>!isNaN(+new Date(x.datum)))
-        .map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+      ereignisse:(nsLog&&nsAchse==='datum')?logbuchPunkte(db.ereignisse):[]});
     el('legNs').innerHTML=legende(serien,diagAus,
       Z.skala==='lage'?'Skala 0–3: 1 bis 2 ist der Sollbereich':'Einheit '+esc(Z.einheiten.join(' · ')));
   }
@@ -4038,7 +4106,7 @@ function vGiess(){
         xTyp:'datum',xLabel:'Probendatum',hoehe:330,linien:gwLinien!=='aus',aufKlick:true,
         fotos:fotoSpur?fotoGruppen():null,
         yLabel:gwSk==='rel'?'Anteil am höchsten gemessenen Wert, in %':gwEinheiten.join(' · '),
-        ereignisse:gwLog?rel.filter(x=>!isNaN(+new Date(x.datum))).map(e=>({x:+new Date(e.datum),label:e.titel||e.typ})):[]});
+        ereignisse:gwLog?logbuchPunkte(rel):[]});
       el('legGw').innerHTML=legende(serien,diagAus,
         gwSk==='rel'?'100 % = höchster gemessener Wert des jeweiligen Parameters':'Einheit '+esc(gwEinheiten.join(' · ')))
         +(gwBand?`<span class="muted">grünes Band: bis ${nz(gwBand[1])} <span class="tag schaetz">Annahme</span></span>`:'');
@@ -4085,9 +4153,7 @@ function vGiess(){
        bandLabel:grenze?`Sättigungsgrenze bei ${nz(mitTemp.temp,1)} °C, ${nz(db.einst.hoeheM,0)} m (Annahme)`:'',
        leerText:o2.length?'kein Sauerstoff in diesem Zeitraum':'noch nie gemessen – neu am Tank erfassbar'}];
     chartStapel(el('cTank'),{von:koVon,bis:koBis,linien:tkLinien==='reihe',spuren,spannen:beigabenFuer([],{}),
-      ereignisse:tkBeigaben?rel.filter(x=>x.datum&&!isNaN(+new Date(x.datum))).map(e=>({x:zeitpunkt(e),farbe:evFarbe(e.typ),
-        tipp:tippBau(e.typ,evFarbe(e.typ),[['Datum',fmtZ(e)],e.mittel?['Mittel',evMittelName(e.mittel)]:null,
-          e.menge!=null?['Menge',evMenge(e)]:null,e.stelle&&e.stelle!=='beide'?['Wohin',e.stelle]:null,e.wer?['eingetragen von',e.wer]:null],e.notiz||'')})):[]});
+      ereignisse:tkBeigaben?logbuchPunkte(rel):[]});
     el('legTank').innerHTML=legende(ph.concat(ec,o2),diagAus,stellen.length>1?'Form = Stelle · jede Grösse hat ihre eigene Achse':'jede Grösse hat ihre eigene Achse');
   }
   /* Drei Kacheln: der letzte Wert, daneben der von vor einer Woche. Kein
@@ -4416,7 +4482,35 @@ function beigabeSpannen(k){
     akt.bis=g.datum;akt.n++;akt.gaben.push(g);akt.produkte.add(g.mittel);
   }
   for(const sp of out){sp.laeuft=beigabeLaeuft(sp.bis);sp.produkte=[...sp.produkte];}
-  return out;
+  /* Zeiträume von Hand der Produkte dieses Nährstoffs – überlappende werden
+     eins (Epsotop und Kalisulfat liefern beide Schwefel). */
+  const hand=beigabeHand(h=>ids.includes(h.mittel)).sort((a,b)=>a.von.localeCompare(b.von));
+  const zus=[];
+  for(const h of hand){
+    const bis=h.bis||'9999-12-31',l=zus[zus.length-1];
+    if(l&&h.von<=l.bisRoh){if(bis>l.bisRoh)l.bisRoh=bis;l.mittel.add(h.mittel);continue}
+    zus.push({von:h.von,bisRoh:bis,mittel:new Set([h.mittel])});
+  }
+  return beigabeMitHand(out,zus.map(z=>({von:z.von,bis:z.bisRoh==='9999-12-31'?null:z.bisRoh,mittel:[...z.mittel]})),gaben,
+    sp=>{sp.k=k;sp.produkte=[...new Set(sp.hand.mittel.concat(sp.gaben.map(g=>g.mittel)))]});
+}
+/* ── Zeiträume von Hand ──────────────────────────────────────────────────
+   Die Balken entstehen aus dem Logbuch: von der ersten bis zur letzten Gabe,
+   eine Lücke über vier Wochen trennt. Das Logbuch weiss aber nicht, dass
+   Magnesium weiterhin dazukommt, wenn es seit Wochen niemand eingetragen hat.
+   Darum lässt sich jeder Balken anklicken und von Hand setzen: Beginn, Ende
+   oder «läuft noch». Das gilt für alle (liegt im Bestand) und schlägt die
+   Automatik: ein automatischer Balken, der einen Zeitraum von Hand berührt,
+   geht in ihm auf. */
+const beigabeHand=f=>(Array.isArray(db.beigabeZeiten)?db.beigabeZeiten:[]).filter(h=>h&&h.mittel&&h.von&&(!f||f(h)));
+function beigabeMitHand(auto,hand,gaben,nachbau){
+  if(!hand.length)return auto;
+  const h2=hand.map(h=>{const bis=h.bis||heute();
+    const g=gaben.filter(x=>x.datum>=h.von&&x.datum<=bis);
+    const sp={von:h.von,bis,laeuft:!h.bis,n:g.length,gaben:g,hand:h};
+    if(nachbau)nachbau(sp);return sp});
+  const frei=auto.filter(a=>!h2.some(h=>a.von<=h.bis&&a.bis>=h.von));
+  return frei.concat(h2).sort((a,b)=>a.von.localeCompare(b.von));
 }
 /* Läuft eine Beigabe noch? Nur, wenn die letzte Gabe keine vier Wochen her
    ist UND die Tanks seither nicht neu angesetzt wurden – mit dem Wasser ist
@@ -4442,7 +4536,7 @@ function beigabeSpannenMittel(id){
     akt.bis=g.datum;akt.n++;akt.gaben.push(g);
   }
   for(const sp of out)sp.laeuft=beigabeLaeuft(sp.bis);
-  return out;
+  return beigabeMitHand(out,beigabeHand(h=>h.mittel===id),gaben,sp=>{sp.id=id});
 }
 /* Summe der Mengen einer Spanne, je Einheit – Gramm und Kilogramm (oder
    Milliliter und Liter) zusammengezählt, sobald beide vorkommen. Gaben ohne
@@ -4458,7 +4552,7 @@ function beigabeSumme(gaben){
 /* Alle Mittel, die je gegeben wurden – in der Reihenfolge der Stammdaten,
    jedes mit seiner festen Farbe. Dieselbe Liste für Balken und Schalter. */
 function beigabeMittelListe(){
-  const ids=[...new Set(db.ereignisse.filter(x=>x.mittel&&x.datum).map(x=>x.mittel))];
+  const ids=[...new Set(db.ereignisse.filter(x=>x.mittel&&x.datum).map(x=>x.mittel).concat(beigabeHand().map(h=>h.mittel)))];
   const reihenfolge=Object.keys(db.produkte||{});
   ids.sort((a,b)=>{const ia=reihenfolge.indexOf(a),ib=reihenfolge.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b)});
   return ids.map((id,i)=>({id,name:mittelKurz(id),farbe:MITTEL_FARBE[id]||FARBEN[i%FARBEN.length]}));
@@ -4472,10 +4566,10 @@ function beigabeBalkenMittel(){
     if(mittelAus.has(id))return;
     for(const sp of beigabeSpannenMittel(id)){
       const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:(sp.von===sp.bis?`${name} ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`);
-      out.push({k:null,mittel:id,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
-        tipp:tippBau(name,farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],['Gaben',String(sp.n)],
-          ['Menge gesamt',beigabeSumme(sp.gaben)]],
-          'Anklicken zeigt jede Gabe.')});
+      out.push({k:null,mittel:id,zeile:'m|'+id,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
+        tipp:tippBau(name,farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft – bis heute':fmt(sp.bis)],['Gaben im Logbuch',String(sp.n)],
+          ['Menge gesamt',beigabeSumme(sp.gaben)],sp.hand?['Zeitraum','von Hand gesetzt'+(sp.hand.notiz?': '+sp.hand.notiz:'')]:null],
+          'Anklicken: jede Gabe sehen, Beginn und Ende setzen.')});
     }
   });
   return out;
@@ -4510,7 +4604,7 @@ function beigabeBalken(keys,farbe){
   for(const k of keys)for(const sp of beigabeSpannen(k)){
     const name=NAME[k]||k;
     const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`;
-    out.push({k,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe:farbe[k]||'#697A6C',text,
+    out.push({k,zeile:'k|'+k,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe:farbe[k]||'#697A6C',text,
       kennung:k+'|'+sp.von,
       tipp:tippBau(name+' beigegeben',farbe[k]||'#697A6C',[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],
         ['Gaben',String(sp.n)],['Produkte',sp.produkte.map(id=>evMittelName(id)).join(', ')]],'Anklicken zeigt jede Gabe.')});
@@ -4519,17 +4613,64 @@ function beigabeBalken(keys,farbe){
 }
 AKTION.spanne=d=>{
   const teile=String(d.id).split('|');
-  let sp,titel;
-  if(teile[0]==='m'){sp=beigabeSpannenMittel(teile[1]).find(x=>x.von===teile[2]);titel=mittelKurz(teile[1])}
+  let sp,titel,mittel=null;
+  if(teile[0]==='m'){mittel=teile[1];sp=beigabeSpannenMittel(mittel).find(x=>x.von===teile[2]);titel=mittelKurz(mittel)}
   else{sp=beigabeSpannen(teile[0]).find(x=>x.von===teile[1]);titel=(NAME[teile[0]]||teile[0])+' beigegeben'}
   if(!sp)return;
+  const h=mittel&&sp.hand?sp.hand:null;
+  /* Beginn und Ende: nur je Mittel – ein Nährstoffbalken fasst mehrere
+     Produkte zusammen, dort führt je ein Knopf zum Balken des Produkts. */
+  const form=mittel?`<div class="note neutral" style="margin:0 0 12px">
+      <strong>Zeitraum des Balkens</strong>
+      <div class="row" style="margin-top:8px;align-items:flex-end">
+        <div><label class="lab">Beginn</label><input type="date" id="spVon" value="${esc(sp.von)}"></div>
+        <div><label class="lab">Ende</label><input type="date" id="spBis" value="${sp.laeuft?'':esc(sp.bis)}"${sp.laeuft?' disabled':''}></div>
+        <label class="small" style="padding-bottom:8px"><input type="checkbox" id="spLaeuft" data-aend="spLaeuft"${sp.laeuft?' checked':''}> wird weiterhin gegeben – Balken bis heute</label>
+      </div>
+      <div style="margin-top:8px"><label class="lab">Notiz <span class="muted">(freiwillig)</span></label><input id="spNotiz" value="${esc(h&&h.notiz||'')}" style="width:100%" placeholder="z.B. seit August jede Woche"></div>
+      <p class="tiny muted" style="margin:8px 0 0">${h
+        ?`Von Hand gesetzt${h.gesetzt?' am '+fmt(h.gesetzt):''}. Gilt für alle, die das Dashboard öffnen. «Wieder automatisch» nimmt den Balken wieder aus dem Logbuch.`
+        :'Jetzt automatisch aus dem Logbuch: von der ersten bis zur letzten Gabe. Wer Beginn oder Ende setzt, überschreibt das – für alle.'}</p></div>`
+    :`<div class="note neutral" style="margin:0 0 12px">Beginn und Ende lassen sich je Mittel setzen:
+      ${(sp.produkte||[]).map(id=>{const m=beigabeSpannenMittel(id).find(x=>x.von<=sp.bis&&x.bis>=sp.von);
+        return m?`<button class="ghost" data-tun="spanne" data-id="${esc('m|'+id+'|'+m.von)}">${esc(mittelKurz(id))}</button>`:''}).join(' ')}</div>`;
   dialog(`${titel} · ${fmt(sp.von)} bis ${sp.laeuft?'heute':fmt(sp.bis)}`,
-    `<p class="small muted">${sp.n} Gabe${sp.n>1?'n':''}, aus dem Logbuch. Mengen wie eingetragen; ob und wieviel davon in der Pflanze ankommt, sagt nur die Analyse.</p>
+    form+`<p class="small muted">${sp.n?`${sp.n} Gabe${sp.n>1?'n':''} im Logbuch in diesem Zeitraum`:'Keine Gabe im Logbuch in diesem Zeitraum'}. Mengen wie eingetragen; ob und wieviel davon in der Pflanze ankommt, sagt nur die Analyse.</p>
      <div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Mittel</th><th>Menge</th><th>Wohin</th><th>wer</th><th>Notiz</th></tr></thead><tbody>
      ${chronoAb(sp.gaben).map(g=>`<tr><td class="mono">${fmt(g.datum)}${zeitTag(g)}</td><td>${esc(g.typ)}</td><td>${esc(evMittelName(g.mittel))}</td>
        <td class="mono">${g.menge!=null?esc(evMenge(g)):'–'}</td><td class="tiny">${esc(g.stelle||'')}</td><td class="mono tiny">${esc(g.wer||'')}</td><td class="small muted">${esc(g.notiz||'')}</td></tr>`).join('')}
      </tbody></table></div>`,
-    `<button data-tun="reiter" data-reiter="logbuch">Zum Logbuch</button><button class="primary" data-tun="dlgZu">Schliessen</button>`);
+    (mittel?`<button class="primary" data-tun="spanneSpeichern" data-id="${esc(d.id)}">Zeitraum speichern</button>`:'')
+    +(h?`<button data-tun="spanneAuto" data-id="${esc(h.id)}">Wieder automatisch</button>`:'')
+    +`<button data-tun="reiter" data-reiter="logbuch">Zum Logbuch</button><button data-tun="dlgZu">Schliessen</button>`);
+};
+AKTION.spLaeuft=(d,ev)=>{
+  const b=el('spBis');if(!b)return;
+  b.disabled=!!ev.target.checked;
+  if(!ev.target.checked&&!b.value)b.value=heute();
+};
+AKTION.spanneSpeichern=d=>{
+  const teile=String(d.id).split('|');if(teile[0]!=='m')return;
+  const mittel=teile[1];
+  const alt=beigabeSpannenMittel(mittel).find(x=>x.von===teile[2]);
+  const von=el('spVon').value,laeuft=el('spLaeuft').checked,bis=laeuft?null:el('spBis').value;
+  if(!von)return toast('Bitte einen Beginn eintragen.');
+  if(!laeuft&&!bis)return toast('Bitte ein Ende eintragen – oder «wird weiterhin gegeben» ankreuzen.');
+  if(bis&&bis<von)return toast('Das Ende liegt vor dem Beginn.');
+  const notiz=(el('spNotiz').value||'').trim()||null;
+  /* Was sich mit dem neuen Zeitraum überschneidet, geht in ihm auf – für
+     dasselbe Mittel gibt es nie zwei Zeiträume übereinander. */
+  const ende=bis||'9999-12-31';
+  const id=alt&&alt.hand?alt.hand.id:uid();
+  db.beigabeZeiten=beigabeHand().filter(h=>h.id!==id&&!(h.mittel===mittel&&h.von<=ende&&(h.bis||'9999-12-31')>=von));
+  db.beigabeZeiten.push({id,mittel,von,bis,notiz,gesetzt:heute()});
+  aend();if(el('dlg').open)el('dlg').close();diagFrisch();
+  toast(`${mittelKurz(mittel)}: ${fmt(von)} bis ${bis?fmt(bis):'heute (läuft)'} – gilt für alle.`);
+};
+AKTION.spanneAuto=d=>{
+  db.beigabeZeiten=beigabeHand().filter(h=>h.id!==d.id);
+  aend();if(el('dlg').open)el('dlg').close();diagFrisch();
+  toast('Der Balken kommt wieder aus dem Logbuch.');
 };
 const BILANZ_HERKUNFT='Berechnet aus den Logbucheinträgen und den Produktangaben unter «Sätze & Einstellungen». Die Gehalte stammen von den Etiketten, nicht aus einer eigenen Analyse.';
 const BILANZ_DECKUNG=0.7;   /* darunter verweigert die App die Aussage */
@@ -5407,6 +5548,12 @@ const PAKET_RES26=(()=>{
   s25('2026-09-17',T(56,S52));
   zeile('2026-09-17',null,[null,7.3],[null,7.38],null,null,T(57));
 
+  /* Laut Betrieb (30.09.) werden Magnesium, Kalisulfat und Zink weiterhin
+     gegeben – auch wenn das Logbuch seit August schweigt. Darum laufen ihre
+     Balken bis heute; anklicken und ändern lässt sich das jederzeit. */
+  const Z=[['epsotop','2026-07-28'],['kali','2026-08-26'],['zink','2026-08-26']].map(([mittel,von])=>({id:'p26z-'+mittel,mittel,von,bis:null,
+    notiz:'wird laut Betrieb weiterhin gegeben',gesetzt:'2026-09-30',quelle:'paket',paket:P,beleg:'Angabe des Betriebs vom 30.09.2026'}));
+
   return {id:P,titel:'Reservoir April bis September 2026',
     kurz:'pH, EC und Sauerstoff im Rücklauf, dazu jede Gabe – aus der Reservoir-Tabelle und dem Bericht über die Säure',
     quellen:['Tabelle «pH/EC Reservoir», 30.04.–17.09.2026','Bericht «pH und Säure», 31.08.–10.09.2026 (mit Uhrzeiten am 9.9.)'],
@@ -5422,14 +5569,15 @@ const PAKET_RES26=(()=>{
       'Die Messreihen vom 31.08. bis 10.09. stammen aus dem Bericht, am 9.9. mit Uhrzeit. Die erste Zeile vom 31.08. steht in beiden und ist einmal eingetragen.',
       'Sauerstoff 0,2 mg/l am 9.9. vorne, am ersten und letzten Messpunkt – laut Bericht den ganzen Tag unverändert.',
       '«Wasser abgepumpt, Tanks neu gefüllt» am 10.09. ist ein Neuansatz; die leeren Zeilen 10. und 11.09. in der Tabelle gehören dazu.',
-      'Ohne Uhrzeit stehen mehrere Messungen eines Tages in der Reihenfolge der Tabelle – im Diagramm über den Tag verteilt, im Kästchen als «Uhrzeit nicht erfasst» bezeichnet.'],
-    messungen:M,ereignisse:E};
+      'Ohne Uhrzeit stehen mehrere Messungen eines Tages in der Reihenfolge der Tabelle – im Diagramm über den Tag verteilt, im Kästchen als «Uhrzeit nicht erfasst» bezeichnet.',
+      'Magnesium (seit 28.07.), Kalisulfat und Zink (seit 26.08.) werden weiterhin gegeben – ihre Balken laufen bis heute. Anklicken setzt Beginn und Ende neu.'],
+    messungen:M,ereignisse:E,zeiten:Z};
 })();
 const PAKETE=[PAKET_RES26];
 const paketVon=id=>PAKETE.find(p=>p.id===id)||null;
 function paketStand(p){
-  const ids=new Set(db.messungen.map(x=>x.id).concat(db.ereignisse.map(x=>x.id)));
-  const alle=p.messungen.concat(p.ereignisse),da=alle.filter(x=>ids.has(x.id)).length;
+  const ids=new Set(db.messungen.map(x=>x.id).concat(db.ereignisse.map(x=>x.id),beigabeHand().map(x=>x.id)));
+  const alle=p.messungen.concat(p.ereignisse,p.zeiten||[]),da=alle.filter(x=>ids.has(x.id)).length;
   const merk=(db.pakete||{})[p.id]||null;
   return {da,gesamt:alle.length,aktiv:da>0,voll:da===alle.length,merk};
 }
@@ -5473,8 +5621,12 @@ AKTION.paketZeigen=d=>{
     const g=p.ereignisse.filter(e=>e.mittel===id).sort(chrono);
     const sp=[];let akt=null;
     for(const x of g){if(!akt||tage(akt.bis,x.datum)>BEIGABE_LUECKE){akt={von:x.datum,bis:x.datum,n:0};sp.push(akt)}akt.bis=x.datum;akt.n++}
+    for(const z of (p.zeiten||[]).filter(z=>z.mittel===id)){
+      for(let i=sp.length-1;i>=0;i--)if(sp[i].bis>=z.von)sp.splice(i,1);
+      sp.push({von:z.von,bis:null});
+    }
     return `<tr><td><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${MITTEL_FARBE[id]||'#697A6C'};margin-right:6px"></span>${esc(mittelKurz(id))}</td>
-      <td class="small">${sp.map(x=>x.von===x.bis?fmt(x.von):fmt(x.von)+' – '+fmt(x.bis)).join(' · ')}</td><td class="mono">${g.length}</td></tr>`}).join('');
+      <td class="small">${sp.map(x=>x.bis==null?fmt(x.von)+' – heute':x.von===x.bis?fmt(x.von):fmt(x.von)+' – '+fmt(x.bis)).join(' · ')}</td><td class="mono">${g.length}</td></tr>`}).join('');
   const zeileE=e=>`<tr><td class="mono">${fmt(e.datum)}${zeitTag(e)}</td><td>${esc(e.typ)}</td><td>${esc(e.mittel?mittelKurz(e.mittel):(e.titel||''))}</td>
     <td class="mono">${e.menge!=null?esc(evMenge(e)):'–'}</td><td class="tiny">${esc(e.stelle)}</td>
     <td class="small">${esc(e.notiz||(e.felder&&e.felder.text)||'')}</td><td class="tiny muted">${esc(e.beleg)}</td></tr>`;
@@ -5516,15 +5668,24 @@ AKTION.paketAn=d=>{
   let nm=0,ne=0;
   for(const m of p.messungen)if(!ids.has(m.id)){db.messungen.push(JSON.parse(JSON.stringify(m)));nm++}
   for(const e of p.ereignisse)if(!ids.has(e.id)){db.ereignisse.push(JSON.parse(JSON.stringify(e)));ne++}
+  /* Laufende Beigaben – nur, wo nicht schon jemand für dasselbe Mittel einen
+     Zeitraum von Hand gesetzt hat, der sich damit überschneidet. */
+  db.beigabeZeiten=beigabeHand();
+  for(const z of (p.zeiten||[])){
+    if(db.beigabeZeiten.some(h=>h.id===z.id))continue;
+    if(db.beigabeZeiten.some(h=>h.mittel===z.mittel&&(h.bis||'9999-12-31')>=z.von))continue;
+    db.beigabeZeiten.push(JSON.parse(JSON.stringify(z)));
+  }
   db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:heute(),abgelehnt:false};
   aend();if(el('dlg').open)el('dlg').close();setTab('giess');
   toast(`Aktiviert: ${nm} Messungen und ${ne} Logbucheinträge${weg?`, ${weg} Einträge aus dem früheren Tabellenimport ersetzt`:''}.`);
 };
 AKTION.paketWeg=d=>{
   const p=paketVon(d.id);if(!p)return;
-  const n=db.messungen.filter(x=>x.paket===p.id).length+db.ereignisse.filter(x=>x.paket===p.id).length;
+  const n=db.messungen.filter(x=>x.paket===p.id).length+db.ereignisse.filter(x=>x.paket===p.id).length+beigabeHand(h=>h.paket===p.id).length;
   if(!confirm(`Alle ${n} Einträge aus «${p.titel}» entfernen? Auch bearbeitete. Aktivieren geht danach wieder.`))return;
   db.messungen=db.messungen.filter(x=>x.paket!==p.id);db.ereignisse=db.ereignisse.filter(x=>x.paket!==p.id);
+  db.beigabeZeiten=beigabeHand(h=>h.paket!==p.id);
   db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:null,abgelehnt:true};
   aend();if(el('dlg').open)el('dlg').close();render();toast(`${n} Einträge entfernt.`);
 };

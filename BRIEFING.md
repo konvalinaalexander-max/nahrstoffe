@@ -189,6 +189,21 @@ Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
   «Wieder entfernen» nimmt alles heraus. `db.pakete[id]` merkt sich den Stand.
   **Wer das Paket ändert, ändert Kennungen nie** — sonst stünde nach einem
   zweiten Aktivieren alles doppelt. `z1.js` hält jeden Entscheid fest.
+- **Balken von Hand** (`db.beigabeZeiten`, geteilt, kein Schemawechsel –
+  fehlt das Feld, ist es leer): Klick auf einen Balken je Mittel öffnet
+  Beginn, Ende und «wird weiterhin gegeben – Balken bis heute». Ein Zeitraum
+  von Hand schlägt die Automatik: ein automatischer Balken, der ihn berührt,
+  geht in ihm auf (`beigabeMitHand`); für dasselbe Mittel gibt es nie zwei
+  überlappende. «Wieder automatisch» löscht ihn. Der Nährstoffbalken rechnet
+  die Zeiträume seiner Produkte mit. Das Paket setzt Magnesium seit 28.07.,
+  Kalisulfat und Zink seit 26.08. als laufend (Angabe des Betriebs).
+- **Logbuch in den Diagrammen** (`logbuchPunkte`, `logbuchBuendel`,
+  `logbuchMarke`): keine gestrichelte Linie mit Titel je Eintrag mehr, sondern
+  eine Zeile «Logbuch» unter der Zeitachse. Je Tag eine Marke in der Farbe der
+  Art, näher als 10 Bildpunkte wird eine Marke mit Zahl; das Kästchen nennt
+  jeden Eintrag. Die Hilfslinie ins Diagramm ist fast unsichtbar und wird beim
+  Zeigen deutlich. Beigabe-Balken liegen je Mittel in einer Zeile
+  (`spannenZeilen`), solange die Beschriftung nicht anstösst.
 - **Online ohne Passwort** (siehe «Online» unten): `/` ist das Dashboard,
   `/maske` die Eingabemaske, die nur nach dem Namen fragt (2–20 Zeichen;
   kurze Kürzel werden gross geschrieben, Namen bleiben wie getippt) und
@@ -708,7 +723,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (731 Einzelprüfungen, ohne Browser)
+# 2 · Fachliche Regressionsprüfungen (759 Einzelprüfungen, ohne Browser)
 for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 z1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
@@ -739,7 +754,7 @@ node pruefung/paket.js                       # der erste Tag online: Sicherung, 
 | `d1` | Selbstsicherung: Einsetzen und Herauslesen des Datenblocks, Skript-Ende im Text, zweimal sichern |
 | `st1` | Entnahmestellen zuordnen — gegen die vier echten Berichte mit ihren vier Schreibweisen |
 | `o1` | Schema 9, Sättigungsgrenze, `vereinigen`, Satzpaare, Stand in der Kopfzeile |
-| `z1` | Schema 11: Uhrzeit (Normalform, Achse, Verteilung, Import), EM, Balken je Mittel und ihr Ende beim Neuansatz, das Datenpaket mit jedem Entscheid, Aktivieren/Ergänzen/Entfernen |
+| `z1` | Schema 11: Uhrzeit (Normalform, Achse, Verteilung, Import), EM, Balken je Mittel und ihr Ende beim Neuansatz, Balken von Hand (Beginn, Ende, läuft, wieder automatisch), Balkenzeilen, Logbuch-Zeile, das Datenpaket mit jedem Entscheid, Aktivieren/Ergänzen/Entfernen |
 | `server1` | `server.js` als eigener Prozess: offen ohne Passwort, nur Dashboard geschützt, beide Passwörter; `/maske`, Umleitung, noindex, Anhängen, Uhrzeit, 409, Sicherungskopien, Neustart |
 | `s1`–`s4` | Belege zum Statistikbericht, ohne Bestanden/Durchgefallen |
 | `browser.js` | Chromium: alle Reiter, Diagrammbedienung, Ziehen/Zoomen im Verlauf, Offline-Verhalten, Escaping |
@@ -747,7 +762,7 @@ node pruefung/paket.js                       # der erste Tag online: Sicherung, 
 | `rundreise.js` | Chromium: erfassen → Stellen zuordnen → als HTML sichern → die gesicherte Datei frisch öffnen → weiterarbeiten |
 | `tank.js` | Chromium (Handy-Format) gegen `server.js`, offen: Name, Uhrzeit von selbst und von Hand, messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, Netz da, kein Link ins Dashboard |
 | `online.js` | Chromium gegen `server.js`: Dashboard ohne Login, sichert laufend, vereinigt bei Gleichzeitigkeit, frischt auf, Kopie herunterladen |
-| `paket.js` | Chromium: leerer Server → Sicherung einspielen → Paket aktivieren → Balken, Uhrzeit, Schalter → QR-Code zurückgelesen → Handy mit Namen → Neustart |
+| `paket.js` | Chromium: leerer Server → Sicherung einspielen → Paket aktivieren → Balken, Uhrzeit, Schalter → Logbuch-Zeile und Balken-Dialog im Reiter Nährstoffe → QR-Code zurückgelesen und gedruckt → Handy mit Namen → Neustart |
 
 **Wichtig:** `pruefung/app.js` wird aus `basilikum.html` erzeugt und ist
 gitignoriert. Wer die HTML-Datei ändert und die Prüfungen laufen lässt, ohne
