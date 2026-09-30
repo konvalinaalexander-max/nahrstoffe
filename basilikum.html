@@ -40,6 +40,7 @@ button.klein{padding:3px 10px;font-size:12px;border-radius:20px;color:var(--mute
 nav#nav{display:flex;align-items:center;flex-wrap:wrap}
 body.wesentlich #view>*:not(.haupt){display:none}
 body.wesentlich #view .haupt .werkzeug .wz:not(.haupt):not(.mitBeigaben){display:none}
+.spb rect,.spb path{transition:filter .12s}.spb:hover rect,.spb:hover path{filter:brightness(1.12) saturate(1.1)}
 .lbm .lbl{opacity:.06;pointer-events:none;transition:opacity .12s}.lbm:hover .lbl{opacity:.75}
 #qrDruck{display:none}
 @media print{body.druckQr>*:not(#qrDruck){display:none!important}
@@ -1626,8 +1627,8 @@ function chartPunkte(box,o){
   if(x0===x1){const d=xTyp==='datum'?6048e5:1;x0-=d;x1+=d}
   const sp=(x1-x0)*0.07;x0-=sp;x1+=sp;
   const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
-  const SZ=spannenZeilen(spannen,X,x0,x1);
-  const spH=SZ.n?14+SZ.n*16:0;
+  const SZ=spannenZeilen(spannen,X,x0,x1,W-4);
+  const spH=SZ.n?10+SZ.n*BALKEN_ZEILE:0;
   const H=hoehe+(spur?30:0)+spH+lbH,mb=48+(spur?30:0)+spH+lbH;
   let y0,y1;
   if(lageSkala){y0=0;y1=3}
@@ -1721,14 +1722,8 @@ function chartPunkte(box,o){
   s+=`<line x1="${ml}" x2="${W-mr}" y1="${H-mb}" y2="${H-mb}" stroke="#141D17"/>`;
   if(SZ.n){
     const spO=H-mb+24+lbH;
-    s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
-    SZ.liste.forEach(({sp,z,xa,xb})=>{
-      const y=spO+2+z*16;
-      s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
-        <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
-        <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
-        <text x="${xa+7}" y="${y+9.5}" font-size="9.5" fill="#141D17">${esc(sp.text)}</text></g>`;
-    });
+    s+=`<text x="${ml-8}" y="${spO+15}" text-anchor="end" font-size="10.5" font-weight="600" fill="#4F5E53">Beigaben</text>`;
+    s+=spannenSvg(SZ,spO+2);
   }
   if(spur){
     const y=H-16;
@@ -1773,8 +1768,8 @@ function chartStapel(box,o){
     const sp=(x1-x0)*0.05;x0-=sp;x1+=sp;
   }
   const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
-  const SZ=spannenZeilen(spannen,X,x0,x1);
-  const spH=SZ.n?14+SZ.n*16:0;
+  const SZ=spannenZeilen(spannen,X,x0,x1,W-4);
+  const spH=SZ.n?10+SZ.n*BALKEN_ZEILE:0;
   const evH=((o.ereignisse&&o.ereignisse.length)||(o.fotos&&o.fotos.length)?38:0)+spH;
   const achseH=34;
   const hoehen=spuren.map(sp=>sp.hoehe||190);
@@ -1888,14 +1883,8 @@ function chartStapel(box,o){
      wird. Nur auf der Zeitachse sinnvoll; die Mengen stehen im Kästchen. */
   if(SZ.n){
     const spO=evO+evH-spH;
-    s+=`<text x="${ml-8}" y="${spO+11}" text-anchor="end" font-size="10" fill="#697A6C">Beigaben</text>`;
-    SZ.liste.forEach(({sp,z,xa,xb})=>{
-      const y=spO+2+z*16;
-      s+=`<g style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">
-        <rect x="${xa}" y="${y}" width="${xb-xa}" height="12" rx="3" fill="${sp.farbe}" opacity=".28"/>
-        <rect x="${xa}" y="${y}" width="3" height="12" fill="${sp.farbe}"/>
-        <text x="${xa+7}" y="${y+9.5}" font-size="9.5" fill="#141D17">${esc(sp.text)}</text></g>`;
-    });
+    s+=`<text x="${ml-8}" y="${spO+15}" text-anchor="end" font-size="10.5" font-weight="600" fill="#4F5E53">Beigaben</text>`;
+    s+=spannenSvg(SZ,spO+2);
   }
   /* Gemeinsame Zeitachse, einmal */
   const achseY=evO+evH+2;
@@ -2053,17 +2042,54 @@ function logbuchTipp(liste){
    eine Zeile, solange Balken und Beschriftung nicht aneinanderstossen.
    Vorher bekam jeder Zeitraum seine eigene Zeile – vierzehn Zeilen für
    neun Mittel. */
-function spannenZeilen(spannen,X,x0,x1){
+/* Die Balken selbst (seit 30.09. grösser): 18 Bildpunkte hoch, satt in der
+   Farbe des Mittels, die Beschriftung weiss im Balken – passt sie nicht
+   hinein, steht sie dunkel gleich rechts daneben. Ein Balken, der noch
+   läuft, endet in einer Spitze: es geht weiter. */
+const BALKEN_ZEILE=23,BALKEN_H=18,BALKEN_ZEICHEN=6.4;
+function spannenZeilen(spannen,X,x0,x1,rechts){
   const zeilen=[],liste=[];
+  const grenze=rechts!=null?rechts:X(x1)+20;
   for(const sp of spannen){
     const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)continue;
-    const xa=X(a),xb=Math.max(X(b),xa+4),ende=Math.max(xb,xa+7+String(sp.text||'').length*5.3)+10;
+    const xa=X(a),xb=Math.max(X(b),xa+6),textW=String(sp.text||'').length*BALKEN_ZEICHEN;
+    const spitze=sp.laeuft?8:0;
+    /* Die Beschriftung: im Balken, sonst rechts daneben – und wo rechts der
+       Rand kommt (ein kurzer Balken, der bis heute läuft), links davor. */
+    let lage,links,ende;
+    if(xb-xa>=textW+18){lage='innen';links=xa;ende=xb+spitze}
+    else if(xb+spitze+6+textW<=grenze){lage='rechts';links=xa;ende=xb+spitze+6+textW}
+    else{lage='links';links=xa-6-textW;ende=xb+spitze}
+    links-=6;ende+=12;
     const key=sp.zeile||sp.kennung;
-    let z=zeilen.findIndex(r=>r.key===key&&r.ende<=xa);
+    let z=zeilen.findIndex(r=>r.key===key&&r.ende<=links);
     if(z<0){zeilen.push({key,ende});z=zeilen.length-1}else zeilen[z].ende=ende;
-    liste.push({sp,z,xa,xb});
+    liste.push({sp,z,xa,xb,lage,innen:lage==='innen',spitze,links,ende});
   }
   return {liste,n:zeilen.length};
+}
+/* Eine Farbe um f dunkler – damit weisse Schrift auch auf Orange lesbar ist. */
+function dunkler(hex,f){
+  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
+  const n=parseInt(m[1],16),k=c=>Math.round(c*(1-f)).toString(16).padStart(2,'0');
+  return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255);
+}
+function spannenSvg(SZ,oben){
+  let s='';
+  for(const {sp,z,xa,xb,lage,spitze} of SZ.liste){
+    const y=oben+z*BALKEN_ZEILE,h=BALKEN_H,f=dunkler(sp.farbe,.12);
+    s+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">`;
+    s+=`<rect x="${xa}" y="${y}" width="${xb-xa}" height="${h}" rx="5" fill="${f}"/>`;
+    if(spitze)s+=`<path d="M${xb-5} ${y}L${xb+spitze} ${y+h/2}L${xb-5} ${y+h}Z" fill="${f}"/>`;
+    const dunkel=dunkler(sp.farbe,.35);
+    s+=lage==='innen'
+      ?`<text x="${xa+8}" y="${y+12.6}" font-size="11" font-weight="600" fill="#fff">${esc(sp.text)}</text>`
+      :lage==='links'
+      ?`<text x="${xa-6}" y="${y+12.6}" text-anchor="end" font-size="11" font-weight="600" fill="${dunkel}">${esc(sp.text)}</text>`
+      :`<text x="${xb+spitze+6}" y="${y+12.6}" font-size="11" font-weight="600" fill="${dunkel}">${esc(sp.text)}</text>`;
+    s+=`</g>`;
+  }
+  return s;
 }
 function logbuchMarke(b,y,oben,unten){
   const n=b.eintraege.length,x=b.x,w=n>9?22:18;
@@ -4566,7 +4592,7 @@ function beigabeBalkenMittel(){
     if(mittelAus.has(id))return;
     for(const sp of beigabeSpannenMittel(id)){
       const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:(sp.von===sp.bis?`${name} ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`);
-      out.push({k:null,mittel:id,zeile:'m|'+id,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
+      out.push({k:null,mittel:id,zeile:'m|'+id,laeuft:!!sp.laeuft,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe,text,kennung:'m|'+id+'|'+sp.von,
         tipp:tippBau(name,farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft – bis heute':fmt(sp.bis)],['Gaben im Logbuch',String(sp.n)],
           ['Menge gesamt',beigabeSumme(sp.gaben)],sp.hand?['Zeitraum','von Hand gesetzt'+(sp.hand.notiz?': '+sp.hand.notiz:'')]:null],
           'Anklicken: jede Gabe sehen, Beginn und Ende setzen.')});
@@ -4604,7 +4630,7 @@ function beigabeBalken(keys,farbe){
   for(const k of keys)for(const sp of beigabeSpannen(k)){
     const name=NAME[k]||k;
     const text=sp.laeuft?`${name} seit ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`;
-    out.push({k,zeile:'k|'+k,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe:farbe[k]||'#697A6C',text,
+    out.push({k,zeile:'k|'+k,laeuft:!!sp.laeuft,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),farbe:farbe[k]||'#697A6C',text,
       kennung:k+'|'+sp.von,
       tipp:tippBau(name+' beigegeben',farbe[k]||'#697A6C',[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft':fmt(sp.bis)],
         ['Gaben',String(sp.n)],['Produkte',sp.produkte.map(id=>evMittelName(id)).join(', ')]],'Anklicken zeigt jede Gabe.')});
@@ -5548,15 +5574,55 @@ const PAKET_RES26=(()=>{
   s25('2026-09-17',T(56,S52));
   zeile('2026-09-17',null,[null,7.3],[null,7.38],null,null,T(57));
 
+  /* ── 18. bis 30. September (Nachtrag vom 30.09.) ──
+     Die zweite Tabelle, jetzt mit Uhrzeit bei jeder Zeile. «DO vorne» ist
+     der gelöste Sauerstoff im Reservoir vorne, in mg/l. «h2so4» ist die
+     Schwefelsäure 25 % wie seit dem 16.09. Paketfassung 2: alles hier trägt
+     pv:2, damit ein schon aktiviertes Paket gezielt nur das Neue ergänzt. */
+  const vorM=M.length,vorE=E.length;
+  const T2=(d,z,roh)=>`Tabelle 18.–30.09.2026, ${d.slice(8,10)}.${d.slice(5,7)}. ${z}`+(roh?`: «${roh}»`:'');
+  const zt=(d,z,v,h,o2,notiz)=>zeile(d,z,v,h,o2,notiz,T2(d,z));
+  const sa=(d,z,v,h,roh)=>vh(d,z,'Säurezugabe','schwefelsaeure25',v,h,'l',null,T2(d,z,roh));
+  zt('2026-09-18','13:25',[1.17,7.56],[1.28,7.59],4);
+  zt('2026-09-21','17:00',[1.24,7.49],[1.27,7.65],null);
+  zt('2026-09-23','10:00',[1.25,7.35],[1.29,7.6],null);
+  sa('2026-09-23','11:00',1,1,'je 1l h2so4 RV, RH');
+  zt('2026-09-23','12:00',[null,6.5],[null,7],2.5);
+  zt('2026-09-23','13:30',[null,6.7],[null,7.2],null);
+  sa('2026-09-23','14:00',0.5,0.5,'je 0.5l h2so4 rv,rh');
+  zt('2026-09-23','15:00',[null,6.4],[null,6.9],null);
+  sa('2026-09-23','15:10',0.5,0.5,'je 0.5l H2So4 rv,rh');
+  zt('2026-09-23','16:50',[null,6.27],[null,6.8],3.4);
+  sa('2026-09-23','17:00',0.2,0.8,'0.2l H2So4 RV und 0.8l RH');
+  zt('2026-09-24','07:45',[1.32,6.48],[1.4,7.2],3.7);
+  sa('2026-09-24','08:00',0.5,1,'1l h2so4 RH, 0.5l RV');
+  zt('2026-09-24','08:30',[1.3,5.28],[1.36,6.56],6.3,'danach vorne und hinten gemischt');
+  ev('2026-09-24','08:30','Umpumpen',null,null,null,'beide','beide Reservoirs gemischt, nach der Messung um 08:30',
+    T2('2026-09-24','08:30','RV und RH mischen'),{von:'vorne und hinten',nach:'gemischt'},'Reservoirs gemischt');
+  zt('2026-09-24','08:50',[null,6.16],[null,6.6],5.6,'nach dem Mischen');
+  zt('2026-09-24','11:00',[null,6.55],[null,6.64],5.2);
+  zt('2026-09-24','14:00',[null,6.63],[null,6.82],5.1);
+  zt('2026-09-25','13:00',[1.24,6.29],[1.26,6.98],5.8);
+  sa('2026-09-25','13:10',null,1,'1l h2so4 RH');
+  zt('2026-09-25','16:30',[1.22,6.06],[1.27,5.48],5.9);
+  zt('2026-09-26','10:00',[null,5.85],[null,6],6.5);
+  zt('2026-09-26','17:00',[null,5.73],[null,6.11],6.4);
+  zt('2026-09-28','13:00',[null,6.28],[null,6.4],6.2);
+  zt('2026-09-28','17:00',[1.2,6.2],[1.28,6.3],6.1);
+  zt('2026-09-30','08:00',[1.3,5.93],[1.3,6.46],6);
+  for(const x of M.slice(vorM))x.pv=2;
+  for(const x of E.slice(vorE))x.pv=2;
+
   /* Laut Betrieb (30.09.) werden Magnesium, Kalisulfat und Zink weiterhin
      gegeben – auch wenn das Logbuch seit August schweigt. Darum laufen ihre
      Balken bis heute; anklicken und ändern lässt sich das jederzeit. */
   const Z=[['epsotop','2026-07-28'],['kali','2026-08-26'],['zink','2026-08-26']].map(([mittel,von])=>({id:'p26z-'+mittel,mittel,von,bis:null,
-    notiz:'wird laut Betrieb weiterhin gegeben',gesetzt:'2026-09-30',quelle:'paket',paket:P,beleg:'Angabe des Betriebs vom 30.09.2026'}));
+    notiz:'wird laut Betrieb weiterhin gegeben',gesetzt:'2026-09-30',quelle:'paket',paket:P,pv:2,beleg:'Angabe des Betriebs vom 30.09.2026'}));
 
-  return {id:P,titel:'Reservoir April bis September 2026',
-    kurz:'pH, EC und Sauerstoff im Rücklauf, dazu jede Gabe – aus der Reservoir-Tabelle und dem Bericht über die Säure',
-    quellen:['Tabelle «pH/EC Reservoir», 30.04.–17.09.2026','Bericht «pH und Säure», 31.08.–10.09.2026 (mit Uhrzeiten am 9.9.)'],
+  return {id:P,titel:'Reservoir April bis September 2026',version:2,
+    kurz:'pH, EC und Sauerstoff im Rücklauf, dazu jede Gabe – aus der Reservoir-Tabelle, dem Bericht über die Säure und der Tabelle vom 18. bis 30. September',
+    neu:'Messungen und Schwefelsäure vom 18. bis 30. September, mit Uhrzeit; Magnesium, Kalisulfat und Zink laufen bis heute',
+    quellen:['Tabelle «pH/EC Reservoir», 30.04.–17.09.2026','Bericht «pH und Säure», 31.08.–10.09.2026 (mit Uhrzeiten am 9.9.)','Tabelle pH/EC mit Uhrzeit und «DO vorne», 18.–30.09.2026'],
     entscheide:[
       '«RV: + 1.4l A» am 18.08. ist Halades, 1,4 l vorne – «A» steht für HA.',
       '«MKBoden» am 17.09. ist EM (Effektive Mikroorganismen): vorne 5 l, hinten 10 l – mit eigenem Balken.',
@@ -5570,7 +5636,10 @@ const PAKET_RES26=(()=>{
       'Sauerstoff 0,2 mg/l am 9.9. vorne, am ersten und letzten Messpunkt – laut Bericht den ganzen Tag unverändert.',
       '«Wasser abgepumpt, Tanks neu gefüllt» am 10.09. ist ein Neuansatz; die leeren Zeilen 10. und 11.09. in der Tabelle gehören dazu.',
       'Ohne Uhrzeit stehen mehrere Messungen eines Tages in der Reihenfolge der Tabelle – im Diagramm über den Tag verteilt, im Kästchen als «Uhrzeit nicht erfasst» bezeichnet.',
-      'Magnesium (seit 28.07.), Kalisulfat und Zink (seit 26.08.) werden weiterhin gegeben – ihre Balken laufen bis heute. Anklicken setzt Beginn und Ende neu.'],
+      'Magnesium (seit 28.07.), Kalisulfat und Zink (seit 26.08.) werden weiterhin gegeben – ihre Balken laufen bis heute. Anklicken setzt Beginn und Ende neu.',
+      '18. bis 30. September: «DO vorne» ist der Sauerstoff im Reservoir vorne (mg/l); jede Messung und jede Gabe mit ihrer Uhrzeit.',
+      '«h2so4» ist dieselbe Schwefelsäure 25 % wie seit dem 16.09. (Annahme); «je 1l RV, RH» sind zwei Gaben, vorne und hinten.',
+      '«RV und RH mischen» am 24.09. um 08:30 steht als Umpumpen im Logbuch – nach der Messung dieser Zeile, der pH vorne stieg danach von 5,28 auf 6,16.'],
     messungen:M,ereignisse:E,zeiten:Z};
 })();
 const PAKETE=[PAKET_RES26];
@@ -5580,6 +5649,15 @@ function paketStand(p){
   const alle=p.messungen.concat(p.ereignisse,p.zeiten||[]),da=alle.filter(x=>ids.has(x.id)).length;
   const merk=(db.pakete||{})[p.id]||null;
   return {da,gesamt:alle.length,aktiv:da>0,voll:da===alle.length,merk};
+}
+/* Was eine neuere Paketfassung dazubringt und im Bestand noch fehlt. Wer das
+   Paket schon aktiviert hatte, bekommt gezielt nur das – was er selbst
+   gelöscht hat, kommt nicht ungefragt zurück. */
+function paketNeues(p){
+  const merk=(db.pakete||{})[p.id]||{},hatte=merk.version||1;
+  if(!merk.aktiviert||hatte>=(p.version||1))return [];
+  const ids=new Set(db.messungen.map(x=>x.id).concat(db.ereignisse.map(x=>x.id),beigabeHand().map(x=>x.id)));
+  return p.messungen.concat(p.ereignisse,p.zeiten||[]).filter(x=>(x.pv||1)>hatte&&!ids.has(x.id));
 }
 function paketZeitraum(p){const d=p.messungen.concat(p.ereignisse).map(x=>x.datum).sort();return {von:d[0],bis:d[d.length-1]}}
 /* Was ein früherer Tabellenimport im selben Zeitraum schon eingetragen hat.
@@ -5593,8 +5671,13 @@ function paketAltImport(p){
    aktiviert oder ausdrücklich abgelehnt ist. */
 function paketHinweis(){
   if(!['lage','giess','logbuch'].includes(tab))return '';
+  const neu=PAKETE.map(p=>({p,n:paketNeues(p)})).filter(x=>x.n.length);
   const offen=PAKETE.filter(p=>{const s=paketStand(p);return !s.aktiv&&!(s.merk&&s.merk.abgelehnt)});
-  return offen.map(p=>`<div class="note gut paketHinweis"><strong>Bereit zum Aktivieren: ${esc(p.titel)}.</strong>
+  return neu.map(({p,n})=>`<div class="note gut paketHinweis"><strong>Neu im Paket «${esc(p.titel)}»:</strong> ${esc(p.neu||'neue Einträge')} –
+    ${n.length} Einträge, noch nicht im Bestand.
+    <div class="row" style="margin-top:8px"><button class="primary" data-tun="paketNeu" data-id="${esc(p.id)}">Ergänzen</button>
+    <button class="ghost" data-tun="paketZeigen" data-id="${esc(p.id)}">Ansehen</button></div></div>`).join('')
+  +offen.map(p=>`<div class="note gut paketHinweis"><strong>Bereit zum Aktivieren: ${esc(p.titel)}.</strong>
     ${p.messungen.length} Messungen und ${p.ereignisse.length} Logbucheinträge, bereinigt und fertig eingetragen – ein Klick übernimmt sie.
     <div class="row" style="margin-top:8px"><button class="primary" data-tun="paketZeigen" data-id="${esc(p.id)}">Ansehen und aktivieren</button>
     <button class="ghost" data-tun="paketNein" data-id="${esc(p.id)}">Nicht verwenden</button></div></div>`).join('');
@@ -5676,9 +5759,25 @@ AKTION.paketAn=d=>{
     if(db.beigabeZeiten.some(h=>h.mittel===z.mittel&&(h.bis||'9999-12-31')>=z.von))continue;
     db.beigabeZeiten.push(JSON.parse(JSON.stringify(z)));
   }
-  db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:heute(),abgelehnt:false};
+  db.pakete=Object.assign({},db.pakete||{});db.pakete[p.id]={aktiviert:heute(),abgelehnt:false,version:p.version||1};
   aend();if(el('dlg').open)el('dlg').close();setTab('giess');
   toast(`Aktiviert: ${nm} Messungen und ${ne} Logbucheinträge${weg?`, ${weg} Einträge aus dem früheren Tabellenimport ersetzt`:''}.`);
+};
+AKTION.paketNeu=d=>{
+  const p=paketVon(d.id);if(!p)return;
+  const neu=paketNeues(p);
+  let nm=0,ne=0,nz=0;
+  db.beigabeZeiten=beigabeHand();
+  for(const x of neu){
+    const k=JSON.parse(JSON.stringify(x));
+    if(p.messungen.includes(x)){db.messungen.push(k);nm++}
+    else if(p.ereignisse.includes(x)){db.ereignisse.push(k);ne++}
+    else if(!db.beigabeZeiten.some(h=>h.mittel===x.mittel&&(h.bis||'9999-12-31')>=x.von)){db.beigabeZeiten.push(k);nz++}
+  }
+  db.pakete=Object.assign({},db.pakete||{});
+  db.pakete[p.id]=Object.assign({},db.pakete[p.id]||{},{version:p.version||1,ergaenzt:heute()});
+  aend();if(el('dlg').open)el('dlg').close();setTab('giess');
+  toast(`Ergänzt: ${nm} Messungen, ${ne} Logbucheinträge${nz?`, ${nz} laufende Beigaben`:''}.`);
 };
 AKTION.paketWeg=d=>{
   const p=paketVon(d.id);if(!p)return;

@@ -140,8 +140,8 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    später steht oben rechts *gesichert hh:mm*.
 3. **Dann die vorbereiteten Daten:** Im **Überblick** steht ein grüner
    Hinweis *«Bereit zum Aktivieren: Reservoir April bis September 2026»*
-   → **Ansehen und aktivieren**. Der Dialog zeigt, was hineinkommt (111
-   Messungen, 70 Logbucheinträge), welche Balken danach unter den Diagrammen
+   → **Ansehen und aktivieren**. Der Dialog zeigt, was hineinkommt (149
+   Messungen bis zum 30. September, 82 Logbucheinträge), welche Balken danach unter den Diagrammen
    stehen und was dabei entschieden wurde. → **Aktivieren**.
    Die App springt in den Reiter Giesswasser; alles ist eingetragen und
    gesichert.

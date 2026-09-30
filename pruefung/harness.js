@@ -43,7 +43,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
  'stellenVorschlag','stellenListe','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar','stellenDb','stellenDialog','stellenChip','STELLEN_VORGABE','gwStelle','gwProben',
  'satzpaare','PAAR_TOLERANZ','o2Saettigung','O2_LOESLICH','messStelle','vereinigen','ONLINE','onlineStand','zoomMelden',
- 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz','beigabeMittelListe','beigabeLaeuft','beigabeSumme','beigabenSchalter','MITTEL_FARBE','beigabeHand','beigabeMitHand','logbuchPunkte','logbuchBuendel','logbuchTipp','logbuchMarke','spannenZeilen',
+ 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz','beigabeMittelListe','beigabeLaeuft','beigabeSumme','beigabenSchalter','MITTEL_FARBE','beigabeHand','beigabeMitHand','logbuchPunkte','logbuchBuendel','logbuchTipp','logbuchMarke','spannenZeilen','spannenSvg','dunkler','paketNeues',
  'PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte','zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','tabZeit','heute','jetztZeit',
  'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
  'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',

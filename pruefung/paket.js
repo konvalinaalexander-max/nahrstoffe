@@ -65,7 +65,7 @@ const bandTexte=p=>p.$$eval('#cTank text',es=>es.map(e=>e.textContent));
   ok(/online · gesichert/.test(await p.$eval('#stand',e=>e.textContent)),'Von selbst gesichert – kein Knopf');
   srv=await ruf('/api/bestand');
   const sdb=srv.json.db;
-  ok(sdb.messungen.filter(m=>m.paket==='reservoir-2026').length===111&&sdb.ereignisse.filter(e=>e.paket==='reservoir-2026').length===70,'Auf dem Server: 111 Messungen und 70 Logbucheinträge aus dem Paket');
+  ok(sdb.messungen.filter(m=>m.paket==='reservoir-2026').length===149&&sdb.ereignisse.filter(e=>e.paket==='reservoir-2026').length===82,'Auf dem Server: 149 Messungen und 82 Logbucheinträge aus dem Paket');
   ok(sdb.analysen.length===10&&sdb.pakete&&sdb.pakete['reservoir-2026'].aktiviert,'Die Analysen sind noch da, das Paket als aktiv vermerkt');
 
   console.log('\n════ Am Tank: Balken, Uhrzeit, Schalter ════');
@@ -80,6 +80,8 @@ const bandTexte=p=>p.$$eval('#cTank text',es=>es.map(e=>e.textContent));
   t=await bandTexte(p);
   ok(!t.some(x=>/^EM /.test(x))&&t.some(x=>/^Biovin/.test(x)),'EM ausgeblendet, der Rest bleibt');
   await p.screenshot({path:shots+'/paket-tank.png',fullPage:false});
+  await p.$eval('#cTank',e=>e.scrollIntoView({block:'start'}));await p.waitForTimeout(200);
+  await p.screenshot({path:shots+'/paket-tank-diagramm.png',clip:await p.$eval('#cTank',e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})});
   await p.reload();await p.waitForTimeout(1800);
   t=await bandTexte(p);
   ok(!t.some(x=>/^EM /.test(x)),'Nach dem Neuladen bleibt EM ausgeblendet – persönliche Ansicht');
@@ -94,7 +96,7 @@ const bandTexte=p=>p.$$eval('#cTank text',es=>es.map(e=>e.textContent));
   if(!(await p.$eval('#view [data-tun="nsLog"]',e=>e.classList.contains('on'))))await p.click('#view [data-tun="nsLog"]'),await p.waitForTimeout(400);
   const ns=await p.$eval('#cNs',e=>({marken:e.querySelectorAll('.lbm').length,strich:e.querySelectorAll('line[stroke-dasharray="3 4"]').length,
     lb:[...e.querySelectorAll('text')].some(t=>t.textContent==='Logbuch'),texte:[...e.querySelectorAll('text')].map(t=>t.textContent)}));
-  ok(ns.lb&&ns.marken>3&&ns.marken<40,'Logbuch als eigene Zeile unter der Zeitachse: '+ns.marken+' Marken für 70 Einträge');
+  ok(ns.lb&&ns.marken>3&&ns.marken<40,'Logbuch als eigene Zeile unter der Zeitachse: '+ns.marken+' Marken für 82 Einträge');
   ok(ns.strich===0&&!ns.texte.some(t=>/^(Düngergabe|Säurezugabe|Wasserzugabe|Zusatzdünger)/.test(t)),'Keine gestrichelten Linien, keine Titel mehr oben im Diagramm');
   await p.$eval('#cNs',e=>e.scrollIntoView({block:'center'}));await p.waitForTimeout(200);
   const marke=(await p.$$('#cNs .lbm')).slice(-3)[0];
@@ -182,7 +184,7 @@ const bandTexte=p=>p.$$eval('#cTank text',es=>es.map(e=>e.textContent));
   server=await starten();
   await p.reload();await p.waitForTimeout(1800);
   srv=await ruf('/api/bestand');
-  ok(srv.json.db.messungen.length===111+3+1,'Alles noch da: Paket, Sicherung, Handy ('+srv.json.db.messungen.length+' Messungen)');
+  ok(srv.json.db.messungen.length===149+3+1,'Alles noch da: Paket, Sicherung, Handy ('+srv.json.db.messungen.length+' Messungen)');
   await p.click('#nav button:text-is("Überblick")');await p.waitForTimeout(400);
   ok(await p.$('.paketHinweis')===null,'Und kein Hinweis zum Aktivieren mehr');
 

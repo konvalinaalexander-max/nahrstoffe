@@ -70,7 +70,7 @@ console.log('\n════ Uhrzeit: Tabellenimport ════');
 }
 
 console.log('\n════ Das Paket: Umfang und Form ════');
-ok(P.id==='reservoir-2026'&&P.messungen.length===111&&P.ereignisse.length===70,`111 Messungen und 70 Logbucheinträge (${P.messungen.length} / ${P.ereignisse.length})`);
+ok(P.id==='reservoir-2026'&&P.messungen.length===149&&P.ereignisse.length===82&&P.version===2,`149 Messungen und 82 Logbucheinträge, Fassung 2 (${P.messungen.length} / ${P.ereignisse.length})`);
 {
   const alle=P.messungen.concat(P.ereignisse),ids=alle.map(x=>x.id);
   ok(new Set(ids).size===ids.length&&ids.every(i=>/^p26[me]-/.test(i)),'Jede Kennung einmal, alle mit Präfix – zweimal aktivieren trägt nichts doppelt ein');
@@ -85,9 +85,9 @@ ok(P.id==='reservoir-2026'&&P.messungen.length===111&&P.ereignisse.length===70,`
   ok(P.messungen.every(m=>['vorne','hinten','wurzelraum'].includes(m.stelle)),'Messstellen: vorne, hinten, Wurzelraum');
   ok(P.messungen.every(m=>m.ph==null||(m.ph>=5&&m.ph<=8.5)),'Kein pH ausserhalb 5–8,5 – der Tippfehler ist draussen');
   ok(P.messungen.filter(m=>m.o2!=null).every(m=>m.stelle==='vorne'),'Sauerstoff nur vorne');
-  ok(P.messungen.filter(m=>m.o2!=null).length===7,'Sieben Sauerstoffwerte: fünf aus der Tabelle, zweimal 0,2 aus dem Bericht');
+  ok(P.messungen.filter(m=>m.o2!=null).length===22,'22 Sauerstoffwerte: fünf aus der ersten Tabelle, zweimal 0,2 aus dem Bericht, 15 «DO vorne» vom 18.–30.09.');
   const tage=[...new Set(P.messungen.map(m=>m.datum))].sort();
-  ok(tage[0]==='2026-04-30'&&tage[tage.length-1]==='2026-09-17','Von 30.04. bis 17.09.');
+  ok(tage[0]==='2026-04-30'&&tage[tage.length-1]==='2026-09-30','Von 30.04. bis 30.09.');
 }
 
 console.log('\n════ Das Paket: was am 30.09. entschieden wurde ════');
@@ -114,7 +114,9 @@ console.log('\n════ Das Paket: was am 30.09. entschieden wurde ═══
   ok(n9.length===12&&n9.every(m=>m.zeit),'9.9.: zwölf Messungen, alle mit Uhrzeit');
   ok(n9.filter(m=>m.o2===0.2).map(m=>m.zeit).join(',')==='09:00,17:15','O₂ 0,2 mg/l um 09:00 und 17:15 vorne');
   ok(E('2026-09-10','Tank neu angesetzt').length===1&&E('2026-09-10','Notiz').length===1,'10.09.: Tanks neu gefüllt, dazu die Notiz zum Geruch');
-  ok(P.ereignisse.filter(e=>e.mittel==='schwefelsaeure25').length===8&&E('2026-09-16',null,'schwefelsaeure25').length===2,'Schwefelsäure: 1 l je Reservoir, am 16.09. einmal, am 17.09. dreimal');
+  ok(E('2026-09-16',null,'schwefelsaeure25').length===2&&E('2026-09-17',null,'schwefelsaeure25').length===6,'Schwefelsäure: 1 l je Reservoir, am 16.09. einmal, am 17.09. dreimal');
+  const s25=P.ereignisse.filter(e=>e.mittel==='schwefelsaeure25');
+  ok(s25.length===19&&Math.abs(s25.reduce((a,e)=>a+e.menge,0)-15.5)<1e-9,'Schwefelsäure insgesamt: 19 Gaben, 15,5 l');
   ok(M('2026-09-17').filter(m=>m.o2!=null).map(m=>m.o2).join(',')==='6,6.2,5.9,5.1','O₂ am 17.09. aus der Tabelle');
   ok(P.messungen.filter(m=>m.stelle==='wurzelraum').length===3,'EC im Wurzelraum: drei Sätze am 08.06.');
   ok(E('2026-08-06','Gerätekalibrierung').length===1,'Neukalibrierung am 06.08. steht im Logbuch');
@@ -130,18 +132,18 @@ console.log('\n════ Aktivieren ════');
   ok(/nicht aktiv/.test(A.paketKarte()),'Einstellungen: «nicht aktiv»');
   A.AKTION.paketAn({id:'reservoir-2026'});
   const db=A.getDb();
-  ok(db.messungen.length===111&&db.ereignisse.length===70&&db.beigabeZeiten.length===3,'Aktivieren trägt alles ein, dazu drei laufende Beigaben');
+  ok(db.messungen.length===149&&db.ereignisse.length===82&&db.beigabeZeiten.length===3,'Aktivieren trägt alles ein, dazu drei laufende Beigaben');
   ok(A.getTab()==='giess','… und öffnet den Reiter Giesswasser');
   ok(db.pakete['reservoir-2026'].aktiviert,'Der Bestand weiss, dass das Paket aktiv ist');
   A.AKTION.paketAn({id:'reservoir-2026'});
-  ok(A.getDb().messungen.length===111&&A.getDb().ereignisse.length===70,'Zweimal aktivieren: nichts doppelt');
+  ok(A.getDb().messungen.length===149&&A.getDb().ereignisse.length===82,'Zweimal aktivieren: nichts doppelt');
   A.setTab('lage');ok(A.paketHinweis()==='','Danach kein Hinweis mehr');
   ok(/>aktiv</.test(A.paketKarte()),'Einstellungen: «aktiv»');
   db.messungen[0].ph=9.99;
   db.messungen.splice(5,1);
   ok(/teilweise aktiv/.test(A.paketKarte()),'Einen Eintrag entfernt: «teilweise aktiv»');
   A.AKTION.paketAn({id:'reservoir-2026'});
-  ok(A.getDb().messungen.length===111&&A.getDb().messungen[0].ph===9.99,'«Fehlende ergänzen» holt nur den fehlenden zurück – Bearbeitetes bleibt');
+  ok(A.getDb().messungen.length===149&&A.getDb().messungen[0].ph===9.99,'«Fehlende ergänzen» holt nur den fehlenden zurück – Bearbeitetes bleibt');
   let render=true;try{A.setTab('giess');A.vGiess();A.vLogbuch();A.vSaetze();A.nachRenderRun()}catch(e){render=false;console.log('   ',e.stack)}
   ok(render,'Giesswasser, Logbuch und Einstellungen bauen sich mit dem Paket fehlerfrei auf');
   A.AKTION.paketWeg({id:'reservoir-2026'});
@@ -164,7 +166,7 @@ console.log('\n════ Aktivieren ════');
   document.getElementById('paketErsetzen').checked=false;
   const db=A.getDb(),ids=new Set(db.messungen.map(m=>m.id).concat(db.ereignisse.map(e=>e.id)));
   ok(!ids.has('x1')&&!ids.has('xe')&&ids.has('x2')&&ids.has('h1'),'Ersetzt wird nur der alte Import im Zeitraum');
-  ok(db.messungen.length===111+2,'111 aus dem Paket, dazu die zwei unberührten');
+  ok(db.messungen.length===149+2,'149 aus dem Paket, dazu die zwei unberührten');
 }
 
 console.log('\n════ Balken je Mittel ════');
@@ -267,19 +269,56 @@ console.log('\n════ Balken in Zeilen: je Mittel eine ════');
   ok(Z.n===mittel.size,`${bal.length} Balken in ${Z.n} Zeilen – eine je Mittel (${mittel.size})`);
   const zeileVon=t=>Z.liste.find(x=>x.sp.text===t).z;
   ok(zeileVon('Biovin 06.05.–26.05.')===zeileVon('Biovin 28.07.–26.08.'),'Biovin Mai und Biovin August teilen sich eine Zeile');
-  for(const a of Z.liste)for(const b of Z.liste)if(a!==b&&a.z===b.z&&a.xa<b.xa&&a.xa+7+a.sp.text.length*5.3>b.xa){ok(false,'Beschriftung stösst an den nächsten Balken: '+a.sp.text);break}
+  let stoss=null;for(const a of Z.liste)for(const b of Z.liste)if(a!==b&&a.z===b.z&&a.xa<b.xa&&a.ende>b.links)stoss=a.sp.text;
+  ok(!stoss,'Keine Beschriftung stösst an den nächsten Balken derselben Zeile'+(stoss?': '+stoss:''));
+  ok(Z.liste.every(x=>x.innen?x.xb-x.xa>=x.sp.text.length*6.4+18:true),'Weisse Schrift nur, wo sie in den Balken passt – sonst dunkel daneben');
+  const R=A.spannenZeilen(bal,X,x0,x1,1000);
+  ok(R.liste.filter(x=>x.lage==='rechts').every(x=>x.ende-12<=1000)&&R.liste.filter(x=>x.lage==='links').every(x=>x.links+6>=100-400),'Keine Beschriftung ragt über den rechten Rand');
+  ok(R.liste.some(x=>x.lage==='links'),'Kurze Balken am rechten Rand tragen ihre Beschriftung links davor');
+  const svgB=A.spannenSvg(Z,300);
+  ok((svgB.match(/<path d="M/g)||[]).length===bal.filter(x=>x.laeuft).length,'Jeder laufende Balken endet in einer Spitze ('+bal.filter(x=>x.laeuft).length+')');
+  ok(/height="18"/.test(svgB)&&/font-size="11" font-weight="600" fill="#fff"/.test(svgB),'18 Bildpunkte hoch, weisse, halbfette Schrift');
   const eng=A.spannenZeilen(bal,v=>100+(v-x0)/(x1-x0)*250,x0,x1);
   ok(eng.n>Z.n,'Wird es eng, bekommt ein Mittel eine zweite Zeile, statt dass Text übereinanderliegt');
+}
+
+console.log('\n════ Paketfassung 2: gezielt nur das Neue ergänzen ════');
+{
+  /* Stand eines Betriebs, der Fassung 1 aktiviert hat: ohne die Daten vom
+     18.–30.09. und ohne laufende Beigaben; eine Messung hat er selbst gelöscht. */
+  const d=A.leer();
+  d.messungen=A.PAKET_RES26.messungen.filter(m=>!m.pv).map(m=>Object.assign({},m));
+  d.ereignisse=A.PAKET_RES26.ereignisse.filter(e=>!e.pv).map(e=>Object.assign({},e));
+  const weg=d.messungen.splice(3,1)[0];
+  d.pakete={'reservoir-2026':{aktiviert:'2026-09-30',abgelehnt:false}};
+  A.setDb(d);A.setTab('lage');
+  const n=A.paketNeues(A.PAKET_RES26);
+  ok(n.length===53,'Neu gegenüber Fassung 1: 38 Messungen, 12 Logbucheinträge, 3 laufende Beigaben ('+n.length+')');
+  ok(!n.some(x=>x.id===weg.id),'Was der Betrieb selbst gelöscht hat, gilt nicht als neu');
+  ok(/Neu im Paket/.test(A.paketHinweis())&&/Ergänzen/.test(A.paketHinweis()),'Im Überblick: «Neu im Paket» mit «Ergänzen»');
+  A.AKTION.paketNeu({id:'reservoir-2026'});
+  const db=A.getDb();
+  ok(db.messungen.length===148&&db.ereignisse.length===82&&db.beigabeZeiten.length===3,'Ergänzt: jetzt 148 Messungen (eine bleibt gelöscht), 82 Einträge, 3 laufende Beigaben');
+  ok(!db.messungen.some(m=>m.id===weg.id),'Die gelöschte Messung kommt nicht zurück');
+  ok(db.pakete['reservoir-2026'].version===2&&A.paketNeues(A.PAKET_RES26).length===0,'Danach kein Hinweis mehr');
+  A.setTab('lage');ok(!/Neu im Paket/.test(A.paketHinweis()),'… auch nicht im Überblick');
+  const neun=db.messungen.filter(m=>m.datum==='2026-09-24');
+  ok(neun.length===10&&neun.every(m=>/^\d\d:\d\d$/.test(m.zeit)),'24.09.: zehn Messungen, alle mit Uhrzeit');
+  const misch=db.ereignisse.find(e=>e.datum==='2026-09-24'&&e.typ==='Umpumpen');
+  ok(misch&&misch.zeit==='08:30'&&/gemischt/.test(misch.titel),'«RV und RH mischen» am 24.09. um 08:30');
+  const s23=db.ereignisse.filter(e=>e.datum==='2026-09-23'&&e.mittel==='schwefelsaeure25');
+  ok(s23.length===8&&Math.abs(s23.filter(e=>e.stelle==='vorne').reduce((a,e)=>a+e.menge,0)-2.2)<1e-9&&Math.abs(s23.filter(e=>e.stelle==='hinten').reduce((a,e)=>a+e.menge,0)-2.8)<1e-9,'23.09.: Schwefelsäure vorne 2,2 l, hinten 2,8 l');
+  ok(db.messungen.find(m=>m.datum==='2026-09-30'&&m.stelle==='vorne').o2===6,'30.09. 08:00: O₂ vorne 6 mg/l');
 }
 
 console.log('\n════ Logbuch im Diagramm: eine Zeile, gebündelt ════');
 {
   A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});
   const items=A.logbuchPunkte(A.getDb().ereignisse.concat([{datum:'kaputt',typ:'Notiz'}]));
-  ok(items.length===70,'logbuchPunkte nimmt nur Einträge mit gültigem Datum');
+  ok(items.length===82,'logbuchPunkte nimmt nur Einträge mit gültigem Datum');
   const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01'),X=v=>100+(v-x0)/(x1-x0)*800;
   const b=A.logbuchBuendel(items,X,x0,x1);
-  ok(b.length<40&&b.reduce((s,x)=>s+x.eintraege.length,0)===70,`70 Einträge in ${b.length} Marken – nichts geht verloren`);
+  ok(b.length<40&&b.reduce((s,x)=>s+x.eintraege.length,0)===82,`82 Einträge in ${b.length} Marken – nichts geht verloren`);
   for(let i=1;i<b.length;i++)if(b[i].x-b[i-1].x<10){ok(false,'Zwei Marken näher als 10 Bildpunkte');break}
   const tag=b.find(x=>x.eintraege.some(e=>e.datum==='2026-09-09'));
   ok(/Logbucheinträge/.test(tag.tipp)&&/09:05/.test(tag.tipp)&&/Zitronensäure/.test(tag.tipp),'Das Kästchen nennt jeden Eintrag mit Uhrzeit und Mittel');
@@ -292,7 +331,7 @@ console.log('\n════ Logbuch im Diagramm: eine Zeile, gebündelt ══�
     xTyp:'datum',ereignisse:items});
   const h=box.innerHTML;
   const nMarken=(h.match(/class="lbm"/g)||[]).length;
-  ok(/>Logbuch</.test(h)&&nMarken>5&&nMarken<40,'Das Diagramm zeichnet die Logbuch-Zeile mit gebündelten Marken ('+nMarken+' für 70 Einträge)');
+  ok(/>Logbuch</.test(h)&&nMarken>5&&nMarken<40,'Das Diagramm zeichnet die Logbuch-Zeile mit gebündelten Marken ('+nMarken+' für 82 Einträge)');
   ok(!/stroke-dasharray="3 4"/.test(h),'Keine gestrichelten Linien mehr über das ganze Diagramm');
   ok(!/font-size="10" fill="#141D17">(Düngergabe|Säurezugabe|Wasserzugabe)/.test(h),'Keine Titel mehr oben im Diagramm');
 }

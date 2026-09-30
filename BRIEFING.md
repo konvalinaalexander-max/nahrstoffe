@@ -180,7 +180,12 @@ Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
   April–September und der Bericht über die Säure, von Hand gelesen und mit den
   Entscheiden des Betriebs eingetragen — «A» = Halades, «MKBoden» = EM, die
   Zeile ohne Datum und pH 1,36 weggelassen, die Betriebsregel «1 kg Kalisulfat
-  pro 10'000 l» nicht als Gabe. 111 Messungen, 70 Logbucheinträge, feste
+  pro 10'000 l» nicht als Gabe. Fassung 2 (30.09.) bringt die Tabelle vom
+  18.–30.09. mit Uhrzeit und «DO vorne» dazu: 149 Messungen, 82 Logbucheinträge,
+  3 laufende Beigaben. Einträge ab Fassung 2 tragen `pv:2`; wer Fassung 1
+  aktiviert hatte, sieht «Neu im Paket» und ergänzt mit `paketNeues`/
+  `AKTION.paketNeu` gezielt nur das Neue – selbst Gelöschtes kommt nicht
+  zurück. Feste
   Kennungen (`p26m-…`, `p26e-…`), jeder mit `quelle:'paket'`, `paket` und
   `beleg` (Tabellenzeile samt Rohtext oder Berichtsteil). Aktiviert wird über
   den Hinweis in Überblick/Giesswasser/Logbuch oder die Karte «Vorbereitete
@@ -203,7 +208,11 @@ Bewertung je Nährstoff, `e.index` die Kennzahl, `e.alter` das Kulturalter.
   Art, näher als 10 Bildpunkte wird eine Marke mit Zahl; das Kästchen nennt
   jeden Eintrag. Die Hilfslinie ins Diagramm ist fast unsichtbar und wird beim
   Zeigen deutlich. Beigabe-Balken liegen je Mittel in einer Zeile
-  (`spannenZeilen`), solange die Beschriftung nicht anstösst.
+  (`spannenZeilen`), solange die Beschriftung nicht anstösst. Gezeichnet
+  werden sie von `spannenSvg`: 18 Bildpunkte hoch, satt in der (etwas
+  abgedunkelten) Farbe des Mittels, weisse halbfette Schrift im Balken oder
+  dunkel daneben, wenn sie nicht passt; ein laufender Balken endet in einer
+  Spitze.
 - **Online ohne Passwort** (siehe «Online» unten): `/` ist das Dashboard,
   `/maske` die Eingabemaske, die nur nach dem Namen fragt (2–20 Zeichen;
   kurze Kürzel werden gross geschrieben, Namen bleiben wie getippt) und
@@ -723,7 +732,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Fachliche Regressionsprüfungen (759 Einzelprüfungen, ohne Browser)
+# 2 · Fachliche Regressionsprüfungen (777 Einzelprüfungen, ohne Browser)
 for f in n1 n2 n3 n4 n5 g1 f1 l1 x1 b1 v1 d1 st1 o1 z1 server1; do node pruefung/$f.js; done
 
 # 3 · Im echten Browser
