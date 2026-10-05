@@ -26,7 +26,7 @@ const alt3={schema:3,version:7,gespeichert:'2026-08-01T10:00:00.000Z',
 const erg=A.migriere(JSON.parse(JSON.stringify(alt3)));
 console.log('   von Format',erg.von,'nach',erg.db.schema);
 erg.notizen.forEach(n=>console.log('   ·',n));
-ok(erg.db.schema===11,'Schema auf 11 gehoben');
+ok(erg.db.schema===12,'Schema auf 12 gehoben');
 ok(erg.db.produkte&&erg.db.produkte.biovin&&erg.db.produkte.kali,'Die Mittel sind angelegt – die Handy-Seite bietet sie an');
 ok(erg.db.analysen.length===2,'Beide Analysen übernommen');
 ok(erg.db.ereignisse.length===3&&erg.db.messungen.length===1,'Einträge und Messungen übernommen');
@@ -49,7 +49,7 @@ ok(alt3.analysen[0].werte.Mo.limit===true,'Die eingelesene Datei selbst wird nic
 console.log('\n════ Sicherung schreiben und wieder laden ════');
 const rund=JSON.parse(JSON.stringify(erg.db));
 const erg2=A.migriere(rund);
-ok(erg2.von===11&&!erg2.notizen.length,'Eine Datei im aktuellen Format wird ohne Umbau geladen');
+ok(erg2.von===12&&!erg2.notizen.length,'Eine Datei im aktuellen Format wird ohne Umbau geladen');
 ok(JSON.stringify(erg2.db.analysen)===JSON.stringify(erg.db.analysen),'Analysen bleiben beim Rundlauf identisch');
 ok(JSON.stringify(erg2.db.ereignisse)===JSON.stringify(erg.db.ereignisse),'Einträge bleiben beim Rundlauf identisch');
 A.setDb(erg2.db);
@@ -59,7 +59,7 @@ for(const t of ['vAnalysen','vKombi','vTank','vMaske','vEinst']){
   catch(e){bad.push(t+' WIRFT '+e.message)}
 }
 ok(!bad.length,'Alle fünf Reiter rendern die geladene Datei sauber'+(bad.length?': '+bad.join(', '):''));
-ok(A.TABS.map(t=>t[1]).join('|')==='Analysen|Blattsaft & Giesswasser|pH & EC am Tank|Einträge Maske|Einstellungen','Fünf Reiter, in dieser Reihenfolge');
+ok(A.TABS.map(t=>t[1]).join('|')==='Blattsaft & Giesswasser|Analysen|pH & EC am Tank|Einträge Maske|Einstellungen','Fünf Reiter, Blattsaft & Giesswasser zuerst');
 
 console.log('\n════ Der Bericht: Werte, Optimum, sonst nichts ════');
 const d=A.leer();

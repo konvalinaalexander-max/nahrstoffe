@@ -73,7 +73,7 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
   ok(bloecke(text)===1,'Genau ein Datenblock darin');
   const dbTeil=text.slice(text.indexOf('id="datenblock">'),text.indexOf('</'+'script>',text.indexOf('id="datenblock">')));
   ok(dbTeil.indexOf('</'+'script')<0,'Kein rohes Skript-Ende im Datenteil – die Datei bleibt heil');
-  ok(text.indexOf('function chartStapel')>0,'Das Werkzeug selbst steckt unverändert darin');
+  ok(text.indexOf('function zeitBild')>0,'Das Werkzeug selbst steckt unverändert darin');
   const toast=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
   console.log('   ',toast.join(' | '));
   ok(toast.some(t=>/HTML-Datei mit allem darin/.test(t)),'Und die App sagt, was sie gerade geschrieben hat');
@@ -106,7 +106,7 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
   }
   console.log('  ✓ Jeder Reiter baut sich auf');
   await p2.click('#nav button:text-is("Blattsaft & Giesswasser")');await p2.waitForTimeout(500);
-  await p2.click('#kbKopf .chip:text-is("Hydrogencarbonat")');await p2.waitForTimeout(400);
+  await p2.click('#cKb .chip:text-is("Hydrogencarbonat")');await p2.waitForTimeout(400);
   const kbNach=await p2.$eval('#view',e=>e.innerText);
   ok(/Tisch 1–4/.test(kbNach)&&!/mitt H2O2/.test(kbNach),'Die zugeordneten Namen stehen sofort über dem Diagramm – ohne erneutes Zuordnen');
   const tipps=await p2.$$eval('#cKb [data-tipp]',es=>es.map(e=>e.getAttribute('data-tipp')));

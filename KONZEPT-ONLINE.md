@@ -272,7 +272,7 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
 
 9. **Balken je Mittel, keine Versuchs-Etiketten** (Nachtrag vom Abend).
    Die Balken erzählen je Mittel: Halades vom 6. bis 19. August und dann
-   nicht mehr, Phosphorsäure bis 25. August, Zitronensäure Ende August,
+   nicht mehr, Zitronensäure Ende August,
    Schwefelsäure seit 16. September, Magnesium seit Mai, Kali und Zink seit
    26. August. Der Zitronensäure-Versuch vom September wird nicht als
    Versuch ausgewiesen – es sind Messungen und Gaben wie alle anderen. Die
@@ -342,3 +342,36 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
     Die Daten dazu bleiben im Bestand; die volle Fassung liegt im
     Git-Verlauf (Commit `7274630`). Unverändert: die Handy-Seite, der Server,
     die Online-Anleitung, das Datenpaket, ohne Passwort.
+
+## 12 · Entschieden (5. Oktober, abends): leichter zu bedienen
+
+17. **Phosphorsäure gibt es nicht** – «als hätte es das nie gegeben». Kein
+    Produkt, kein Import-Kürzel «PS», nichts im Datenpaket (jetzt 149
+    Messungen und 76 Gaben und Ereignisse; die übrigen behalten ihre
+    Kennung). Wo sie schon im Bestand steht, verschwindet sie beim Laden;
+    Paketeinträge bekommen den heutigen Wortlaut. **Biovin** steht im Reiter
+    Blattsaft & Giesswasser nicht mehr im Kulturmanagement – nur dort nicht,
+    die Gaben bleiben und stehen im Reiter pH & EC am Tank.
+18. **Blattsaft & Giesswasser ist der erste Reiter** und öffnet beim Laden.
+19. **Zoomen ohne Versehen.** Das Mausrad scrollt die Seite und zoomt nicht
+    mehr. Gezoomt wird mit **−** und **+**, mit Strg + Rad oder zwei Fingern
+    auf dem Trackpad. Unten eine **Zoomleiste**, die am Bildrand klebt: −, +,
+    ein Schiebebalken für den sichtbaren Ausschnitt, feste Zeiträume und
+    «Punkte verbinden».
+20. **Getrennt, aber zusammen.** Blattsaft und Giesswasser – am Tank pH, EC
+    und Sauerstoff – sind je eine eigene Grafik mit eigener Datumsachse.
+    Gezoomt und verschoben wird gemeinsam, und ein feiner Zeiger steht in
+    allen am selben Tag.
+21. **Kulturmanagement:** gleich unter der Überschrift «＋ Massnahme
+    eintragen». Die Ereignisse (Wasserzugabe, Neuansatz, Umpumpen,
+    Kalibrierung, Notiz) sind eingeklappt und lassen sich aufklappen. Jede
+    Zeile lässt sich nach oben und unten schieben, ausblenden (beides nur
+    auf dem eigenen Gerät) und löschen (die Einträge selbst, für alle, mit
+    Rückfrage).
+22. **Viele Messungen am Tag.** Seit September wird teils stündlich
+    gemessen. Weit herausgezoomt wird ein solcher Tag ein Punkt (Mittelwert)
+    mit einem Strich vom tiefsten zum höchsten Wert – die Schwankung bleibt
+    sichtbar, ohne Haufen. Ab etwa drei Wochen Ausschnitt steht wieder jede
+    Messung einzeln; ein Klick auf den Tagespunkt zoomt dorthin.
+23. **Kleinigkeiten:** jede Grafik wählt ihre Werte in der eigenen
+    Kopfzeile; die Liste der Messungen am Tank ist eingeklappt.

@@ -142,7 +142,7 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    (oder **pH & EC am Tank**) steht ein grüner
    Hinweis *«Bereit zum Aktivieren: Reservoir April bis September 2026»*
    → **Ansehen und aktivieren**. Der Dialog zeigt, was hineinkommt (149
-   Messungen bis zum 30. September, 82 Gaben und Ereignisse), welche Balken danach unter den Diagrammen
+   Messungen bis zum 30. September, 76 Gaben und Ereignisse), welche Balken danach unter den Diagrammen
    stehen und was dabei entschieden wurde. → **Aktivieren**.
    Die App springt in den Reiter **pH & EC am Tank**; alles ist eingetragen und
    gesichert.
@@ -192,7 +192,8 @@ im Browserfenster und gehen raus, sobald er wieder antwortet. Das Fenster
 dann nicht schliessen.
 
 **Persönliche Ansicht bleibt persönlich.** Welche Werte du anzeigst,
-welche Balken (über «Balken ein- und ausblenden»), welcher Reiter offen ist –
+welche Balken in welcher Reihenfolge (über «Zeilen ordnen und ausblenden»),
+ob die Ereignisse aufgeklappt sind, welcher Reiter offen ist –
 das merkt sich nur dein Browser. Einträge, Massnahmen, Stellen und
 Zeiträume gelten für alle.
 

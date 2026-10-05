@@ -89,7 +89,8 @@ console.log('\n════ Giesswasser im Reiter Blattsaft & Giesswasser ══
   console.log('  Proben:',alle.length,'· Entnahmestellen:',stellen.join(' · '));
   ok(stellen.length===3,'Drei Entnahmestellen erkannt');
   ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Der Reiter rendert sauber');
-  ok(/<\/svg>Vorne /.test(h)&&/<\/svg>Hinter, Ohne H2O2/.test(h)&&/<\/svg>Vorne, mitt H2O2/.test(h),'Alle drei Stellen stehen mit ihrem Zeichen über dem Diagramm');
+  const kw=(svg.match(/<h3>Giesswasser<\/h3>.*?<div class="wahl">/s)||[''])[0];
+  ok(/<\/svg>Vorne /.test(kw)&&/<\/svg>Hinter, Ohne H2O2/.test(kw)&&/<\/svg>Vorne, mitt H2O2/.test(kw),'Alle drei Stellen stehen mit ihrem Zeichen in der Kopfzeile der Giesswasser-Grafik');
   ok(/>Giesswasser</.test(svg)&&/>Blattsaft</.test(svg),'Zwei Fenster: Blattsaft und Giesswasser');
   ok(/Noch keine Blattsaftanalyse/.test(svg),'Ohne Blattsaft sagt das obere Fenster, was fehlt');
   const entziffern=t=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');

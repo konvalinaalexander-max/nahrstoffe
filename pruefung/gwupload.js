@@ -62,8 +62,8 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
 
   console.log('\n── Im Diagramm ──');
   await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(500);
-  await p.click('#kbKopf .chip:text-is("Hydrogencarbonat")');await p.waitForTimeout(400);
-  const legende=await p.$eval('#kbKopf .zeichen',e=>e.innerText.replace(/\s+/g,' ').trim());
+  await p.click('#cKb .chip:text-is("Hydrogencarbonat")');await p.waitForTimeout(400);
+  const legende=await p.$eval('#cKb .tafelKopf .zeichen',e=>e.innerText.replace(/\s+/g,' ').trim());
   console.log('  Stellen:',legende);
   ok(/Vorne/.test(legende)&&/Hinter, Ohne H2O2/.test(legende)&&/Vorne, mitt H2O2/.test(legende),'Alle drei Stellen mit ihrem Zeichen über dem Diagramm');
   const tipps=await p.$$eval('#cKb circle.hit',es=>es.map(e=>e.getAttribute('data-tipp').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()));

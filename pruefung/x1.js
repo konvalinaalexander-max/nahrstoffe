@@ -134,8 +134,10 @@ ok(!!v('2026-07-09','Düngergabe','epsotop'),'«3kg ET» → Epsotop');
 ok(v('2026-07-09','Düngergabe','epsotop').menge===3,'Mit 3 kg');
 
 ok(!!v('2026-07-09','Notiz'),'«Dünger leer» wird als Notiz erfasst');
-ok(!!v('2026-07-21','Säurezugabe','phosphorsaeure'),'«1.7l P-Säure» → Phosphorsäure');
-ok(v('2026-07-21','Säurezugabe','phosphorsaeure').menge===1.7,'Mit 1,7 l');
+/* Phosphorsäure gibt es seit dem 5. Oktober nicht mehr: der Import kennt sie
+   nicht, er rät sie auch nicht – eine Säure mit Menge bleibt ohne Mittel. */
+ok(!r.vorschlaege.some(x=>x.mittel==='phosphorsaeure'),'Kein Vorschlag für Phosphorsäure – der Import kennt sie nicht mehr');
+ok(!!v('2026-07-21','Säurezugabe',null)&&v('2026-07-21','Säurezugabe',null).menge===1.7,'«1.7l P-Säure» → eine Säurezugabe ohne Mittel, 1,7 l – nichts geraten');
 ok(!!v('2026-07-21','Umpumpen'),'«alles nach hinten gepumpt» → Umpumpen');
 ok(!!v('2026-08-04','Gerätekalibrierung'),'«EC + pH-Gerät neu kalbriert» → Gerätekalibrierung');
 
@@ -205,12 +207,10 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   const V=(datum,typ,mittel)=>t.vorschlaege.filter(x=>x.datum===datum&&x.typ===typ&&(mittel===undefined||x.mittel===mittel));
   ok(V('2026-08-13','Düngergabe','epsotop').length===1&&V('2026-08-13','Desinfektion','halades')[0].menge===1.5,'«5kg EPT + 1.5l HA» → Epsotop 5 kg und Halades 1,5 l');
   ok(V('2026-08-26','Zusatzdünger / Spurenelemente','kali')[0].menge===1.7&&V('2026-08-26','Zusatzdünger / Spurenelemente','zink')[0].menge===6,'«1,7kg KS + 6g Zn» → Kalisulfat 1,7 kg und Zink 6 g');
-  ok(V('2026-08-25','Säurezugabe','phosphorsaeure')[0].menge===1.2,'«+1,2l PS» → Phosphorsäure 1,2 l');
+  ok(!t.vorschlaege.some(x=>x.mittel==='phosphorsaeure'),'Auch hier: kein Vorschlag für Phosphorsäure');
+  ok(V('2026-08-25','Notiz').some(x=>/ohne erkennbares Mittel/.test(x.hinweis||'')),'«+1,2l PS» → eine Notiz mit Nachfrage – das Kürzel kennt der Import nicht mehr');
   ok(V('2026-08-06','Desinfektion','halades').length===1,'«Haldes PE» mit Tippfehler → Halades');
-  const ps=V('2026-07-21','Säurezugabe','phosphorsaeure');
-  ok(ps.length===2&&ps.some(x=>x.stelle==='vorne'&&x.menge===2100&&x.einheit==='ml')&&ps.some(x=>x.stelle==='hinten'),
-     '«nach PS (vorne 2100ml, hinten 2100ml)» → zwei Gaben, das Mittel aus dem Satzanfang mitgetragen');
-  ok(!t.vorschlaege.some(x=>x.datum==='2026-07-21'&&x.typ==='Notiz'&&/nach PS/.test(x.felder.text||'')),'Und keine überflüssige Notiz «PS erwähnt» daneben');
+  ok(!V('2026-07-21','Säurezugabe').length,'«nach PS (vorne 2100ml, hinten 2100ml)» → keine Säurezugabe mit geratenem Mittel');
   const h2=V('2026-09-16','Säurezugabe','schwefelsaeure25');
   ok(h2.length===2&&h2.some(x=>x.stelle==='vorne')&&h2.some(x=>x.stelle==='hinten')&&h2.every(x=>x.menge===1),
      '«RV (ca. 5000l) + 1l H2S04 RH(ca.7000l) + 1l H2SO4» → je 1 l Schwefelsäure vorne und hinten, das Volumen ist keine Zugabe');
@@ -233,7 +233,7 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   const txt=M.map(x=>x.text);
   console.log('   Mittel:',txt.join(' | '));
   ok(txt.some(t=>/^Halades( PE)? 06\.08\.–19\.08\./.test(t)),'Halades: 6. bis 19. August, dann nicht mehr – ein Balken mit Anfang und Ende');
-  ok(txt.some(t=>/^Phosphorsäure .*–25\.08\./.test(t)),'Phosphorsäure: bis 25. August');
+  ok(!txt.some(t=>/Phosphor/.test(t)),'Kein Balken für Phosphorsäure');
   /* Ob «seit» oder ein einzelner Tag, haengt davon ab, wie lange der 31.8.
      heute her ist – die Regel sagt: laeuft, solange keine 28 Tage vergangen sind. */
   ok(txt.some(t=>/^Zitronensäure (seit )?31\.08\./.test(t)),'Zitronensäure: 31. August – und danach nichts mehr in der Tabelle');

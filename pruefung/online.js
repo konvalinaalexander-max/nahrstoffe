@@ -101,13 +101,14 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   await p.click('#nav button:text-is("pH & EC am Tank")');await p.waitForTimeout(400);
   /* die Abfrage laeuft alle 30 s – hier direkt anstossen */
   await p.evaluate(()=>onlineAbfragen());await p.waitForTimeout(800);
+  await p.click('#tkListe summary');await p.waitForTimeout(200);
   const tk=await p.$eval('#view',e=>e.innerText);
   ok(/AB/.test(tk)&&/6.4/.test(tk),'Die Messung von «AB» steht ohne Neuladen in der Liste am Tank');
   const toasts=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
   ok(toasts.some(t=>/Aufgefrischt/.test(t)),'Mit dem Hinweis, dass aufgefrischt wurde');
-  const spuren=await p.$$eval('#cTank text',es=>es.map(e=>e.textContent).filter(t=>/^(pH|EC|EC · .*|Sauerstoff)$/.test(t)));
-  console.log('   Spuren:',spuren.join(' | '));
-  ok(spuren.length===3&&spuren.includes('Sauerstoff'),'Drei Spuren: pH, EC, Sauerstoff – jede mit eigener Achse');
+  const spuren=await p.$$eval('#cTank .tafelKopf h3',es=>es.map(e=>e.textContent).filter(t=>/^(pH|EC|Sauerstoff)$/.test(t)));
+  console.log('   Grafiken:',spuren.join(' | '));
+  ok(spuren.join('|')==='pH|EC|Sauerstoff','Drei Grafiken: pH, EC, Sauerstoff – jede mit eigener Achse');
   ok(!/Sättigung/.test(tk),'Keine Sättigungsgrenze, keine Deutung');
   await p.screenshot({path:shots+'/online-tank.png',fullPage:false});
   await p.click('#nav button:text-is("Einträge Maske")');await p.waitForTimeout(400);
@@ -126,10 +127,10 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
 
   console.log('\n════ Persönliche Ansicht ════');
   await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(500);
-  await p.click('#kbKopf .chip:text-is("Magnesium")');await p.waitForTimeout(400);
+  await p.click('#cKb .tafel:first-of-type .chip:text-is("Magnesium")');await p.waitForTimeout(400);
   await p.reload();await p.waitForTimeout(1500);
   ok((await p.$eval('#nav button.active',e=>e.textContent))==='Blattsaft & Giesswasser','Nach dem Neuladen ist der Reiter noch derselbe – persönliche Ansicht auf diesem Gerät');
-  ok(await p.$eval('#kbKopf .chip:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Auswahl auch');
+  ok(await p.$eval('#cKb .tafel:first-of-type .chip:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Auswahl auch');
 
   console.log('\n════ Server weg ════');
   await p.route('**/api/**',r=>r.abort('connectionfailed'));

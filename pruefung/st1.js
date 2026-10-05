@@ -85,7 +85,8 @@ console.log('\n════ Wirkung auf die Reihen ════');
   const h=A.vKombi();A.nachRenderRun();
   const svg=global.document.getElementById('cKb').innerHTML;
   ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Der Reiter Blattsaft & Giesswasser rendert sauber');
-  ok(/<\/svg>vorne/.test(h)&&/<\/svg>hinten/.test(h)&&!/H2O2/.test(h),'Über dem Diagramm stehen nur noch die zwei Reservoirs');
+  const kw=(svg.match(/<h3>Giesswasser<\/h3>.*?<div class="wahl">/s)||[''])[0];
+  ok(/<\/svg>vorne/.test(kw)&&/<\/svg>hinten/.test(kw)&&!/H2O2/.test(kw),'In der Kopfzeile der Giesswasser-Grafik stehen nur noch die zwei Reservoirs');
   ok(/auf dem Bericht/.test(svg),'Die Bezeichnung des Labors bleibt im Kästchen nachlesbar');
   ok(!/mitt H2O2/.test(svg),'Die ausgeschlossene Probe bildet keine Reihe');
   const e=A.vEinst();
@@ -109,7 +110,8 @@ console.log('\n════ Der Dialog ════');
   A.AKTION.stelleVorschlagAlle();
   A.AKTION.stelleName({id:'v'},{target:{value:'Tisch West'}});
   A.setKombi({wasser:['gw_HCO3']});
-  ok(/Tisch West/.test(A.vKombi())&&/Tisch West/.test(A.vEinst()),'Ein neuer Name erscheint überall');
+  A.vKombi();A.nachRenderRun();
+  ok(/Tisch West/.test(global.document.getElementById('cKb').innerHTML)&&/Tisch West/.test(A.vEinst()),'Ein neuer Name erscheint überall');
   /* Eine Stelle entfernen gibt ihre Bezeichnungen wieder frei */
   A.AKTION.stelleWeg({id:'v'});
   ok(A.stellenListe().filter(x=>x.zustand.offen).length===3,'Wird eine Stelle entfernt, werden ihre Bezeichnungen wieder offen');
@@ -139,7 +141,7 @@ console.log('\n════ Migration ════');
     {id:'b',typ:'giesswasser',datum:'2026-08-18',stelle:'Reservoir Vorne',werte:{},optima:{}},
     {id:'c',typ:'giesswasser',datum:'2026-09-01',stelle:'Basilikum RV',werte:{},optima:{}}],
     ereignisse:[],messungen:[],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},einst:{}});
-  ok(r.db.schema===11,'Schema auf 11 gehoben');
+  ok(r.db.schema===12,'Schema auf 12 gehoben');
   ok(r.db.stellen&&r.db.stellen.gruppen.length===2,'Zwei Stellen sind angelegt – so viele Reservoirs gibt es');
   ok(Object.keys(r.db.stellen.zu).length===0,'Aber nichts ist zugeordnet: das entscheidet der Mensch');
   A.setDb(r.db);

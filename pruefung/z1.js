@@ -41,9 +41,9 @@ console.log('\n════ Uhrzeit: Schema 11 ════');
 {
   const r=A.migriere({schema:10,analysen:[],ereignisse:[{id:'e1',datum:'2026-09-01',typ:'Notiz',felder:{}}],
     messungen:[{id:'m1',datum:'2026-09-01',ph:6.2}],rundgaenge:[],fotos:[],saetze:{},eigeneOptima:{},einst:{}});
-  ok(r.db.schema===11,'Schema auf 11 gehoben');
+  ok(r.db.schema===12,'Schema auf 12 gehoben');
   ok(r.db.messungen[0].zeit===null&&r.db.ereignisse[0].zeit===null,'Bisherige Einträge bekommen «keine Uhrzeit» – nicht geraten');
-  ok(A.leer().schema===11&&typeof A.leer().pakete==='object','Ein neuer Bestand ist Schema 11 und kennt Pakete');
+  ok(A.leer().schema===12&&typeof A.leer().pakete==='object','Ein neuer Bestand ist Schema 12 und kennt Pakete');
 }
 
 console.log('\n════ Uhrzeit: Tabellenimport ════');
@@ -70,7 +70,7 @@ console.log('\n════ Uhrzeit: Tabellenimport ════');
 }
 
 console.log('\n════ Das Paket: Umfang und Form ════');
-ok(P.id==='reservoir-2026'&&P.messungen.length===149&&P.ereignisse.length===82&&P.version===2,`149 Messungen und 82 Gaben und Ereignisse, Fassung 2 (${P.messungen.length} / ${P.ereignisse.length})`);
+ok(P.id==='reservoir-2026'&&P.messungen.length===149&&P.ereignisse.length===76&&P.version===2,`149 Messungen und 76 Gaben und Ereignisse, Fassung 2 (${P.messungen.length} / ${P.ereignisse.length})`);
 {
   const alle=P.messungen.concat(P.ereignisse),ids=alle.map(x=>x.id);
   ok(new Set(ids).size===ids.length&&ids.every(i=>/^p26[me]-/.test(i)),'Jede Kennung einmal, alle mit Präfix – zweimal aktivieren trägt nichts doppelt ein');
@@ -102,8 +102,11 @@ console.log('\n════ Das Paket: was am 30.09. entschieden wurde ═══
   ok(!P.messungen.some(m=>m.ph===1.36),'1,36 steht nirgends');
   ok(E('2026-08-26',null,'kali').length===1&&!P.ereignisse.some(e=>/10'000l|Kein Halades/.test(e.notiz||'')),'Die Betriebsregel «1 kg Kalisulfat pro 10\'000 l» ist keine Gabe');
   ok(E('2026-08-26',null,'kali')[0].menge===1.7&&E('2026-08-26',null,'kali')[0].einheit==='kg'&&E('2026-08-26',null,'zink')[0].menge===6&&E('2026-08-26',null,'zink')[0].einheit==='g','Kalisulfat 1,7 kg und Zink 6 g am 26.08.');
-  ok(E('2026-05-06','Säurezugabe','phosphorsaeure').length===2&&/angenommen/.test(E('2026-05-06','Säurezugabe')[0].notiz),'Säure ohne Namen am 06.05. → Phosphorsäure, als Annahme benannt');
-  ok(E('2026-08-07','Säurezugabe','phosphorsaeure')[0].stelle==='vorne','1,7 l Phosphorsäure am 07.08. → vorne');
+  /* Seit dem 5. Oktober: Phosphorsäure gibt es nicht – kein Eintrag, kein Wort. */
+  ok(!P.ereignisse.some(e=>e.mittel==='phosphorsaeure')&&!/phosphor|p-säure|\bPS\b/i.test(JSON.stringify(P)),'Im Paket steht keine Phosphorsäure – weder als Eintrag noch im Text');
+  ok(!E('2026-05-06','Säurezugabe').length&&!E('2026-07-21','Säurezugabe').length&&!E('2026-08-25','Säurezugabe').length,'Die Säuregaben vom 06.05., 21.07. und 25.08. gibt es nicht mehr');
+  ok(E('2026-05-06',null,'epsotop')[0].id==='p26e-05-06-3'&&E('2026-08-07','Umpumpen')[0].id==='p26e-08-07-2'&&E('2026-05-06',null,'biovin')[1].id==='p26e-05-06-6',
+     'Die übrigen Einträge behalten ihre Kennung – ein aktivierter Bestand bleibt «aktiv»');
   const bio=P.ereignisse.filter(e=>e.mittel==='biovin'&&e.menge==null);
   ok(bio.length===7&&bio.every(e=>/nicht notiert/.test(e.notiz)),'BioV-Wasser: sieben Biovin-Gaben ohne Menge – nicht geschätzt');
   const zs=P.ereignisse.filter(e=>e.mittel==='zitronensaeure');
@@ -134,11 +137,11 @@ console.log('\n════ Aktivieren ════');
   ok(/nicht aktiv/.test(A.paketKarte()),'Einstellungen: «nicht aktiv»');
   A.AKTION.paketAn({id:'reservoir-2026'});
   const db=A.getDb();
-  ok(db.messungen.length===149&&db.ereignisse.length===82&&db.beigabeZeiten.length===3,'Aktivieren trägt alles ein, dazu drei laufende Beigaben');
+  ok(db.messungen.length===149&&db.ereignisse.length===76&&db.beigabeZeiten.length===3,'Aktivieren trägt alles ein, dazu drei laufende Beigaben');
   ok(A.getTab()==='tank','… und öffnet den Reiter pH & EC am Tank');
   ok(db.pakete['reservoir-2026'].aktiviert,'Der Bestand weiss, dass das Paket aktiv ist');
   A.AKTION.paketAn({id:'reservoir-2026'});
-  ok(A.getDb().messungen.length===149&&A.getDb().ereignisse.length===82,'Zweimal aktivieren: nichts doppelt');
+  ok(A.getDb().messungen.length===149&&A.getDb().ereignisse.length===76,'Zweimal aktivieren: nichts doppelt');
   A.setTab('kombi');ok(A.paketHinweis()==='','Danach kein Hinweis mehr');
   ok(/>aktiv</.test(A.paketKarte()),'Einstellungen: «aktiv»');
   db.messungen[0].ph=9.99;
@@ -183,21 +186,21 @@ console.log('\n════ Balken je Mittel ════');
   ok(hat(/^Kalisulfat seit 26\.08\.$/)&&hat(/^Zink seit 26\.08\.$/),'Kalisulfat und Zink seit 26.08. – laufen weiter');
   const mg=balken().find(b=>/^Magnesium seit/.test(b.text));
   ok(mg.x1===+new Date(A.heute())&&mg.laeuft,'Der laufende Balken reicht bis heute und endet in einer Spitze');
-  ok(hat(/^Phosphorsäure 21\.07\.–25\.08\.$/),'Phosphorsäure bis 25.08. und dann nicht mehr');
+  ok(!hat(/Phosphor/),'Kein Balken für Phosphorsäure');
   ok(hat(/^Halades PE 06\.08\.–19\.08\.$/),'Halades vom 06.08. bis 19.08. – mit der Gabe «A» vom 18.08.');
   ok(hat(/^Zitronensäure 31\.08\.–09\.09\.$/),'Zitronensäure 31.08.–09.09. – endet mit dem Neuansatz der Tanks, läuft nicht weiter');
   ok(hat(/^EM /)&&hat(/^Schwefelsäure 25 % /),'EM und Schwefelsäure haben ihren Balken');
   const tipp=t=>balken().find(b=>t.test(b.text)).tipp.replace(/&#39;/g,"'");
   ok(/22\.5 kg/.test(tipp(/^Magnesium seit 28/)),'Menge gesamt Magnesium 28.07.–26.08.: 22,5 kg');
-  ok(/7\.1 l/.test(tipp(/^Phosphorsäure 21/)),'Phosphorsäure: 4,2 l in ml und 2,9 l zusammengezählt – 7,1 l');
   ok(/ohne notierte Menge/.test(tipp(/^Biovin 28/)),'Biovin im August: Gaben ohne Menge werden genannt, nicht geschätzt');
   ok(!/Versuch/.test(texte.join(' ')),'Kein Etikett «Versuch» – einfach die Daten');
   A.setKmAus(new Set(['m|em','m|halades']));
   const ohne=balken().map(b=>b.text);
   ok(!ohne.some(t=>/^EM|^Halades/.test(t))&&ohne.some(t=>/^Biovin/.test(t)),'EM und Halades ausgeblendet – die übrigen bleiben');
-  A.AKTION.kmWahl();
-  const w=document.getElementById('dlgBody').innerHTML;
-  ok(/data-tun="kmAn" data-k="m\|em"/.test(w)&&/data-tun="kmAlle"/.test(w)&&/Ereignisse/.test(w),'«Balken ein- und ausblenden»: je Zeile ein Knopf, dazu «alle»');
+  A.AKTION.kmBearbeiten();
+  const w=document.getElementById('dlgBody').innerHTML,wf=document.getElementById('dlgFoot').innerHTML;
+  ok(/data-aend="kmAn" data-k="m\|em"/.test(w)&&/data-tun="kmSchieben"/.test(w)&&/data-tun="kmLoeschen"/.test(w)&&/data-tun="kmAlle"/.test(wf)&&/Ereignisse/.test(w),
+     '«Zeilen ordnen und ausblenden»: je Zeile hoch, runter, zeigen, löschen – dazu «alle»');
   A.AKTION.kmAn({k:'m|em'});
   ok(!A.getKmAus().has('m|em'),'Ein Klick blendet EM wieder ein');
   A.AKTION.kmAlle({v:'an'});
@@ -257,8 +260,8 @@ console.log('\n════ Balken von Hand: Beginn, Ende, läuft ════')
   setze('2026-09-01','',true);
   A.AKTION.spanneSpeichern({id:'m|zink|2026-08-26'});
   ok(T().includes('Zink seit 01.09.')&&T().includes('Zink 26.08.'),'Zink: Beginn auf 01.09. verschoben – die Gabe vom 26.08. bleibt als eigener Balken');
-  A.getDb().beigabeZeiten.push({id:'t1',mittel:'phosphorsaeure',von:'2026-09-25',bis:null});
-  ok(T().includes('Phosphorsäure seit 25.09.'),'Ein Zeitraum ohne Gabe ist trotzdem ein Balken');
+  A.getDb().beigabeZeiten.push({id:'t1',mittel:'halades',von:'2026-09-25',bis:null});
+  ok(T().includes('Halades PE seit 25.09.'),'Ein Zeitraum ohne Gabe ist trotzdem ein Balken');
   A.AKTION.paketAn({id:'reservoir-2026'});
   ok(T().includes('Kalisulfat 26.08.–20.09.')&&A.beigabeHand(x=>x.mittel==='kali').length===1,'Paket ergänzen lässt von Hand Gesetztes stehen');
   const r=A.migriere(JSON.parse(JSON.stringify(A.getDb())));
@@ -305,7 +308,7 @@ console.log('\n════ Paketfassung 2: gezielt nur das Neue ergänzen ═�
   ok(/Neu im Paket/.test(A.paketHinweis())&&/Ergänzen/.test(A.paketHinweis()),'Über den Diagrammen: «Neu im Paket» mit «Ergänzen»');
   A.AKTION.paketNeu({id:'reservoir-2026'});
   const db=A.getDb();
-  ok(db.messungen.length===148&&db.ereignisse.length===82&&db.beigabeZeiten.length===3,'Ergänzt: jetzt 148 Messungen (eine bleibt gelöscht), 82 Einträge, 3 laufende Beigaben');
+  ok(db.messungen.length===148&&db.ereignisse.length===76&&db.beigabeZeiten.length===3,'Ergänzt: jetzt 148 Messungen (eine bleibt gelöscht), 76 Einträge, 3 laufende Beigaben');
   ok(!db.messungen.some(m=>m.id===weg.id),'Die gelöschte Messung kommt nicht zurück');
   ok(db.pakete['reservoir-2026'].version===2&&A.paketNeues(A.PAKET_RES26).length===0,'Danach kein Hinweis mehr');
   A.setTab('kombi');ok(!/Neu im Paket/.test(A.paketHinweis()),'… auch nicht über den Diagrammen');
@@ -338,10 +341,35 @@ console.log('\n════ Ereignisse ohne Mittel: Marken, eine Zeile je Art �
   A.AKTION.spanne({id:'t|Umpumpen|2026-09-24'});
   ok(/Umpumpen · 24\.09\.2026/.test(document.getElementById('dlgTitel').textContent)&&/data-tun="evWeg"/.test(document.getElementById('dlgBody').innerHTML),'Anklicken zeigt die Einträge des Tages, einzeln entfernbar');
   const box=document.getElementById('probeDiagramm');
-  A.chartStapel(box,{spuren:[{kopf:'pH',serien:[{id:'s',farbe:'#000',form:'kreis',punkte:[{x:+new Date('2026-05-01'),y:6},{x:+new Date('2026-09-15'),y:7}]}]}],spannen:A.kmBalken()});
+  A.zeitBild(box,{tafeln:[{kopf:'pH',spuren:[{serien:[{id:'s',farbe:'#000',form:'kreis',punkte:[{x:+new Date('2026-05-01'),y:6},{x:+new Date('2026-09-15'),y:7}]}]}]}],
+    km:{spannen:A.kmBalken(),typen:['Umpumpen'],offen:true}});
   const h=box.innerHTML;
-  ok(/>Kulturmanagement</.test(h)&&(h.match(/class="spb"/g)||[]).length===A.kmBalken().length,'Das Diagramm zeichnet unter den Spuren das Kulturmanagement – jeder Balken, jede Marke');
+  ok(/>Kulturmanagement</.test(h)&&(h.match(/class="spb"/g)||[]).length===A.kmBalken().length,'Unter den Grafiken das Kulturmanagement – aufgeklappt jeder Balken, jede Marke');
   ok(!/>Logbuch</.test(h),'Eine eigene Logbuch-Zeile gibt es nicht mehr');
+}
+
+console.log('\n════ Phosphorsäure: als hätte es sie nie gegeben ════');
+{
+  const alt={schema:11,analysen:[],messungen:[
+      {id:'p26m-07-21-v1',datum:'2026-07-21',stelle:'vorne',ph:8.03,notiz:'morgens, vor der Phosphorsäure',beleg:'Tabelle «pH/EC Reservoir», Zeile 22: «Morgens, vor PS»',quelle:'paket',paket:'reservoir-2026'},
+      {id:'h1',datum:'2026-07-21',stelle:'vorne',ph:7,notiz:'nach PS',quelle:'hand'}],
+    ereignisse:[{id:'p26e-07-21-1',datum:'2026-07-21',typ:'Säurezugabe',mittel:'phosphorsaeure',menge:2100,einheit:'ml',quelle:'paket',paket:'reservoir-2026'},
+      {id:'x1',datum:'2026-08-25',typ:'Säurezugabe',mittel:'phosphorsaeure',menge:1.2,einheit:'l',quelle:'hand'},
+      {id:'p26e-08-07-2',datum:'2026-08-07',typ:'Umpumpen',mittel:null,notiz:'«alles nach hinten gepumpt»',beleg:'Tabelle «pH/EC Reservoir», Zeile 32: «Zugabe 1.7l P-Säure --> alles nach hinten gepumpt»',quelle:'paket',paket:'reservoir-2026'}],
+    beigabeZeiten:[{id:'z',mittel:'phosphorsaeure',von:'2026-09-01',bis:null}],
+    produkte:{phosphorsaeure:{name:'Phosphorsäure',form:'fluessig'}}};
+  const r=A.migriere(alt);
+  ok(r.db.ereignisse.length===1&&!r.db.beigabeZeiten.length,'Jede Gabe und jeder Zeitraum für Phosphorsäure ist weg – auch von Hand eingetragene');
+  ok(!r.db.produkte.phosphorsaeure&&!A.leer().produkte.phosphorsaeure,'Das Produkt gibt es nicht mehr');
+  ok(/entfernt/.test(r.notizen.join(' ')),'Beim Laden wird gesagt, dass etwas entfernt wurde');
+  const m=r.db.messungen.find(x=>x.id==='p26m-07-21-v1');
+  ok(m.notiz==='morgens'&&!/PS/.test(m.beleg),'Einträge aus dem Paket bekommen seinen heutigen Wortlaut – ohne Phosphorsäure');
+  ok(!/P-Säure/.test(r.db.ereignisse[0].beleg),'Auch der Beleg des Umpumpens vom 07.08.');
+  ok(r.db.messungen.find(x=>x.id==='h1').notiz==='nach PS','Was jemand selbst geschrieben hat, bleibt unangetastet');
+  ok(!A.migriere(JSON.parse(JSON.stringify(r.db))).notizen.length,'Beim nächsten Laden ist nichts mehr zu tun');
+  const v=A.vereinigen({analysen:[],ereignisse:[],messungen:[]},{ereignisse:[{id:'alt',mittel:'phosphorsaeure',datum:'2026-08-25'},{id:'gut',mittel:'kali',datum:'2026-08-26'}]});
+  ok(v.db.ereignisse.length===1&&v.db.ereignisse[0].id==='gut','Auch aus einem älteren Stand auf dem Server kommt sie nicht zurück');
+  ok(!A.MITTEL_MUSTER.some(mu=>mu.mittel==='phosphorsaeure'),'Der Tabellenimport kennt sie nicht');
 }
 
 console.log('\n════ Ergebnis ════');

@@ -5,10 +5,10 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 8
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten.
 
-Stand: 5. Oktober 2026 · Schema 11 · die **schlanke Fassung**: rund 250 KB,
-3700 Zeilen, fünf Reiter – plus `erfassen.html` (Eingabemaske fürs Handy,
-online unter `/maske`) und `server.js` (online, ohne Passwort). Hosting:
-`ONLINE.md`, Konzept: `KONZEPT-ONLINE.md` (Entscheid 16).
+Stand: 5. Oktober 2026 (abends) · Schema 12 · die **schlanke Fassung**: rund
+260 KB, 4000 Zeilen, fünf Reiter – plus `erfassen.html` (Eingabemaske fürs
+Handy, online unter `/maske`) und `server.js` (online, ohne Passwort).
+Hosting: `ONLINE.md`, Konzept: `KONZEPT-ONLINE.md` (Entscheide 16 und 17).
 
 > **Die volle Fassung** mit Regelwerk, Befunden, Kennzahl «im Optimum»,
 > Planer, Rundgang, Fotos, Logbuch und Soll-Ist-Bilanz liegt im Git-Verlauf:
@@ -44,9 +44,9 @@ Agronom und sein Chef am PC; hinten am Tank die Mitarbeitenden mit dem Handy
 
 | Reiter | Was er zeigt |
 |---|---|
+| **Blattsaft & Giesswasser** (öffnet zuerst) | **Zwei Grafiken mit je eigener Datumsachse**, gemeinsam gezoomt: Blattsaft (Kopfzeile: Nährstoffe anklicken, Blatt beide/jung/alt, Anzeige Messwert / Lage im Optimum), Giesswasser (Kopfzeile: Stoffe, Zeichen der Stellen), darunter das **Kulturmanagement** – gleich unter der Überschrift «＋ Massnahme eintragen» und «Zeilen ordnen und ausblenden». **Biovin steht hier nicht** (nur Darstellung; die Gaben bleiben, im Tank-Reiter stehen sie). Ganz unten die **Zoomleiste**. Zeigen → Kästchen, Klick → Bericht. |
 | **Analysen** | Oben PDFs hochladen (Ablegen oder «Dateien wählen»), darunter alle Berichte, neueste zuerst, filterbar nach Art. Jung- und Altblatt eines Berichts sind **eine** Zeile. Klick → der Bericht im Pop-up: jeder Wert mit dem Optimum des Labors als Band, gruppiert wie das Laborblatt, Wasser mit Einheit des Labors und daneben mg/l, der Wortlaut des PDFs aufklappbar. «Werte bearbeiten», «Entfernen». **Keine Befunde, keine Bewertungsfarben.** |
-| **Blattsaft & Giesswasser** | Oben: Blattsaft-Werte anklicken → Blatt (beide/jung/alt), Linien, Anzeige (Messwert / Lage im Optimum) → Giesswasser-Werte anklicken. Darunter **zwei Fenster** auf einer Zeitachse (Blattsaft, Giesswasser), darunter die Balken des **Kulturmanagements**, darunter «＋ Massnahme eintragen» und «Balken ein- und ausblenden». Zeigen → Kästchen, Klick → Bericht. |
-| **pH & EC am Tank** | Die Messungen am Tank (Excel, Handy, Datenpaket) – nicht die Laborwerte: Spuren pH, EC (Ring: frisch angesetzt), Sauerstoff; Stelle, Zeitraum, Linien; dieselben Balken; darunter die Liste aller Messungen mit Herkunft; «Excel oder CSV einlesen». |
+| **pH & EC am Tank** | Die Messungen am Tank (Excel, Handy, Datenpaket) – nicht die Laborwerte: **drei Grafiken** pH, EC (Ring: frisch angesetzt), Sauerstoff, je mit eigener Datumsachse, gemeinsam gezoomt; oben die Stelle; dasselbe Kulturmanagement (mit Biovin); weit herausgezoomt werden mehrere Messungen eines Tages zu **Tagesmittel mit Strich** (tiefster bis höchster Wert); darunter die Liste aller Messungen, **eingeklappt**, mit «Excel oder CSV einlesen». |
 | **Einträge Maske** | Alles, was über die Handy-Seite kam (Messungen und Beigaben), als Liste mit Name, Uhrzeit, Werten. Visualisierung folgt später. |
 | **Einstellungen** | Maske/QR-Code (online), Entnahmestellen zuordnen, vorbereitete Daten (Datenpaket), Daten (sichern, öffnen, Kopie, JSON). |
 
@@ -55,6 +55,29 @@ Fragen, Nährstoffe, Substrat, Giesswasser-Karten mit Richtwerten,
 Soll-Ist-Bilanz, Logbuch, Fotos, Rundgang, Planer, Sätze, eigene Optima,
 Schwellen, Kernnährstoffe, «Wesentlich». **Ihre Daten bleiben im Bestand**
 (`migriere` behält jedes Feld) – diese Fassung zeigt sie nur nicht.
+
+### Grafiken und Zoom (Abschnitt 5, `zeitBild`)
+
+- **Getrennt, aber zusammen:** jede Grafik ein eigenes SVG mit eigener
+  y-Achse und **eigener Datumsachse**; gemeinsam ist der Ausschnitt
+  (`koVon`/`koBis`, `ZEIT`), und ein feiner **Zeiger** steht in allen am
+  selben Tag.
+- **Das Mausrad zoomt nicht** (am Laptop passierte das beim Scrollen aus
+  Versehen) – es scrollt die Seite. Gezoomt wird mit **− / +**, mit
+  **Strg + Rad** oder zwei Fingern auf dem Trackpad; seitwärts wischen oder
+  Umschalt + Rad verschiebt, wenn gezoomt ist; in der Grafik ziehen
+  verschiebt. Kein Doppelklick mehr.
+- **Zoomleiste** unten, klebt am Bildrand, solange man in den Grafiken ist:
+  − und +, ein **Schiebebalken** (das helle Fenster ist der Ausschnitt –
+  ziehen verschiebt, die Ränder ziehen ändert die Länge, Pfeiltasten gehen
+  auch), der Zeitraum als Text, feste Zeiträume (Tank: alles, 3 Monate,
+  6 Wochen, 1 Woche; Blattsaft: alles, 6 und 3 Monate), «Punkte verbinden».
+  Der Ausschnitt bleibt immer im Bereich der Daten.
+- **Dichte Messungen** (`DICHT_PX` = 36 Bildpunkte je Tag): liegen die Tage
+  enger, wird ein Tag mit mehreren Messungen ein Punkt (Mittelwert) mit
+  Strich (tiefster bis höchster Wert); ein Satz über der Grafik erklärt es,
+  ein Klick zoomt auf den Tag. Tage mit einer Messung bleiben gewöhnliche
+  Punkte. Nur im Tank-Reiter.
 
 ## 4 · Daten und Parser
 
@@ -80,15 +103,15 @@ Was im Parser teuer gelernt ist und bleiben muss:
   Sechsfachen der oberen Grenze wird rot umrandet («ungewöhnlich – bitte
   prüfen», fängt verrutschte Kommas, nicht echte Extremwerte).
 - **Tabellenimport** (`tabBlatt`, `bemerkungLesen`): Spalten über die
-  Kopfzeile, Kürzel des Betriebs (ET/EPT, KS, Zn, HA, PS, ZS, H2SO4, RV/RH,
+  Kopfzeile, Kürzel des Betriebs (ET/EPT, KS, Zn, HA, ZS, H2SO4, RV/RH,
   MKBoden = EM), Liter ab 500 sind Wasser, «Wasser ohne Dünger» ist keine
   Gabe, pH ausserhalb 3–10 rot markiert, «Tanks neu gefüllt» ist ein
   Neuansatz. Geprüft Zeile für Zeile an `pruefung/fixtures/*.tsv`.
 
-## 5 · Das Datenmodell (Schema 11)
+## 5 · Das Datenmodell (Schema 12)
 
 ```js
-{schema:11, version, gespeichert,
+{schema:12, version, gespeichert,
  analysen:[],      // je Probe: typ, datum, satz, blattalter, zustand, stelle,
                    // laborId, kultur, werte{k:{wert,unter}}, optima{k:[lo,hi]}, quelle{datei,text}
  ereignisse:[],    // Gaben und Ereignisse: typ, datum, zeit, mittel, menge, einheit,
@@ -117,17 +140,26 @@ Was im Parser teuer gelernt ist und bleiben muss:
 - **Datenpaket** `PAKET_RES26` (Abschnitt 12b): Reservoir-Tabelle April–
   September und Säurebericht, von Hand gelesen, mit den Entscheiden des
   Betriebs (A = Halades, MKBoden = EM, pH 1,36 und die Zeile ohne Datum weg).
-  Fassung 2: 149 Messungen, 82 Gaben und Ereignisse, 3 laufende Zeiträume.
+  Fassung 2: 149 Messungen, 76 Gaben und Ereignisse, 3 laufende Zeiträume.
   Feste Kennungen – **nie ändern**, sonst steht nach zweimal Aktivieren alles
-  doppelt. `z1.js` hält jeden Entscheid fest.
+  doppelt. Was aus dem Paket fällt, gibt seine Nummer nicht weiter
+  (`frei(datum,n)`). `z1.js` hält jeden Entscheid fest.
+- **Phosphorsäure gibt es nicht** (Entscheid vom 5. Oktober: «als hätte es
+  das nie gegeben»): kein Produkt, kein Import-Kürzel, nichts im Paket.
+  `bestandBereinigen()` (bei jedem Laden, Schema 12) entfernt jede Gabe und
+  jeden Zeitraum dafür und gibt Paketeinträgen den heutigen Wortlaut;
+  `vereinigen` holt sie auch aus einem älteren Server-Stand nicht zurück
+  (`MITTEL_WEG`).
 - **Migration**: `migriere()` hebt alte Dateien, behält jedes unbekannte Feld
   und meldet nur, was Werte verändert (Nachweisgrenzen, Substratnamen,
   Wassereinheiten, Mengen aus Freitext).
 
 ## 6 · Kulturmanagement (Abschnitt 9)
 
-Die Balken unter beiden Diagramm-Reitern, in drei Arten von Zeilen
-(`kmListe`, `kmBalken`):
+Eine eigene Tafel unter den Grafiken beider Diagramm-Reiter: Überschrift,
+gleich darunter «＋ Massnahme eintragen» und «Zeilen ordnen und ausblenden»,
+dann die Balken mit eigener Datumsachse. Drei Arten von Zeilen
+(`kmListe(ansicht)`, `kmBalken(ansicht)`, `kmDaten(ansicht)`):
 
 1. **Je Mittel** (Biovin, Magnesium, Kalisulfat, Zink, Säuren, Halades, EM …):
    aus den Gaben, von der ersten bis zur letzten, eine Lücke über 28 Tage
@@ -139,16 +171,24 @@ Die Balken unter beiden Diagramm-Reitern, in drei Arten von Zeilen
 2. **Eigene Massnahmen** (`beigabeZeiten` mit `name`): Schattierung, neues
    Substrat, Klima … – nur von Hand, über «＋ Massnahme eintragen».
 3. **Ereignisse ohne Mittel** (Tank neu angesetzt, Umpumpen, Kalibrierung,
-   Wasserzugabe, Notiz …): Marken, eine Zeile je Art, links benannt; mehrere
-   am selben Tag eine Marke mit Zahl. Klick → die Einträge, einzeln
-   entfernbar.
+   Wasserzugabe, Notiz …): **eingeklappt** – eine Zeile «▸ Ereignisse zeigen
+   (5): Wasserzugabe · Neuansatz …» öffnet sie. Dann Marken, eine Zeile je
+   Art, links benannt; mehrere am selben Tag eine Marke mit Zahl. Klick → die
+   Einträge, einzeln entfernbar. Wer ein Ereignis einträgt, bekommt sie
+   aufgeklappt.
 
 «＋ Massnahme eintragen»: Was (neue Massnahme · eigene · Mittel · Ereignis an
 einem Tag), Beginn, Dauer (läuft noch · bis · nur dieser Tag), Notiz. Ein
 Mittel, dessen Zeitraum schon in einem Balken liegt, bleibt unverändert
 (mit Hinweis); sonst entsteht ein Zeitraum von Hand, vereinigt mit den
 Balken desselben Mittels, die er berührt (`mittelZeitraumDazu`).
-«Balken ein- und ausblenden» ist persönlich (`kmAus`, localStorage).
+«Zeilen ordnen und ausblenden»: je Zeile ↑ ↓ (innerhalb der Balken bzw.
+der Ereignisse), «zeigen» und «löschen». Reihenfolge (`kmReihe`), Ausblenden
+(`kmAus`) und Klappzustand (`kmEreignisseOffen`) sind persönlich
+(localStorage); **löschen** nimmt die Einträge selbst weg – alle Gaben eines
+Mittels samt Zeiträumen, alle Zeiträume einer Massnahme, alle Einträge eines
+Ereignisses –, für alle, mit Rückfrage und Zahl. Biovin fehlt im Reiter
+Blattsaft & Giesswasser fest (`KM_NICHT_IM_KOMBI`).
 
 Das frühere Logbuch ist darin aufgegangen; seine Einträge sind dieselben
 `ereignisse`.
@@ -163,11 +203,11 @@ Eine Datei: `<style>`, Gerüst, ein `<script>`, durchnummeriert:
 | 2 | Fachwissen | `NAME`, `EINH`, `einheit`, `inMgL`, `EVTYPEN` |
 | 3 | Parser | `parseNCC`, `parseIns`, `parseGiess`, `parseAuto`, `pdfSeiten`, `pdfPunkte` |
 | 4 | Datenmodell | `PRODUKTE_VORGABE`, `leer`, `migriere`, `optimum`, `optText`, `lage` |
-| 5 | Diagramme | Kästchen, `marke`, `chartStapel`, Zeitachse, Zoom, `spannenZeilen`, `spannenSvg`, `tippBau` |
+| 5 | Diagramme | Kästchen, `marke`, `zeitBild` (`spurSvg`, `kmTafel`, Zoomleiste, `zeitSetzen`, `zeitBedienung`), `zeitMarken`, `spannenZeilen`, `spannenSvg`, `tippBau` |
 | 6 | Gerüst | Verdrahtung `data-tun`/`data-aend`, `TABS`, `render`, `diagFrisch`, `dialog`, `toast` |
 | 7 | Analysen | Liste, `berichte`, `detail`, `wertMitOptimum`, `einlesen`, `pruefdialog` |
 | 8 | Blattsaft & Giesswasser | `vKombi`, `farbenFuer`, `spurGruppen`, Entnahmestellen (`stelleVon`, `stellenDialog` …) |
-| 9 | Kulturmanagement | Balken, Marken, Dialoge, «＋ Massnahme», ein-/ausblenden |
+| 9 | Kulturmanagement | Balken, Marken, Dialoge, «＋ Massnahme», Zeilen ordnen, ausblenden, löschen |
 | 10 | pH & EC am Tank | `vTank`, `messStelle`; 10b Tabellenimport |
 | 11 | Einträge Maske | `vMaske` |
 | 12 | Einstellungen | `vEinst`; 12b Vorbereitete Daten (`PAKET_RES26`) |
@@ -187,11 +227,13 @@ Muster, die durchgehalten werden müssen:
    Auswahl abhängt, wird **innerhalb** von `zeichnen`/`kopf` bestimmt – nicht
    im äusseren Gültigkeitsbereich der Ansicht (dieser Fehler ist früher
    dreimal passiert).
-3. **`chartStapel`**: jede Spur eigene y-Achse, eine Zeitachse ganz unten.
-   Spuren nach Einheit *und* Grössenordnung (Faktor 25), derselbe Stoff an zwei
-   Stellen auf derselben Achse, höchstens drei Spuren je Fenster. Die Achse
-   folgt den Messwerten; das Band des Optimums wird beschnitten, nicht
-   umgekehrt. Eine Spur mit `kopf` beginnt ein Fenster.
+3. **`zeitBild`**: Tafeln (`{kopf, neben, rechts, wahl, spuren}`), jede Spur
+   ein eigenes SVG mit eigener y- und Datumsachse. Spuren nach Einheit *und*
+   Grössenordnung (Faktor 25), derselbe Stoff an zwei Stellen auf derselben
+   Achse, höchstens drei Spuren je Tafel. Die Achse folgt den Messwerten; das
+   Band des Optimums wird beschnitten, nicht umgekehrt. Die Zoomleiste wird
+   einmal je Kasten gebaut und danach nur nachgeführt – beim Ziehen darf sie
+   nicht ersetzt werden, sonst verliert sie den Zeiger.
 4. **Farbe = Stoff, Form = Blatt (oben) bzw. Stelle (unten).** Nitrat oben und
    Nitrat unten tragen dieselbe Farbe (`farbenFuer` über die entdoppelten
    Schlüssel). Die Zeichen stehen in der Bedienung als Erklärung.
@@ -236,13 +278,13 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# ohne Browser (590 Einzelprüfungen)
+# ohne Browser (638 Einzelprüfungen)
 for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1; do node pruefung/$t.js; done
 
 # im Browser (Chromium + playwright; NODE_PATH mit pdfjs-dist@3.11.174, jsqr, pngjs)
 node pruefung/browser.js   node pruefung/upload.js   node pruefung/gwupload.js
 node pruefung/rundreise.js node pruefung/tank.js     node pruefung/online.js
-node pruefung/paket.js
+node pruefung/paket.js     node pruefung/pdfbau-pruefen.js
 ```
 
 `upload.js` und `gwupload.js` brauchen keine echten PDFs mehr: `pdfbau.js`
