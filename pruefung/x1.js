@@ -1,6 +1,6 @@
 /* Tabellenimport: Datumsformate, doppelte Datumszeilen, leere Messwerte mit
    Bemerkung, «je Reservoir», gemischte Dezimaltrennzeichen, Bemerkungen zu
-   Logbuchvorschlaegen.
+   Vorschlägen für Gaben und Ereignisse.
 
    Geprueft wird gegen einen Nachbau der beschriebenen Datei, nicht gegen die
    Datei selbst – die lag beim Bauen nicht vor. Der Parser sucht die Spalten
@@ -84,7 +84,7 @@ ok(am21.filter(m=>m.stelle==='vorne').map(m=>m.ph).sort().join(',')==='6.6,8', '
 
 console.log('\n════ Leere Messwerte bei vorhandener Bemerkung ════');
 ok(!r.mess.some(m=>m.datum==='2026-07-02'),'Eine Zeile ohne Messwert erzeugt KEINE Messung');
-ok(r.vorschlaege.some(v=>v.datum==='2026-07-02'),'Aber sehr wohl einen Logbuchvorschlag');
+ok(r.vorschlaege.some(v=>v.datum==='2026-07-02'),'Aber sehr wohl einen Vorschlag für eine Gabe');
 ok(r.hinweise.some(h=>/nur eine Bemerkung/.test(h)),'Und die App sagt, dass sie das getan hat');
 
 console.log('\n════ Wurzel-EC ════');
@@ -93,7 +93,7 @@ ok(r.wurzel.length===2,'Beide Wurzelzeilen erkannt');
 ok(r.wurzel[0].satz==='18-431'&&r.wurzel[0].werte.length===3,'Satz und drei Einzelwerte');
 ok(r.wurzel[0].werte[1]===2.3,'Auch hier Komma als Trennzeichen');
 
-console.log('\n════ Bemerkungen zu Logbuchvorschlaegen ════');
+console.log('\n════ Bemerkungen zu Vorschlägen ════');
 const v=(d,typ,mittel)=>r.vorschlaege.find(x=>x.datum===d&&x.typ===typ&&(mittel===undefined||x.mittel===mittel));
 r.vorschlaege.forEach(x=>console.log(`   ${x.datum} ${x.typ.padEnd(22)} ${String(x.mittel||'–').padEnd(15)} ${x.menge==null?'–':x.menge+' '+(x.einheit||'')}${x.jeReservoir?' je Reservoir':''}`));
 
@@ -170,7 +170,7 @@ console.log('\n════ CSV ohne jede Bibliothek ════');
   ok(z.length===3,'CSV mit Semikolon zerlegt');
   ok(x.mess.length===4,'Zwei Zeilen à zwei Stellen');
   ok(x.mess[0].ec===1.2,'Komma als Dezimaltrennzeichen im CSV');
-  ok(x.vorschlaege.length>=2,'Auch im CSV entstehen Logbuchvorschlaege');
+  ok(x.vorschlaege.length>=2,'Auch im CSV entstehen Vorschläge');
 }
 
 console.log('\n════ Robustheit ════');
@@ -229,13 +229,7 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   const d=A.leer();
   for(const v of t.vorschlaege)if(v.typ!=='Notiz')d.ereignisse.push({id:'e'+d.ereignisse.length,datum:v.datum,typ:v.typ,mittel:v.mittel,menge:v.menge,einheit:v.einheit,jeReservoir:v.jeReservoir,stelle:v.stelle,felder:v.felder||{},geltung:'alle',saetze:[],quelle:'excel'});
   A.setDb(d);
-  const mg=A.beigabeSpannen('Mg'),k=A.beigabeSpannen('K'),zn=A.beigabeSpannen('Zn'),s=A.beigabeSpannen('S');
-  console.log('   Bänder: Mg',mg.map(x=>x.von+'→'+x.bis).join(','),'· K',k.map(x=>x.von).join(','),'· Zn',zn.map(x=>x.von).join(','),'· S',s.length);
-  ok(mg.length>=1&&mg[0].von==='2026-05-06','Magnesium: Band ab 6. Mai');
-  ok(k.length===1&&k[0].von==='2026-08-26'&&zn.length===1&&zn[0].von==='2026-08-26','Kali und Zink: ab 26. August – die 0,19 % Zink im Biovin zählen nicht als «Zink dazugeben»');
-  ok(s.length>=1,'Schwefel kommt aus Epsotop, Kalisulfat und Schwefelsäure – auch das wird ein Band');
-  /* Die Geschichte je Mittel: von wann bis wann, auch was wieder aufgehoert hat */
-  const M=A.beigabeBalkenMittel();
+  const M=A.kmBalken().filter(x=>!x.marke);
   const txt=M.map(x=>x.text);
   console.log('   Mittel:',txt.join(' | '));
   ok(txt.some(t=>/^Halades( PE)? 06\.08\.–19\.08\./.test(t)),'Halades: 6. bis 19. August, dann nicht mehr – ein Balken mit Anfang und Ende');
@@ -245,7 +239,8 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   ok(txt.some(t=>/^Zitronensäure (seit )?31\.08\./.test(t)),'Zitronensäure: 31. August – und danach nichts mehr in der Tabelle');
   ok(txt.some(t=>/^Schwefelsäure 25 % seit 16\.09\./.test(t)),'Schwefelsäure: seit 16. September, läuft');
   ok(txt.some(t=>/^Kalisulfat (seit )?26\.08\./.test(t))&&txt.some(t=>/^Zink (seit )?26\.08\./.test(t)),'Kalisulfat und Zink ab 26. August – in der Tabelle steht danach keine weitere Gabe, also kein «seit» ohne Beleg');
-  ok(M.every(x=>x.tipp&&/Menge gesamt/.test(x.tipp)),'Im Kästchen die Summe – für den Admin, nicht für den Chef');
+  ok(M.every(x=>x.tipp&&/Menge gesamt/.test(x.tipp)),'Im Kästchen die Summe der Mengen');
+  ok(txt.some(t=>/^Magnesium 06\.05\./.test(t)),'Magnesium: ein Balken ab 6. Mai');
   ok(!/Versuch/.test(txt.join(' ')),'Kein Etikett «Versuch» – einfach die Daten');
 }
 

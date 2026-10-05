@@ -1,13 +1,17 @@
-/* Der Weg «PDF hochladen und verstehen», in Chromium durchgespielt.
-   pdf.js wird aus der lokalen Installation umgeleitet, damit der Test ohne
-   Netz laeuft – die App selbst ist unveraendert. */
+/* Der Weg «Blattsaftbericht hochladen und ansehen», in Chromium mit echtem
+   pdf.js. Ohne eigenes PDF wird der echte Bericht aus pruefung/seiten.json
+   nachgebaut (pruefung/pdfbau.js). pdf.js kommt aus der lokalen Installation,
+   damit die Prüfung ohne Netz läuft – die App selbst ist unverändert.
+   Aufruf:  CHROME=… NODE_PATH=…/node_modules [PDF=bericht.pdf] node pruefung/upload.js */
 const {chromium}=require('playwright');
-const fs=require('fs'),path=require('path');
+const fs=require('fs'),path=require('path'),os=require('os');
 const APP=path.resolve(__dirname,'..','basilikum.html');
-const PDF=process.env.PDF;              // Pfad zu einer echten Blattsaft-PDF
-const PDFJS=process.env.PDFJS;          // Ordner node_modules/pdfjs-dist/build
-const shots=process.env.SHOTS||require('os').tmpdir()+'/basilikum-upload';
+const PDFJS=process.env.PDFJS||path.dirname(require.resolve('pdfjs-dist/build/pdf.min.js'));
+const shots=process.env.SHOTS||path.join(os.tmpdir(),'basilikum-upload');
 fs.mkdirSync(shots,{recursive:true});
+let PDF=process.env.PDF;
+if(!PDF){PDF=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'basilikum-pdf-')),'NCC 28-478 Blattsaft.pdf');
+  fs.writeFileSync(PDF,require('./pdfbau.js').blattsaftPdf(require('./seiten.json')))}
 let fehler=[];
 const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
 
@@ -17,110 +21,77 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
   p.on('pageerror',e=>fehler.push('pageerror: '+e.message));
   p.on('console',m=>{const t=m.text();
     if(m.type()==='error'&&!/Failed to load resource|net::ERR_/.test(t))fehler.push('console: '+t)});
-
-  if(PDFJS){
-    await p.route('**/pdf.min.js',r=>r.fulfill({contentType:'application/javascript',
-      body:fs.readFileSync(PDFJS+'/pdf.min.js','utf8')}));
-    await p.route('**/pdf.worker.min.js',r=>r.fulfill({contentType:'application/javascript',
-      body:fs.readFileSync(PDFJS+'/pdf.worker.min.js','utf8')}));
-  }
+  await p.route('**/pdf.min.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(PDFJS+'/pdf.min.js','utf8')}));
+  await p.route('**/pdf.worker.min.js',r=>r.fulfill({contentType:'application/javascript',body:fs.readFileSync(PDFJS+'/pdf.worker.min.js','utf8')}));
   await p.goto('file://'+APP);
   await p.waitForTimeout(1200);
 
   console.log('── Start ──');
-  const start=await p.$eval('#view',e=>e.innerText);
-  ok(/Willkommen/.test(start),'Startbildschirm erklaert das Werkzeug');
-  ok(/Erste Analyse einlesen/.test(start),'und bietet den Einstieg an');
-
-  if(!PDF||!PDFJS){
-    console.log('\n(kein PDF oder pdf.js angegeben – Importweg uebersprungen)');
-    await b.close();process.exit(fehler.length?1:0);
-  }
+  ok(/Noch keine Analysen/.test(await p.$eval('#view',e=>e.innerText)),'Ohne Daten sagt die App, was fehlt');
+  await p.click('#view button:text-is("Zu den Analysen")');await p.waitForTimeout(300);
+  ok(await p.$eval('#nav button.active',e=>e.textContent)==='Analysen','Der Knopf führt zu den Analysen');
+  ok(await p.$eval('#view button:text-is("Dateien wählen")',e=>!e.disabled),'pdf.js ist geladen: «Dateien wählen» ist bereit');
 
   console.log('\n── PDF hochladen ──');
-  await p.click('#view button:text-is("Erste Analyse einlesen")');
-  await p.waitForTimeout(300);
   await p.setInputFiles('#filePdf',PDF);
   await p.waitForTimeout(3000);
   const titel=await p.$eval('#dlgTitel',e=>e.textContent);
   console.log('  Kontrolldialog:',titel);
-  ok(/Kontrollieren und bestätigen/.test(titel),'Der Kontrolldialog oeffnet sich');
+  ok(/Kontrollieren und übernehmen · 2 Proben/.test(titel),'Der Kontrolldialog öffnet sich mit beiden Proben');
   const dlg=await p.$eval('#dlgBody',e=>e.innerText);
-  const satz=await p.$eval('#dlgBody input[data-f="satz"]',e=>e.value);
-  ok(satz==='28-478','Satznummer erkannt: '+satz);
-  ok(/Stickstoff\s/.test(dlg)&&/Spurenelemente/.test(dlg),'Felder nach Naehrstoffgruppen gegliedert');
+  const satz=await p.$$eval('#dlgBody input[data-f="satz"]',e=>e.map(x=>x.value));
+  ok(satz.join()==='28-478,28-478','Satznummer erkannt: '+satz[0]);
+  const blatt=await p.$$eval('#dlgBody select[data-f="blattalter"]',e=>e.map(x=>x.value));
+  ok(blatt.join()==='jung,alt','Jung und Alt erkannt');
+  ok(/Stickstoff\s/.test(dlg)&&/Spurenelemente/.test(dlg),'Felder nach Gruppen gegliedert');
   const hints=await p.$$eval('#dlgBody [data-feld] .tiny',es=>es.map(e=>e.textContent));
-  ok(hints.filter(h=>/^Soll /.test(h)).length>=40,
-     'Der Sollbereich steht unter jedem Feld ('+hints.filter(h=>/^Soll /.test(h)).length+' Felder)');
-  ok(!hints.some(h=>/ungewöhnlich/.test(h)),'Kein echter Messwert faelschlich als Uebertragungsfehler markiert');
+  ok(hints.filter(h=>/^Optimum /.test(h)).length>=40,'Das Optimum des Labors steht unter jedem Feld ('+hints.filter(h=>/^Optimum /.test(h)).length+' Felder)');
+  ok(!hints.some(h=>/ungewöhnlich/.test(h)),'Kein echter Messwert fälschlich als Übertragungsfehler markiert');
   const felder=await p.$$eval('#dlgBody input[data-w]',e=>e.length);
-  console.log('  Messwertfelder im Dialog:',felder);
-  ok(felder>=44,'Beide Proben mit je 23 Parametern');
+  ok(felder===46,'Beide Proben mit je 23 Werten ('+felder+')');
   await p.screenshot({path:shots+'/1-kontrolle.png'});
 
-  console.log('\n── Uebernehmen ──');
+  console.log('\n── Übernehmen ──');
   await p.click('#dlgFoot button:text-is("Übernehmen")');
   await p.waitForTimeout(900);
   const nachTitel=await p.$eval('#dlgTitel',e=>e.textContent);
-  console.log('  Danach geoeffnet:',nachTitel);
-  ok(/Satz 28-478 · 18\.08\.2026/.test(nachTitel),'Die Auswertung der Erhebung oeffnet sich von selbst');
+  console.log('  Danach geöffnet:',nachTitel);
+  ok(nachTitel==='Blattsaft · Satz 28-478 · 18.08.2026','Der Bericht öffnet sich von selbst');
   const det=await p.$eval('#dlgBody',e=>e.innerText);
-  await p.screenshot({path:shots+'/2-erhebung.png'});
-  for(const [nam,wert] of [['Nitrat','36'],['Kalium','1040'],['Molybdän','0.05'],['Aluminium','1.03']]){
-    ok(det.indexOf(nam)>=0,'Parameter '+nam+' in der Tabelle');
-  }
-  ok(/jung[\s\S]{0,40}alt/.test(det),'Jung und Alt nebeneinander');
-  ok(/zählt/.test(det),'Das massgebliche Blatt ist markiert');
-  ok(/Ammoniumüberschuss bremst die Kaliumaufnahme/.test(det),'Die Befunde stehen darunter');
+  await p.screenshot({path:shots+'/2-bericht.png'});
+  for(const nam of ['Nitrat','Kalium','Molybdän','Aluminium'])ok(det.indexOf(nam)>=0,'Wert '+nam+' im Bericht');
+  ok(/junges Blatt[\s\S]{0,40}altes Blatt/i.test(det),'Jung und Alt nebeneinander');
+  ok(/Der Bericht im Wortlaut/.test(det),'Der Wortlaut des Berichts ist aufklappbar');
+  ok(!/Befund|zählt|Ammoniumüberschuss|Nächster Schritt/.test(det),'Keine Befunde, keine Deutung');
   const zeilen=await p.$$eval('#dlgBody table tbody tr',e=>e.length);
-  console.log('  Tabellenzeilen (inkl. Gruppentitel):',zeilen);
-  ok(zeilen>=23,'Alle Parameter aufgefuehrt');
+  ok(zeilen>=23,'Alle Werte aufgeführt ('+zeilen+' Zeilen mit Gruppentiteln)');
+  await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(300);
+  const liste=await p.$$eval('#view table tbody tr',e=>e.map(x=>x.innerText.replace(/\s+/g,' ')));
+  ok(liste.length===1&&/18\.08\.2026 Blattsaft Satz 28-478 jung alt NovaCropControl 202608201117, 202608201118/.test(liste[0]),'In der Liste: eine Zeile für den Bericht');
 
-  console.log('\n── Ueberblick dahinter ──');
-  await p.click('#dlgFoot button:text-is("Schliessen")');
-  await p.waitForTimeout(500);
-  const ub=await p.$eval('#view',e=>e.innerText);
-  const iBefund=ub.indexOf('Ammoniumüberschuss');
-  const iDiagramm=ub.indexOf('Nähern wir uns dem Optimum');
-  console.log('  Befund bei Zeichen',iBefund,'· Verlaufsfrage bei',iDiagramm,'von',ub.length);
-  ok(iBefund>=0&&iBefund<iDiagramm,'Die Befunde stehen VOR den Verlaufsdiagrammen');
-  ok(/Dafür braucht es eine zweite Erhebung/.test(ub),'Statt eines leeren Diagramms steht dort, was noch fehlt');
-  ok(!/Nährstofflage über die Zeit/.test(ub),'Das zweite Verlaufsdiagramm ist bei einer Erhebung ausgeblendet');
-  await p.screenshot({path:shots+'/3-ueberblick.png',fullPage:true});
+  console.log('\n── Dasselbe PDF noch einmal ──');
+  await p.setInputFiles('#filePdf',PDF);await p.waitForTimeout(2500);
+  ok(/bereits erfasst/.test(await p.$eval('#dlgBody',e=>e.innerText)),'Die Probennummern sind schon da – nicht vorausgewählt');
+  await p.click('#dlgFoot button:text-is("Abbrechen")');await p.waitForTimeout(300);
 
-  console.log('\n── Wiedereinstieg ──');
-  await p.click('#view button:text-is("Alle Werte ansehen")');
-  await p.waitForTimeout(400);
-  ok(/Satz 28-478/.test(await p.$eval('#dlgTitel',e=>e.textContent)),'Die Erhebung ist aus dem Ueberblick erreichbar');
-  await p.click('#dlgFoot button:text-is("Schliessen")');
-  await p.waitForTimeout(300);
-  await p.click('#nav button:text-is("Analysen")');
-  await p.waitForTimeout(300);
-  await p.click('#view table tbody tr');
-  await p.waitForTimeout(400);
-  const einzel=await p.$eval('#dlgFoot',e=>e.innerText);
-  ok(/Ganze Erhebung ansehen/.test(einzel),'Auch aus der Einzelprobe fuehrt ein Weg zur ganzen Erhebung');
-  await p.click('#dlgFoot button:text-is("Ganze Erhebung ansehen")');
-  await p.waitForTimeout(400);
-  ok(/Satz 28-478/.test(await p.$eval('#dlgTitel',e=>e.textContent)),'und er funktioniert');
+  console.log('\n── Im Diagramm ──');
+  await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(600);
+  const punkte=await p.$$eval('#cKb circle.hit',e=>e.length);
+  ok(punkte===2,'Kalium jung und alt: zwei Punkte');
+  ok(/Noch keine Giesswasseranalyse/.test(await p.$eval('#cKb',e=>e.textContent)),'Das Wasserfenster sagt, dass noch keine Analyse da ist');
 
-  console.log('\n── Alle Reiter mit einer einzigen Analyse ──');
-  await p.click('#dlgFoot button:text-is("Schliessen")');
-  await p.waitForTimeout(300);
+  console.log('\n── Alle Reiter ──');
   const reiter=await p.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(b=>b.textContent));
   for(const t of reiter){
-    await p.click(`#nav button:text-is("${t}")`);
-    await p.waitForTimeout(280);
+    await p.click(`#nav button:text-is("${t}")`);await p.waitForTimeout(280);
     const txt=await p.$eval('#view',e=>e.innerText);
-    const kaputt=/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test(txt);
-    console.log((kaputt?'  ✗ ':'  ✓ ')+t.padEnd(22)+txt.split('\n')[0].slice(0,44));
-    if(kaputt)fehler.push('Reiter '+t);
+    ok(!/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test(txt),t.padEnd(24)+txt.split('\n')[0].slice(0,44));
   }
 
   console.log('\n── Ergebnis ──');
   if(fehler.length){console.log('  FEHLER:');fehler.forEach(f=>console.log('   ·',f))}
-  else console.log('  ✓ Der ganze Weg von der Datei bis zur Auswertung funktioniert.');
-  console.log('  Screenshots:',shots);
+  else console.log('  ✓ Der ganze Weg von der Datei bis zum Bericht funktioniert.');
+  console.log('  Bildschirmfotos:',shots);
   await b.close();
   process.exit(fehler.length?1:0);
-})();
+})().catch(e=>{console.error('ABBRUCH',e);process.exit(1)});

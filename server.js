@@ -210,7 +210,7 @@ function dbSicher(){
 }
 
 /* Was die Handy-Seite wissen muss – und nur das. Kein ganzer Bestand: die
-   Rolle «hinten» sieht weder Analysen noch Logbuchnotizen anderer. */
+   Rolle «hinten» sieht weder Analysen noch Notizen anderer. */
 function kontext(){
   /* Nur lesen: ein Kontext-Aufruf darf keinen Bestand anlegen. Sonst stünde
      nach dem ersten Blick vom Handy plötzlich ein leerer Bestand da, wo
@@ -220,7 +220,7 @@ function kontext(){
   if(!Array.isArray(db.ereignisse))db.ereignisse=[];
   const st=(db.stellen&&Array.isArray(db.stellen.gruppen))?db.stellen.gruppen.map(g=>({id:g.id,name:g.name})):[];
   const pr=db.produkte||{};
-  /* Säuren sind im Logbuch eine eigene Art – die Handy-Seite muss das nicht
+  /* Säuren sind eine eigene Art (Säurezugabe) – die Handy-Seite muss das nicht
      wissen, sie bekommt es hier mitgeliefert. */
   const produkte=Object.keys(pr).map(id=>({id,name:pr[id].name||id,form:pr[id].form||'fluessig',
     einheit:pr[id].einheit||(pr[id].form==='fest'?'kg':'l'),typ:/saeure|säure/i.test(id+' '+(pr[id].name||''))?'Säurezugabe':'Düngergabe'}));

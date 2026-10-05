@@ -174,7 +174,7 @@ details{margin-top:8px}summary{cursor:pointer;color:var(--muted);font-size:14px}
     <h2>Zuletzt <span class="tiny muted">hier und von anderen</span></h2>
     <ul class="liste" id="zuletzt"><li class="muted">wird geladen …</li></ul>
     <details><summary>Was diese Seite tut und was nicht</summary>
-      <p class="tiny muted">Jeder Eintrag geht sofort an den gemeinsamen Bestand; das Büro sieht ihn im Reiter Giesswasser und im Logbuch, mit deinem Namen und der Uhrzeit.
+      <p class="tiny muted">Jeder Eintrag geht sofort an den gemeinsamen Bestand, mit deinem Namen und der Uhrzeit.
       Bricht das Netz weg, wartet der Eintrag hier auf dem Gerät und geht beim nächsten Öffnen oder auf «Erneut senden» hinaus.
       Ändern oder löschen geht nur im Büro – trag bei einem Fehler einfach eine Notiz dazu ein. Die Seite bewertet nichts und empfiehlt nichts.</p>
     </details>
@@ -389,7 +389,7 @@ AKTION.messung=async()=>{
   }else meld('mMeld','alarm','Nicht angenommen: '+e.fehler);
 };
 
-/* Eine Beigabe kann mehrere Logbucheinträge sein (vorne und hinten, Wasser
+/* Eine Beigabe kann mehrere Einträge sein (vorne und hinten, Wasser
    und Dünger). Jeder geht einzeln raus – und einzeln in die Warteschlange. */
 async function beigaben(liste,notizFeld,zusammenfassung){
   const k=werNoetig();if(!k)return;

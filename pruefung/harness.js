@@ -33,26 +33,25 @@ const cut=src.lastIndexOf('(async()=>{');
 if(cut<0)throw new Error('Selbstaufruf nicht gefunden');
 src=src.slice(0,cut).replace(/^"use strict";/,'');
 
-const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseIns','parseAuto',
- 'parseGiess','pdfPunkte','GW_PARAM','GW_MAKRO','GW_MIKRO','inMgL','leer','migriere','ausKW','montagKW','bezugFuer','aussaatVon','kulturdauer','alter',
- 'optVon','optQuelle','status','istOk','istRand','lage','abstand','ausmass','schwereVon',
- 'erhebungen','massgebliche','bewerte','indexVon','bilanz','verh','substratZu','befunde','wiederkehrend',
- 'saetzeListe','vorschlaege','kern','einheit','nz','esc','leitProbe','alleProben','alleSaetze','datenlage',
- 'vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos',
- 'chartPunkte','chartIndex','chartStapel','chartSaetze','zeitMarken','PAARE_VOR','render','sichern','laden','felderText',
- 'datenAusText','datenAusSeite','seiteMitDaten','seiteMerken','sichernJson','vlEigen','vlKurz','VL_MAX_BLATT','VL_MAX_WASSER',
- 'stellenVorschlag','stellenListe','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar','stellenDb','stellenDialog','stellenChip','STELLEN_VORGABE','gwStelle','gwProben',
- 'satzpaare','PAAR_TOLERANZ','o2Saettigung','O2_LOESLICH','messStelle','vereinigen','ONLINE','onlineStand','zoomMelden',
- 'beigabeSpannen','beigabeBalken','beigabeProdukte','BEIGABE_LUECKE','ansichtMerken','ansichtLaden','beigabeSpannenMittel','beigabeBalkenMittel','beigabenFuer','mittelKurz','beigabeMittelListe','beigabeLaeuft','beigabeSumme','beigabenSchalter','MITTEL_FARBE','beigabeHand','beigabeMitHand','logbuchPunkte','logbuchBuendel','logbuchTipp','logbuchMarke','spannenZeilen','spannenSvg','dunkler','paketNeues',
- 'PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte','zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','tabZeit','heute','jetztZeit',
- 'fotoGruppen','exifDatum','dataUrlBytes','dbBytes','ETAGEN','PRODUKTE_VORGABE','tippBau','legende','FARBSTOFF',
- 'EVTYPEN','EVTYP_ALT','evTypDef','STELLEN','evMenge','evMittelListe','monatName',
- 'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER',
- 'bilanzGiess','bilanzFenster','bilanzDeckung','bilanzKarte','eintragMasse','BILANZ_EL','ATOMMASSE','systemLiter',
- 'rangliste','eingangsbilanz','jungAlt','ranglisteKarte','eingangsKarte','pfeil','pfeilText','HAUPT','MOBILTEXT',
- 'NAME','KERN_VORGABE','KERN_WAEHLBAR','MOBIL','BALLAST','NCC','INS','PAARE','RICHT_VORGABE','TABS','AKTION','STTEXT'];
+const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseIns','parseAuto','parseGiess','pdfPunkte',
+ 'GW_PARAM','GW_MAKRO','GW_MIKRO','inMgL','einheit','nz','esc','NAME','NCC','INS','leer','migriere','optimum','optText','lage',
+ 'EVTYPEN','EVTYP_ALT','evTypDef','evEinheit','STELLEN','PRODUKTE_VORGABE','STELLEN_VORGABE','TABS','AKTION','render',
+ 'vAnalysen','vKombi','vTank','vMaske','vEinst','berichte','berichtVon','berichtSchluessel','berichtTitel','detail','wertMitOptimum',
+ 'pruefdialog','GRUPPEN','chartStapel','zeitMarken','spannenZeilen','spannenSvg','dunkler','tippBau','farbenFuer','spurGruppen',
+ 'groessenordnung','STOFFREIHE','gwProben','gwStelle','gwName','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar',
+ 'stellenDb','stellenListe','stellenVorschlag','stellenDialog','messStelle','tankStellen','HERKUNFT',
+ 'beigabeSpannenMittel','beigabeLaeuft','beigabeSumme','beigabeHand','mittelKurz','MITTEL_FARBE','BEIGABE_LUECKE',
+ 'kmListe','kmBalken','mittelZeitraumDazu','evMenge','evAngaben','evNotiz','evMittelListe','eigeneFarbe','typKurz',
+ 'paketNeues','PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte',
+ 'zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','heute','sichern','laden','datenAusText','datenAusSeite',
+ 'seiteMitDaten','seiteMerken','sichernJson','vereinigen','ONLINE','onlineStand','zoomMelden','ansichtMerken','ansichtLaden',
+ 'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER','tabZeit','dbBytes'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
-  ', einheitVon:typeof evEinheit!=="undefined"?evEinheit:undefined, setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, getTab:()=>tab, setMittelAus:x=>{mittelAus=x}, getMittelAus:()=>mittelAus, setModus:x=>{beigabenModus=x}, setTabPruef:x=>{TABPRUEF=x}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ', setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, getTab:()=>tab, setKmAus:x=>{kmAus=x}, getKmAus:()=>kmAus,'+
+  ' setKombi:o=>{if(o.blatt)kbBlatt=o.blatt;if(o.wasser)kbWasser=o.wasser;if(o.etage)kbEtage=o.etage;if(o.skala)kbSkala=o.skala;if(o.linien)kbLinien=o.linien},'+
+  ' getKombi:()=>({blatt:kbBlatt,wasser:kbWasser,etage:kbEtage,skala:kbSkala,linien:kbLinien}), resetKombi:()=>{kbBlatt=null;kbWasser=null},'+
+  ' setTabPruef:x=>{TABPRUEF=x}, setPruef:(v,b)=>{PRUEF=v;PRUEF_BEARB=!!b}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH,'+
+  ' getDiag:()=>DIAG, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
 module.exports=fn(module,{},require,global.document,global.window,global);

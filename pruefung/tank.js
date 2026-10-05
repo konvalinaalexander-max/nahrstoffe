@@ -105,7 +105,7 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
   db=await bestand();
   const sae=db.ereignisse.filter(e=>e.typ==='Säurezugabe');
   ok(sae.length&&sae.every(e=>/^\d\d:\d\d$/.test(e.zeit||'')),'Beigaben tragen die Uhrzeit des Eintragens');
-  ok(sae.length===2&&sae[0].stelle==='vorne'&&sae[0].menge===1.5&&sae[1].stelle==='hinten'&&sae[1].menge===1,'Zwei Einträge im Logbuch: vorne 1,5 l, hinten 1 l');
+  ok(sae.length===2&&sae[0].stelle==='vorne'&&sae[0].menge===1.5&&sae[1].stelle==='hinten'&&sae[1].menge===1,'Zwei Einträge auf dem Server: vorne 1,5 l, hinten 1 l');
   ok(sae.every(e=>e.mittel==='schwefelsaeure25'&&e.einheit==='l'&&e.wer==='MK'&&e.notiz==='pH vorher 7,4'),'Beide mit Säure, Liter, Kürzel und Notiz');
   await p.screenshot({path:shots+'/tank-saeure.png'});
 

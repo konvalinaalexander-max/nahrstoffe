@@ -81,13 +81,15 @@ console.log('\n════ Wirkung auf die Reihen ════');
   const nachher=new Set(A.gwProben().filter(A.gwSichtbar).map(A.stelleSchluessel)).size;
   console.log('   Reihen vorher:',vorher,'· nachher:',nachher);
   ok(vorher===4&&nachher===2,'Aus vier Reihen werden die zwei Reservoirs, die es wirklich gibt');
-  const h=A.vGiess();
-  ok(!/undefined|NaN|\[object Object\]/.test(h),'Der Reiter Giesswasser rendert sauber');
-  ok(/Reservoir vorne/.test(h)&&/Reservoir hinten/.test(h),'Und zeigt die zugeordneten Namen');
-  ok(/auf dem Bericht|zugeordnet:/.test(h),'Die Bezeichnung des Labors bleibt dabei nachlesbar');
-  ok(/Stellen zuordnen/.test(h),'Der Knopf steht im Reiter');
-  const v=A.vVerlauf();
-  ok(/Stellen zuordnen/.test(v),'Auch im Reiter Verlauf');
+  A.setKombi({blatt:['K'],wasser:['gw_HCO3']});
+  const h=A.vKombi();A.nachRenderRun();
+  const svg=global.document.getElementById('cKb').innerHTML;
+  ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Der Reiter Blattsaft & Giesswasser rendert sauber');
+  ok(/<\/svg>vorne/.test(h)&&/<\/svg>hinten/.test(h)&&!/H2O2/.test(h),'Über dem Diagramm stehen nur noch die zwei Reservoirs');
+  ok(/auf dem Bericht/.test(svg),'Die Bezeichnung des Labors bleibt im Kästchen nachlesbar');
+  ok(!/mitt H2O2/.test(svg),'Die ausgeschlossene Probe bildet keine Reihe');
+  const e=A.vEinst();
+  ok(/Stellen zuordnen/.test(e)&&/alle zugeordnet/.test(e),'Der Knopf steht unter Einstellungen, mit dem Stand der Zuordnung');
 }
 
 console.log('\n════ Der Dialog ════');
@@ -106,11 +108,12 @@ console.log('\n════ Der Dialog ════');
   /* Umbenennen wirkt bis in die Diagramme */
   A.AKTION.stelleVorschlagAlle();
   A.AKTION.stelleName({id:'v'},{target:{value:'Tisch West'}});
-  ok(/Tisch West/.test(A.vGiess()),'Ein neuer Name erscheint überall');
+  A.setKombi({wasser:['gw_HCO3']});
+  ok(/Tisch West/.test(A.vKombi())&&/Tisch West/.test(A.vEinst()),'Ein neuer Name erscheint überall');
   /* Eine Stelle entfernen gibt ihre Bezeichnungen wieder frei */
   A.AKTION.stelleWeg({id:'v'});
   ok(A.stellenListe().filter(x=>x.zustand.offen).length===3,'Wird eine Stelle entfernt, werden ihre Bezeichnungen wieder offen');
-  ok(!/undefined/.test(A.vGiess()),'Und der Reiter bleibt heil');
+  ok(!/undefined/.test(A.vKombi()),'Und der Reiter bleibt heil');
 }
 
 console.log('\n════ Escaping ════');
@@ -124,7 +127,9 @@ console.log('\n════ Escaping ════');
   ok(/&lt;img/.test(b),'Sie steht als Text da');
   A.AKTION.stelleZu({roh:'Reservoir <img src=x onerror=alert(1)> «vorne»',id:'v'});
   ok(A.stelleVon({stelle:'Reservoir <img src=x onerror=alert(1)> «vorne»'}).id==='v','Und lässt sich trotzdem zuordnen');
-  ok(A.vGiess().indexOf('<img src=x')<0,'Auch im Reiter nicht');
+  A.setKombi({wasser:['gw_HCO3']});
+  const hk=A.vKombi();A.nachRenderRun();
+  ok((hk+global.document.getElementById('cKb').innerHTML+A.vAnalysen()).indexOf('<img src=x')<0,'Auch im Reiter und in der Liste nicht');
 }
 
 console.log('\n════ Migration ════');
@@ -137,10 +142,8 @@ console.log('\n════ Migration ════');
   ok(r.db.schema===11,'Schema auf 11 gehoben');
   ok(r.db.stellen&&r.db.stellen.gruppen.length===2,'Zwei Stellen sind angelegt – so viele Reservoirs gibt es');
   ok(Object.keys(r.db.stellen.zu).length===0,'Aber nichts ist zugeordnet: das entscheidet der Mensch');
-  const n=r.notizen.filter(x=>/Bezeichnungen/.test(x));
-  console.log('   ',n[0]);
-  ok(n.length===1,'Die Migration sagt, dass es mehr Bezeichnungen als Reservoirs gibt');
-  ok(/es geht also nichts verloren|nichts verloren/.test(n[0]),'Und dass bis zur Zuordnung nichts verloren geht');
+  A.setDb(r.db);
+  ok(/3 Bezeichnungen auf den Berichten – <strong>3 noch nicht zugeordnet/.test(A.vEinst()),'Unter Einstellungen steht, dass drei Bezeichnungen offen sind');
 }
 
 console.log('\n════ Ergebnis ════');

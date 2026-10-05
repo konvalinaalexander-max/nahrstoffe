@@ -33,20 +33,31 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   p.on('pageerror',e=>stoerung.push('pageerror: '+e.message));
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/Failed to load resource|net::ERR_/.test(t))stoerung.push('console: '+t)});
 
+  /* «＋ Massnahme eintragen» im Reiter Blattsaft & Giesswasser */
+  const massnahme=async(was,name,von,dauer)=>{
+    await p.click('#view button:text-is("＋ Massnahme eintragen")');await p.waitForTimeout(250);
+    await p.selectOption('#mnWas',was);
+    if(name)await p.fill('#mnName',name);
+    await p.fill('#mnVon',von);
+    if(dauer&&await p.$eval('#mnDauerBox',e=>!e.hidden))await p.selectOption('#mnDauer',dauer);
+    await p.click('#dlgFoot button:text-is("Eintragen")');await p.waitForTimeout(300);
+  };
+
   console.log('════ Leerer Server ════');
   await p.goto(B+'/');await p.waitForTimeout(1500);
   const stand0=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand:',stand0);
   ok(/online/.test(stand0),'Die Seite merkt, dass sie vom Server kommt');
   ok(await p.$eval('#erfassenLink',e=>!e.hidden&&e.getAttribute('href')==='/maske'),'Der Link zur Maske erscheint («/maske»)');
+  ok(await p.$eval('#knopfQr',e=>!e.hidden),'Der QR-Code zur Maske steht oben');
   ok(!/Anmeldung/.test(await p.$eval('body',e=>e.textContent))&&/Basilikum/.test(await p.title()),'Direkt das Dashboard – kein Login');
-  ok(await p.$eval('#knopfKopie',e=>e.hidden)&&await p.$eval('#knopfSichern',e=>e.hidden)&&await p.$eval('#knopfOeffnen',e=>e.hidden),
+  ok(await p.$eval('#knopfSichern',e=>e.hidden)&&await p.$eval('#knopfOeffnen',e=>e.hidden),
      'Keine Knöpfe zum Sichern oder Öffnen – online ist es eine Webseite');
   const toasts0=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
   ok(toasts0.some(t=>/Server ist noch leer/.test(t)),'Und sagt, dass der Bestand auf dem Server noch leer ist');
 
   console.log('\n════ Sicherung einspielen, laufend sichern ════');
-  await p.click('#nav button:text-is("Sätze & Einstellungen")');await p.waitForTimeout(400);
+  await p.click('#nav button:text-is("Einstellungen")');await p.waitForTimeout(400);
   ok(!!(await p.$('#view button:text-is("Sicherung einspielen")')),'«Sicherung einspielen» steht unter Einstellungen');
   await p.setInputFiles('#fileJson',path.join(__dirname,'testdaten.json'));await p.waitForTimeout(600);
   const standW=await p.$eval('#stand',e=>e.textContent);
@@ -61,98 +72,76 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const v1=srv.json.version;
 
   /* Eine Aenderung in der Oberflaeche geht von selbst hoch */
-  await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(400);
-  await p.click('#view button:text-is("Biovin")');await p.waitForTimeout(200);
-  await p.fill('#lbForm [data-f="menge"]','20');
-  await p.click('#lbForm button:text-is("Eintragen")');await p.waitForTimeout(400);
+  await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(500);
+  await massnahme('neu','Schattierung','2026-09-20','laeuft');
   await p.waitForTimeout(2500);
   srv=await ruf('/api/bestand',{headers:ADMIN});
-  ok(srv.json.version===v1+1&&srv.json.db.ereignisse.some(e=>e.mittel==='biovin'&&e.menge===20),'Ein Logbucheintrag ist 2,5 s später auf dem Server – Version '+srv.json.version);
+  ok(srv.json.version===v1+1&&srv.json.db.beigabeZeiten.some(z=>z.name==='Schattierung'&&z.von==='2026-09-20'&&z.bis===null),'«＋ Massnahme»: «Schattierung» ist 2,5 s später auf dem Server – Version '+srv.json.version);
+  ok(await p.$$eval('#cKb g.spb text',ts=>ts.some(t=>t.textContent==='Schattierung seit 20.09.')),'… und steht als Balken unter dem Diagramm');
 
   console.log('\n════ Gleichzeitig: hinten trägt ein, während hier etwas offen ist ════');
   /* Hier eine Aenderung, die noch nicht hochgegangen ist … */
-  await p.click('#view button:text-is("Epsotop")');await p.waitForTimeout(200);
-  await p.fill('#lbForm [data-f="menge"]','3');
+  await p.evaluate(()=>{ONLINE.laeuft=true});
+  await massnahme('t|Umpumpen',null,'2026-09-24');
   /* … und derweil kommt vom Handy eine Messung (Version springt) */
-  const m=await ruf('/api/messung',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',stelle:'Reservoir vorne',ph:6.2,ec:1.7,o2:7.1,temp:20,wer:'MK'}});
+  const m=await ruf('/api/messung',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',zeit:'07:30',stelle:'Reservoir vorne',ph:6.2,ec:1.7,o2:7.1,temp:20,wer:'MK'}});
   ok(m.status===200,'Die Messung vom Handy ist angenommen (Version '+m.json.version+')');
-  await p.click('#lbForm button:text-is("Eintragen")');await p.waitForTimeout(3000);
+  await p.evaluate(()=>{ONLINE.laeuft=false;sichernOnline()});await p.waitForTimeout(2000);
   srv=await ruf('/api/bestand',{headers:ADMIN});
-  const hatMess=srv.json.db.messungen.some(x=>x.wer==='MK'&&x.o2===7.1),hatEps=srv.json.db.ereignisse.some(e=>e.mittel==='epsotop'&&e.menge===3);
-  ok(hatMess&&hatEps,'Beides ist da: die Messung vom Handy UND der Eintrag von hier – nichts überschrieben');
+  const hatMess=srv.json.db.messungen.some(x=>x.wer==='MK'&&x.o2===7.1),hatUmp=srv.json.db.ereignisse.some(e=>e.typ==='Umpumpen'&&e.datum==='2026-09-24');
+  ok(hatMess&&hatUmp,'Beides ist da: die Messung vom Handy UND das Umpumpen von hier – nichts überschrieben');
   const stand2=await p.$eval('#stand',e=>e.textContent);
   ok(/online · gesichert/.test(stand2),'Der Stand ist wieder «gesichert»: '+stand2);
   const dbSeite=await p.evaluate(()=>({m:db.messungen.filter(x=>x.wer==='MK').length,v:ONLINE.version}));
   ok(dbSeite.m===1&&dbSeite.v===srv.json.version,'Die Seite hat die fremde Messung übernommen und trägt die aktuelle Version');
 
   console.log('\n════ Auffrischen ohne eigene Änderung ════');
-  await ruf('/api/messung',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',stelle:'Reservoir hinten',ph:6.4,ec:1.8,wer:'AB'}});
-  await p.click('#nav button:text-is("Giesswasser")');await p.waitForTimeout(400);
+  await ruf('/api/messung',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',zeit:'07:40',stelle:'Reservoir hinten',ph:6.4,ec:1.8,wer:'AB'}});
+  await ruf('/api/ereignis',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',zeit:'07:50',typ:'Säurezugabe',mittel:'schwefelsaeure25',menge:0.5,einheit:'l',stelle:'hinten',wer:'AB'}});
+  await p.click('#nav button:text-is("pH & EC am Tank")');await p.waitForTimeout(400);
   /* die Abfrage laeuft alle 30 s – hier direkt anstossen */
   await p.evaluate(()=>onlineAbfragen());await p.waitForTimeout(800);
-  const gw=await p.$eval('#view',e=>e.innerText);
-  ok(/AB/.test(gw)&&/6.4|6,4/.test(gw),'Die Messung von «AB» steht ohne Neuladen im Reiter Giesswasser');
+  const tk=await p.$eval('#view',e=>e.innerText);
+  ok(/AB/.test(tk)&&/6.4/.test(tk),'Die Messung von «AB» steht ohne Neuladen in der Liste am Tank');
   const toasts=await p.$$eval('.toast',es=>es.map(e=>e.textContent));
   ok(toasts.some(t=>/Aufgefrischt/.test(t)),'Mit dem Hinweis, dass aufgefrischt wurde');
-  const tank=await p.$eval('#tkKarte',e=>e.innerText);
-  ok(/Am Tank/.test(tank)&&/Sauerstoff/.test(tank)&&/7.1|7,1/.test(tank),'Die Karte «Am Tank» zeigt den Sauerstoff vom Handy');
-  const spuren=await p.$$eval('#cTank text',es=>es.map(e=>e.textContent).filter(t=>/^(pH im|EC im|Sauerstoff$)/.test(t)));
+  const spuren=await p.$$eval('#cTank text',es=>es.map(e=>e.textContent).filter(t=>/^(pH|EC|EC · .*|Sauerstoff)$/.test(t)));
   console.log('   Spuren:',spuren.join(' | '));
-  ok(spuren.length===3,'Drei Spuren: pH, EC, Sauerstoff – jede mit eigener Achse');
-  ok(/Sättigungsgrenze/.test(tank),'Die Sättigungsgrenze steht als Annahme dabei');
-  await (await p.$('#tkKarte')).scrollIntoViewIfNeeded();await p.waitForTimeout(300);
+  ok(spuren.length===3&&spuren.includes('Sauerstoff'),'Drei Spuren: pH, EC, Sauerstoff – jede mit eigener Achse');
+  ok(!/Sättigung/.test(tk),'Keine Sättigungsgrenze, keine Deutung');
   await p.screenshot({path:shots+'/online-tank.png',fullPage:false});
+  await p.click('#nav button:text-is("Einträge Maske")');await p.waitForTimeout(400);
+  const me=await p.$eval('#view',e=>e.innerText);
+  ok(/MK/.test(me)&&/AB/.test(me)&&/Säurezugabe/.test(me)&&/Schwefelsäure 25 % · 0.5 l/.test(me),'Unter «Einträge Maske»: beide Messungen und die Säure, mit Namen');
+  await p.screenshot({path:shots+'/online-maske.png',fullPage:false});
 
   console.log('\n════ Kopie herunterladen ════');
-  await p.click('#nav button:text-is("Sätze & Einstellungen")');await p.waitForTimeout(400);
+  await p.click('#nav button:text-is("Einstellungen")');await p.waitForTimeout(400);
   const dl=p.waitForEvent('download');
   await p.click('#view button:text-is("Kopie herunterladen")');
   const d=await dl;const ziel=path.join(shots,d.suggestedFilename());await d.saveAs(ziel);
   const text=fs.readFileSync(ziel,'utf8');
-  ok(/^<!doctype html>/.test(text)&&/"wer":"MK"/.test(text),'Die Kopie ist die ganze Seite mit dem aktuellen Bestand – auch der Messung vom Handy');
+  ok(/^<!doctype html>/.test(text)&&/"wer":"MK"/.test(text)&&/"name":"Schattierung"/.test(text),'Die Kopie ist die ganze Seite mit dem aktuellen Bestand – auch der Messung vom Handy und der Schattierung');
   ok(text.indexOf('id="erfassenLink" href="/maske" target="_blank" rel="noopener" hidden')>0,'Und trägt das unberührte Gerüst: vom Ordner geöffnet läuft sie im Datei-Modus');
 
-  console.log('\n════ Satzpaare ════');
-  await p.click('#nav button:text-is("Planer")');await p.waitForTimeout(500);
-  const pl=await p.$eval('#view',e=>e.innerText);
-  ok(/Satzpaare · Woche 2 und Woche 4/.test(pl),'Die Karte «Satzpaare» steht im Planer');
-  await p.screenshot({path:shots+'/online-planer.png',fullPage:false});
-
-  console.log('\n════ Beigabe-Bänder und Wesentlich ════');
-  await p.click('#nav button:text-is("Nährstoffe")');await p.waitForTimeout(500);
-  await p.$eval('#nsKarte .chip.stoff:text-is("Magnesium")',e=>e.click());await p.waitForTimeout(450);
-  const baender=await p.$$eval('#cNs [data-tun="spanne"] text',es=>es.map(e=>e.textContent));
-  console.log('   Bänder:',baender.join(' | '));
-  ok(baender.some(t=>/Magnesium seit|Magnesium \d/.test(t)),'Magnesium gewählt → das Band «Magnesium seit …» erscheint unter dem Diagramm');
-  /* Im Modus «alle Mittel» stehen mehrere Bänder – gezielt das Magnesium-Band anklicken. */
-  await p.$$eval('#cNs [data-tun="spanne"]',es=>{const g=es.find(e=>/Magnesium/.test(e.textContent));(g||es[0]).dispatchEvent(new MouseEvent('click',{bubbles:true}))});await p.waitForTimeout(400);
-  const bd=await p.$eval('#dlgTitel',e=>e.textContent);
-  ok(/Magnesium/.test(bd)&&/bis/.test(bd),'Klick auf das Band öffnet die Liste der Gaben: '+bd);
-  await p.click('#dlgFoot button:text-is("Schliessen")');await p.waitForTimeout(200);
-  const vorW=await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length);
-  await p.click('#nav button:text-is("Wesentlich")');await p.waitForTimeout(500);
-  const nachW=await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length);
-  ok(nachW===1&&vorW>1,'«Wesentlich» lässt nur die Diagrammkarte stehen ('+vorW+' → '+nachW+')');
-  ok(await p.$eval('#cNs svg',e=>!!e),'Das Diagramm selbst bleibt');
-  await p.screenshot({path:shots+'/online-wesentlich.png',fullPage:false});
-  await p.click('#nav button:text-is("Alles")');await p.waitForTimeout(400);
-  ok((await p.$$eval('#view > *',es=>es.filter(e=>getComputedStyle(e).display!=='none').length))===vorW,'«Alles» bringt alles zurück');
+  console.log('\n════ Persönliche Ansicht ════');
+  await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(500);
+  await p.click('#kbKopf .chip:text-is("Magnesium")');await p.waitForTimeout(400);
   await p.reload();await p.waitForTimeout(1500);
-  ok((await p.$eval('#nav button.active',e=>e.textContent))==='Nährstoffe','Nach dem Neuladen ist der Reiter noch derselbe – persönliche Ansicht auf diesem Gerät');
-  ok(await p.$eval('#nsKarte .chip.stoff:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Nährstoffauswahl auch');
+  ok((await p.$eval('#nav button.active',e=>e.textContent))==='Blattsaft & Giesswasser','Nach dem Neuladen ist der Reiter noch derselbe – persönliche Ansicht auf diesem Gerät');
+  ok(await p.$eval('#kbKopf .chip:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Auswahl auch');
 
   console.log('\n════ Server weg ════');
   await p.route('**/api/**',r=>r.abort('connectionfailed'));
-  await p.click('#nav button:text-is("Logbuch")');await p.waitForTimeout(400);
-  await p.click('#view button:text-is("Biovin")');await p.fill('#lbForm [data-f="menge"]','15');
-  await p.click('#lbForm button:text-is("Eintragen")');await p.waitForTimeout(2500);
+  await massnahme('neu','Klima umgestellt','2026-09-25','laeuft');
+  await p.waitForTimeout(2500);
   const standF=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand:',standF);
   ok(/nicht erreichbar/.test(standF),'Ohne Server: «nicht erreichbar – Änderungen warten», nichts geht verloren');
   await p.unroute('**/api/**');
   await p.evaluate(()=>sichernOnline());await p.waitForTimeout(1500);
   srv=await ruf('/api/bestand',{headers:ADMIN});
-  ok(srv.json.db.ereignisse.some(e=>e.mittel==='biovin'&&e.menge===15),'Sobald der Server da ist, geht es raus – von selbst beim nächsten Versuch');
+  ok(srv.json.db.beigabeZeiten.some(z=>z.name==='Klima umgestellt'),'Sobald der Server da ist, geht es raus – von selbst beim nächsten Versuch');
   ok(/online · gesichert/.test(await p.$eval('#stand',e=>e.textContent)),'Und der Stand ist wieder grün');
 
   console.log('\n════ Ergebnis ════');

@@ -1,6 +1,11 @@
 # Konzept: die Anwendung geht online
 
-Stand 26. September 2026. Auslöser: Messungen sollen hinten am Tank per Handy
+Stand 26. September 2026, Entscheide bis 5. Oktober (§11). Die Abschnitte 1–9
+beschreiben die damals volle Fassung; was am 5. Oktober weggefallen ist
+(Planer, Satzpaare, Logbuch, Reiter Giesswasser und Nährstoffe, «Wesentlich»),
+steht in §11.
+
+Auslöser: Messungen sollen hinten am Tank per Handy
 eingetragen werden, Laboranalysen sollen für alle sofort sichtbar sein, und
 das Beprobungsschema ändert sich auf zwei Einsendungen pro Monat mit
 Satzpaaren. Das Dokument sagt, was gebaut wird, was sich dadurch an den
@@ -305,3 +310,35 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
     «wird weiterhin gegeben»; das gilt für alle. Das Logbuch steht in den
     Diagrammen als eigene Zeile mit gebündelten Marken statt als Linien mit
     Text quer durchs Bild.
+
+## 11 · Entschieden (5. Oktober): eine schlanke App
+
+16. **Keine Tipps, keine Analysen – einfach angenehm visualisieren.** Das
+    Dashboard hat fünf Reiter:
+    - **Analysen** – oben hochladen, darunter alle Berichte; Klick öffnet den
+      Bericht im Pop-up, trocken: die Werte mit dem Optimum des Labors, ohne
+      Befunde und ohne «was ging hoch, was runter».
+    - **Blattsaft & Giesswasser** – Blattsaft-Werte wählen, darunter Blatt
+      (beide, jung, alt), Linien und Anzeige, dann die Giesswasser-Werte;
+      darunter zwei Fenster (Blattsaft, Giesswasser) auf einer Zeitachse und
+      darunter die Balken des Kulturmanagements. Keine vorformulierten Fragen
+      mehr. Das Kästchen beim Zeigen und der Bericht beim Klicken bleiben.
+    - **pH & EC am Tank** – die Werte aus Excel, vom Handy und aus dem Paket
+      (nicht die Laborwerte) als Grafik, darunter als Liste.
+    - **Einträge Maske** – alle Einträge der Handy-Seite als Liste; wie sie
+      dargestellt werden, wird später entschieden.
+    - **Einstellungen** – Maske und QR-Code, Entnahmestellen, vorbereitete
+      Daten, Sichern.
+
+    **Das Logbuch ist ersetzt** durch «＋ Massnahme eintragen» unter den
+    Balken: ein Mittel, eine eigene Massnahme mit Namen (z. B. Schattierung)
+    oder ein Ereignis an einem Tag, mit Beginn, Dauer und Notiz. Ereignisse
+    ohne Mittel (Tank neu angesetzt, Umpumpen …) stehen als Marken in einer
+    eigenen Zeile je Art.
+
+    **Weg sind:** Überblick, Verlauf mit Fragen, Nährstoffe, Substrat,
+    Giesswasser-Karten mit Richtwerten, Soll-Ist-Bilanz, Fotos, Rundgang,
+    Planer mit Satzpaaren, Sätze, eigene Optima, Schwellen, «Wesentlich».
+    Die Daten dazu bleiben im Bestand; die volle Fassung liegt im
+    Git-Verlauf (Commit `7274630`). Unverändert: die Handy-Seite, der Server,
+    die Online-Anleitung, das Datenpaket, ohne Passwort.

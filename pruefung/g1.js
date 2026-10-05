@@ -72,7 +72,7 @@ ok(Math.abs(A.inMgL('gw_Fe',1.0)-0.056)<0.001,'1,0 µmol/l Eisen sind 0,056 mg/l
 
 
 
-console.log('\n════ Der Reiter Giesswasser ════');
+console.log('\n════ Giesswasser im Reiter Blattsaft & Giesswasser ════');
 {
   const d=A.leer();
   const alle=[];
@@ -81,55 +81,33 @@ console.log('\n════ Der Reiter Giesswasser ════');
     r.proben.forEach((p,i)=>alle.push(Object.assign({id:n+i,typ:'giesswasser',labor:r.labor},p)));
   }
   d.analysen=alle;
-  d.messungen=[{id:'m1',datum:'2026-08-10',ph:6.1,ec:1.5,ecFrisch:2.1,temp:24,notiz:null}];
   A.setDb(d);
-  const h=A.vGiess();A.nachRenderRun();
-  console.log('  Proben im Bestand:',alle.length);
+  A.setKombi({blatt:['K'],wasser:['gw_HCO3','gw_NO3','gw_Fe']});
+  const h=A.vKombi();A.nachRenderRun();
+  const svg=global.document.getElementById('cKb').innerHTML;
   const stellen=[...new Set(alle.map(a=>a.stelle))];
-  console.log('  Entnahmestellen:',stellen.join(' · '));
+  console.log('  Proben:',alle.length,'· Entnahmestellen:',stellen.join(' · '));
   ok(stellen.length===3,'Drei Entnahmestellen erkannt');
-  ok(!/undefined|NaN|\[object Object\]/.test(h),'Der Reiter rendert sauber');
-  ok(/Reservoir Vorne/.test(h)&&/Hinter, Ohne H2O2/.test(h)&&/Vorne, mitt H2O2/.test(h),'Alle drei Namen erscheinen');
-  ok(/Alle Proben nebeneinander/.test(h),'Vergleichstabelle vorhanden');
-  ok(/Verlauf/.test(h),'Verlaufsdiagramm vorhanden');
-  const tooltips=(h.match(/title="[^"]*Vorne, mitt H2O2[^"]*"/g)||[]).length;
-  console.log('  Tooltips mit dem Stellennamen:',tooltips);
-  ok(tooltips>=3,'Der Name der Entnahmestelle steht in den Tooltips');
-  /* zwei Proben am selben Tag */
-  const amTag=alle.filter(a=>a.datum==='2026-08-06');
-  console.log('  Proben am 06.08.:',amTag.map(a=>a.stelle).join(' und '));
-  ok(amTag.length===2&&amTag[0].stelle!==amTag[1].stelle,'Zwei Proben vom selben Tag, unterscheidbar benannt');
-  const farbig=(h.match(/border-radius:50%;background:#[0-9A-F]{6}/gi)||[]).length;
-  ok(farbig>=3,'Jede Entnahmestelle hat eine eigene Farbe ('+farbig+' Farbpunkte)');
-  ok(/über dem Richtwert/.test(h),'Richtwertüberschreitungen werden benannt');
-  ok(/Annahme/.test(h)&&/Nicht vom Labor vorgegeben/.test(h),'Richtwerte als Annahme mit Herkunft gekennzeichnet');
-  ok(/Was mit dem Wasser schon an Nährstoffen hereinkommt/.test(h),'Zeigt, was das Wasser schon mitbringt');
-  ok(/Dosierungsrechnung baut die App bewusst nicht/.test(h),'Und verzichtet ausdrücklich auf eine Dosierungsrechnung');
-  ok(/Der Kreislauf selbst|Am Tank/.test(h),'Der Kreislauf ist in denselben Reiter gewandert');
-
-  console.log('\n  Verlaufsdiagramm: Punkte je Entnahmestelle');
-  const box={clientWidth:900,innerHTML:''};
-  const farbenMap=A.getDb();
-  A.setDb(d);
-  const hh=A.vGiess();A.nachRenderRun();
-  const svg=global.document.getElementById('cGw').innerHTML;
-  /* Seit dem Umbau der Diagramme steht der Text in data-tipp statt in <title>:
-     das Infokaestchen erscheint sofort statt nach rund einer Sekunde. */
+  ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Der Reiter rendert sauber');
+  ok(/<\/svg>Vorne /.test(h)&&/<\/svg>Hinter, Ohne H2O2/.test(h)&&/<\/svg>Vorne, mitt H2O2/.test(h),'Alle drei Stellen stehen mit ihrem Zeichen über dem Diagramm');
+  ok(/>Giesswasser</.test(svg)&&/>Blattsaft</.test(svg),'Zwei Fenster: Blattsaft und Giesswasser');
+  ok(/Noch keine Blattsaftanalyse/.test(svg),'Ohne Blattsaft sagt das obere Fenster, was fehlt');
   const entziffern=t=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
-  const titel=[...svg.matchAll(/data-tipp="([^"]*)"/g)]
-    .map(m=>entziffern(entziffern(m[1])).replace(/<[^>]+>/g,' · ').replace(/\s*·\s*/g,' · ').replace(/\s+/g,' ').replace(/^ · /,'').trim());
-  titel.slice(0,4).forEach(t=>console.log('   ',t));
-  ok(titel.some(t=>/Reservoir Vorne/.test(t)),'Tooltip im Diagramm nennt die Entnahmestelle');
-  ok(titel.some(t=>/Entnahmestelle/.test(t)),'Und sagt dazu, dass es eine Entnahmestelle ist');
-  ok(svg.indexOf('<title>')<0,'Der langsame <title>-Tooltip ist verschwunden');
-
-  console.log('\n  Alle Reiter mit Wasserdaten:');
-  const bad=[];
-  for(const t of ['vLage','vAnalysen','vNaehr','vVerlauf','vSubstrat','vGiess','vLogbuch','vRund','vPlaner','vSaetze','vFotos']){
-    try{const x=A[t]();A.nachRenderRun();if(/undefined|NaN|\[object Object\]/.test(x))bad.push(t)}
-    catch(e){bad.push(t+' WIRFT '+e.message)}
-  }
-  ok(!bad.length,'Alle zehn Reiter sauber'+(bad.length?': '+bad.join(', '):''));
+  const tipps=[...svg.matchAll(/class="hit"[^>]*data-tipp="([^"]*)"/g)]
+    .map(m=>entziffern(entziffern(m[1])).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
+  tipps.slice(0,3).forEach(t=>console.log('   ',t));
+  const messbar=alle.reduce((n,a)=>n+['gw_HCO3','gw_NO3','gw_Fe'].filter(k=>a.werte[k]&&!a.werte[k].unter).length,0);
+  ok(tipps.length===messbar,'Jeder gemessene Wert ist ein Punkt ('+tipps.length+' von '+messbar+'; unter der Nachweisgrenze keiner)');
+  ok(tipps.some(t=>/Stelle: Vorne, mitt H2O2/.test(t)),'Das Kästchen nennt die Entnahmestelle');
+  ok(tipps.some(t=>/entspricht: [\d.]+ mg\/l/.test(t)),'und den Wert in mg/l');
+  const amTag=tipps.filter(t=>/06\.08\.2026/.test(t)&&/Hydrogencarbonat/.test(t));
+  ok(amTag.length===2&&/Hinter/.test(amTag.join())&&/mitt H2O2/.test(amTag.join()),'Zwei Proben vom selben Tag, im Kästchen unterscheidbar');
+  ok(/<polygon/.test(svg)&&/<rect x="[\d.]+" y="[\d.]+" width="[\d.]+" height="[\d.]+" rx="1"/.test(svg),'Jede Stelle hat ihre eigene Form');
+  ok(svg.indexOf('<title>')<0,'Kein langsamer <title>-Tooltip');
+  const titel=[...svg.matchAll(/font-weight="600" fill="#141D17">([^<]*)</g)].map(m=>m[1]);
+  console.log('  Spuren:',titel.join(' | '));
+  ok(titel.includes('Eisen')&&titel.some(t=>/Hydrogencarbonat/.test(t)),'Eisen in µmol/l bekommt eine eigene Spur neben den mmol/l-Werten');
+  ok(!/Richtwert|Annahme|über dem/.test(h+svg),'Keine Richtwerte, keine Bewertung');
 }
 
 console.log('\n════ Migration alter Wasserdaten ════');
@@ -144,6 +122,7 @@ console.log('\n════ Migration alter Wasserdaten ════');
   ok(erg.db.analysen[0].einheitAlt===true,'Von Hand erfasste Wasserwerte werden als einheitenunklar markiert');
   ok(erg.notizen.some(n=>/mmol\/l/.test(n)),'Und die Migration sagt warum');
   A.setDb(erg.db);
-  ok(/vor der Umstellung/.test(A.vGiess()),'Der Reiter weist darauf hin');
+  A.AKTION.detail({id:'g'});
+  ok(/mg\/l hiessen/.test(global.document.getElementById('dlgBody').innerHTML),'Der Bericht weist darauf hin');
 }
 process.exit(fehler?1:0);

@@ -135,24 +135,27 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
 1. Öffne die Adresse aus Teil E. Das Dashboard erscheint **sofort**, ohne
    Login. Oben rechts steht *online · gesichert*.
 2. **Zuerst die alte Sicherung** (falls du eine hast):
-   Reiter **Sätze & Einstellungen** → Karte «Datenstand» →
+   Reiter **Einstellungen** → Karte «Daten» →
    **Sicherung einspielen** → deine letzte Datei wählen. Ein paar Sekunden
    später steht oben rechts *gesichert hh:mm*.
-3. **Dann die vorbereiteten Daten:** Im **Überblick** steht ein grüner
+3. **Dann die vorbereiteten Daten:** Im Reiter **Blattsaft & Giesswasser**
+   (oder **pH & EC am Tank**) steht ein grüner
    Hinweis *«Bereit zum Aktivieren: Reservoir April bis September 2026»*
    → **Ansehen und aktivieren**. Der Dialog zeigt, was hineinkommt (149
-   Messungen bis zum 30. September, 82 Logbucheinträge), welche Balken danach unter den Diagrammen
+   Messungen bis zum 30. September, 82 Gaben und Ereignisse), welche Balken danach unter den Diagrammen
    stehen und was dabei entschieden wurde. → **Aktivieren**.
-   Die App springt in den Reiter Giesswasser; alles ist eingetragen und
+   Die App springt in den Reiter **pH & EC am Tank**; alles ist eingetragen und
    gesichert.
 
    > Die Reihenfolge zählt: «Sicherung einspielen» **ersetzt** den ganzen
-   > Bestand. Wer es andersherum gemacht hat: Sätze & Einstellungen →
+   > Bestand. Wer es andersherum gemacht hat: Einstellungen →
    > «Vorbereitete Daten» → Ansehen → **Aktivieren** (oder «Fehlende
    > ergänzen»). Nichts wird doppelt eingetragen.
 
-4. Reiter **Giesswasser** → **Stellen zuordnen**, falls die App darauf
-   hinweist. Die Zuordnung gilt ab jetzt für alle.
+4. Reiter **Einstellungen** → Karte «Entnahmestellen» → **Stellen zuordnen**,
+   falls dort Bezeichnungen als «noch nicht zugeordnet» stehen (das Labor
+   schreibt die Stellen jedes Mal anders). Die Zuordnung gilt ab jetzt für
+   alle.
 
 ---
 
@@ -171,7 +174,8 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    - Android (Chrome): Menü (drei Punkte) → **Zum Startbildschirm hinzufügen**.
 5. Eine Probemessung eintragen. Uhrzeit und Datum setzt das Handy selbst.
    Im Dashboard erscheint sie innerhalb einer halben Minute im Reiter
-   Giesswasser, mit Namen und Uhrzeit.
+   **Einträge Maske** (und im Reiter **pH & EC am Tank**), mit Namen und
+   Uhrzeit.
 
 Die Maske hat keinen Link ins Dashboard. Wer am Handy `/maske` aus der
 Adresse löscht, käme hin – das ist so gewollt und macht in der Praxis
@@ -187,14 +191,14 @@ für alle. Oben rechts steht immer der Stand. Steht dort *«nicht erreichbar –
 im Browserfenster und gehen raus, sobald er wieder antwortet. Das Fenster
 dann nicht schliessen.
 
-**Persönliche Ansicht bleibt persönlich.** Welche Nährstoffe du anzeigst,
-welche Balken (je Mittel ein- und ausblendbar), welcher Reiter offen ist, ob
-«Wesentlich» oder «Alles» – das merkt sich nur dein Browser. Einträge,
-Stellen, Einstellungen und Produkte gelten für alle.
+**Persönliche Ansicht bleibt persönlich.** Welche Werte du anzeigst,
+welche Balken (über «Balken ein- und ausblenden»), welcher Reiter offen ist –
+das merkt sich nur dein Browser. Einträge, Massnahmen, Stellen und
+Zeiträume gelten für alle.
 
 **Sicherungskopien** macht der Server selbst, bei jeder Änderung, im Volume
 unter `/daten/sicherungen` (die letzten 30 und eine pro Tag für 90 Tage).
-Zusätzlich ab und zu **Kopie herunterladen** (Sätze & Einstellungen) und die
+Zusätzlich ab und zu **Kopie herunterladen** (Einstellungen) und die
 Datei ablegen – sie ist die ganze Anwendung mit allen Daten, vom Ordner aus
 doppelt klickbar.
 
@@ -245,7 +249,7 @@ sichere Weg.
 | Log: *ACHTUNG: Kein Volume angehängt* | Volume fehlt | Teil D |
 | Log: *Das Volume hängt unter …* | falscher Mount Path | Volume anklicken → Mount Path genau `/daten` |
 | Nach einem Neustart ist alles leer | Volume fehlte beim Eintragen | Teil D, dann Sicherung einspielen und Paket aktivieren (Teil G) |
-| Kein grüner Hinweis zum Aktivieren | Paket schon aktiv oder «Nicht verwenden» gewählt | Sätze & Einstellungen → «Vorbereitete Daten» |
+| Kein grüner Hinweis zum Aktivieren | Paket schon aktiv oder «Nicht verwenden» gewählt | Einstellungen → «Vorbereitete Daten» |
 | QR-Code erscheint nicht, stattdessen die Adresse als Text | die QR-Bibliothek (von cdnjs) ist gesperrt | Seite neu laden; sonst die Adresse abtippen |
 | Handy: Punkt oben links orange, «wartet auf Netz» | kein Empfang hinten | nichts tun – geht beim nächsten Öffnen raus |
 | Dashboard: *nicht erreichbar – Änderungen warten* | Server neu gestartet oder Netz weg | Fenster offen lassen; sobald der Server da ist, geht es raus |

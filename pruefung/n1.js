@@ -23,8 +23,9 @@ console.log('\n════ 2 · Behoben: Aluminium-Nachweisgrenze ════'
 console.log('   Al-Optimum gelesen:',JSON.stringify(r.proben[0].optima.Al),'(im PDF: <0,50 - <0,50)');
 ok(r.proben[0].optima.Al[0]===null,'«<0,50 - <0,50» wird als Obergrenze gelesen, nicht als Spanne [0,5;0,5]');
 A.setDb(Object.assign(A.leer(),{analysen:[]}));
-console.log('   status(0,5) =',A.status(0.5,[null,0.5],false),'· lage(0,5) =',A.lage(0.5,[null,0.5]));
-ok(A.status(0.5,[null,0.5],false)==='ok'&&A.lage(0.5,[null,0.5])<=2,'status und lage widersprechen sich nicht mehr');
+console.log('   lage(0,5) =',A.lage(0.5,[null,0.5]),'· Anzeige:',A.optText([null,0.5]));
+ok(A.lage(0.5,[null,0.5])<=2,'Ein Wert an der Obergrenze liegt im Optimum');
+ok(A.optText([null,0.5])==='bis 0.5'&&/^810–1.275$/.test(A.optText([810,1275]))&&A.optText([2,null])==='ab 2','Das Optimum wird so gezeigt, wie es gemeint ist: «bis», «ab» oder eine Spanne');
 ok(r.proben[0].optima.Mo[0]===null&&r.proben[0].optima.Mo[1]===0.05,'Molybdaen-Optimum «< 0,05» korrekt als [null; 0,05]');
 
 console.log('\n════ 3 · Behoben: geteiltes optima-Objekt ════');
@@ -46,34 +47,14 @@ const mut2=JSON.parse(JSON.stringify(seiten));
 const r2=A.parseNCC(mut2);
 ok(Object.keys(r2.proben[0].werte).length===23,'Die echte Datei wird weiterhin vollstaendig gelesen');
 
-console.log('\n════ 5 · Behoben: Jahressprung im Kulturalter ════');
-const d=A.leer();
-const mk=(satz,datum,bl)=>({id:satz+datum+bl,typ:'blattsaft',datum,satz,blattalter:bl,zustand:null,
-  werte:{K:{wert:4200}},optima:{K:[4500,6000]}});
-d.analysen=[mk('19-434','2025-05-10','jung')];d.saetze={'19-434':{}};A.setDb(d);
-const v1=A.alter(d.analysen[0]);
-d.analysen.push({id:'s1',typ:'substrat',datum:'2025-05-02',satz:'19-434',blattalter:null,zustand:null,werte:{sub_pH:{wert:5.2}},optima:{}});
-A.setDb(d);
-const v2=A.alter(d.analysen[0]);
-console.log('   nur Blattsaft        :',v1.aussaat,'Woche',v1.woche);
-console.log('   + Substratprobe davor:',v2.aussaat,'Woche',v2.woche);
-ok(v1.aussaat===v2.aussaat,'Eine Substratprobe vor der Aussaat kippt das Datum nicht mehr');
-ok(v2.woche<2,'Das Alter bleibt plausibel (frueher: 52,7 Wochen)');
-const d2=A.leer();
-d2.analysen=[mk('19-434','2025-05-01','jung')];d2.saetze={'19-434':{}};A.setDb(d2);
-const v3=A.alter(d2.analysen[0]);
-console.log('   Probe 3 Tage vor KW-Beginn:',v3.aussaat,'Woche',v3.woche,'· plausibel:',v3.plausibel);
-ok(v3.woche>-1.5&&v3.woche<2,'Auch eine Probe kurz vor dem KW-Montag springt nicht ins Vorjahr');
-
-console.log('\n════ 6 · Behoben: eigene Grenze loescht Laborgrenze nicht ════');
+console.log('\n════ 5 · Gezeigt wird das Optimum des Labors ════');
 const d3=A.leer();
 d3.analysen=[{id:'x',typ:'blattsaft',datum:'2025-05-12',satz:'19-434',blattalter:'jung',zustand:null,
-  werte:{K:{wert:4200}},optima:{K:[4500,6000]}}];
-d3.eigeneOptima={K:[null,5200]};d3.saetze={'19-434':{}};A.setDb(d3);
-const w=A.optVon(d3.analysen[0],'K');
-console.log('   Labor [4500,6000] + eigene Obergrenze 5200  →',JSON.stringify(w));
-console.log('   Quelle:',A.optQuelle(d3.analysen[0],'K'),'· status(4200) =',A.status(4200,w,false));
-ok(w[0]===4500,'Die Labor-Untergrenze bleibt erhalten');
-ok(A.status(4200,w,false)==='tief','Kalium 4200 gilt weiterhin als zu tief');
+  werte:{K:{wert:4200}},optima:{K:[4500,6000],Na:[null,null]}}];
+d3.eigeneOptima={K:[null,5200]};A.setDb(d3);
+ok(JSON.stringify(A.optimum(d3.analysen[0],'K'))==='[4500,6000]','Eigene Grenzen aus früheren Fassungen verändern das Optimum nicht – es steht, was im Bericht steht');
+ok(A.optimum(d3.analysen[0],'Na')===null,'Ein leeres Optimum gilt als keines');
+ok(A.optimum(d3.analysen[0],'Mg')===null,'Ein fehlendes erst recht');
+ok(A.lage(4200,[4500,6000])<1&&A.lage(5000,[4500,6000])>1&&A.lage(5000,[4500,6000])<2&&A.lage(7000,[4500,6000])>2,'Lage 0–3: darunter, im Optimum, darüber');
 
 process.exit(fehler?1:0);
