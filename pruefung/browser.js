@@ -108,6 +108,13 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   const vorher=await punkte();
   await inTafel('Blattsaft','.chip','Calcium');await p.waitForTimeout(350);
   ok(await punkte()>vorher,'Calcium dazu (in der Kopfzeile des Blattsafts): mehr Punkte ('+vorher+' → '+await punkte()+')');
+  /* Zeigen auf einen Stoff hebt seine Reihen hervor – abgewählt bleibt nichts blass */
+  await p.hover('#cKb .tafel .wahl .chip:text-is("Calcium")');await p.waitForTimeout(300);
+  const hebt=await p.$eval('#cKb .tafeln',e=>e.classList.contains('hebt'));
+  await p.click('#cKb .tafel .wahl .chip:text-is("Calcium")');await p.waitForTimeout(350);
+  ok(hebt&&!(await p.$eval('#cKb .tafeln',e=>e.classList.contains('hebt'))),'Zeigen auf «Calcium» hebt es hervor; abgewählt sind die übrigen Reihen wieder voll');
+  await p.click('#cKb .tafel .wahl .chip:text-is("Calcium")');await p.waitForTimeout(350);
+  await p.mouse.move(5,5);
   const y0=await p.evaluate(()=>window.scrollY);
   await p.evaluate(()=>window.scrollTo(0,200));await p.waitForTimeout(100);
   const yVor=await p.evaluate(()=>window.scrollY);
@@ -177,10 +184,22 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   ok(z1!==z0&&(await p.evaluate(()=>window.scrollY))===0,'Strg + Rad zoomt – und die Seite bleibt, wo sie ist ('+z1+')');
   await p.click('#cKb [data-tun="zeitVorgabe"][data-v="alles"]');await p.waitForTimeout(250);
   ok(await zeitraum()===z0,'«alles» zeigt wieder alles');
-  /* Nicht gezoomt: Ziehen in der Grafik verschiebt nichts */
-  await p.mouse.move(svg1.x+svg1.width*0.5,svg1.y+100);await p.mouse.down();
-  await p.mouse.move(svg1.x+svg1.width*0.5-200,svg1.y+100,{steps:6});await p.mouse.up();await p.waitForTimeout(200);
-  ok(await zeitraum()===z0&&!(await p.$eval('#dlg',d=>d.open)),'Ziehen ohne Zoom verschiebt nichts und öffnet nichts');
+  /* Nicht gezoomt: Ziehen in der Grafik verschiebt nichts – und wer neben
+     einem Punkt loslässt, bekommt keinen Bericht. */
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(100);
+  const ziel0=await lage('#cKb',0,-1);
+  await p.mouse.move(ziel0.x-150,ziel0.y);await p.mouse.down();
+  await p.mouse.move(ziel0.x+4,ziel0.y,{steps:8});await p.mouse.up();await p.waitForTimeout(250);
+  ok(await zeitraum()===z0&&!(await p.$eval('#dlg',d=>d.open)),'Ziehen ohne Zoom verschiebt nichts – und neben einem Punkt losgelassen öffnet es nichts');
+  /* Gedrückt, senkrecht aus der Grafik hinaus und dort losgelassen: danach
+     klebt nichts am Zeiger. */
+  await p.click('#cKb [data-tun="zoomEin"]');await p.waitForTimeout(250);
+  const zKleb=await zeitraum(),rb=await (await p.$('#cKb .rollleiste')).boundingBox(),sv=await (await p.$('#cKb svg.spur')).boundingBox();
+  await p.mouse.move(sv.x+sv.width*0.5,sv.y+sv.height-30);await p.mouse.down();
+  await p.mouse.move(sv.x+sv.width*0.5+1,rb.y+rb.height/2,{steps:4});await p.mouse.up();
+  await p.mouse.move(sv.x+sv.width*0.2,sv.y+60,{steps:8});await p.waitForTimeout(250);
+  ok(await zeitraum()===zKleb,'Ausserhalb losgelassen: ohne gedrückte Taste verschiebt sich nichts');
+  await p.click('#cKb [data-tun="zeitVorgabe"][data-v="alles"]');await p.waitForTimeout(250);
   const ganz=await tage();
   await p.click('#cKb [data-tun="zoomEin"]');await p.waitForTimeout(250);
   const t1=await tage();
@@ -209,16 +228,32 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   await p.mouse.click(sp.x+sp.width-4,sp.y+sp.height/2);await p.waitForTimeout(200);
   ok((await daumen()).l>vorSpur+5,'Klick in die Bahn rechts vom Daumen: eine Seite weiter');
   const svg2=await (await p.$('#cKb svg.spur')).boundingBox();
-  const zv=await zeitraum();
+  const zv=await zeitraum(),vorZ=await p.evaluate(()=>({x0:ZEIT.x0,L:ZEIT.x1-ZEIT.x0,P:ZEIT.W-ZEIT.ml-ZEIT.mr,W:ZEIT.W}));
   await p.mouse.move(svg2.x+svg2.width*0.4,svg2.y+100);await p.mouse.down();
-  await p.mouse.move(svg2.x+svg2.width*0.4+250,svg2.y+100,{steps:8});await p.mouse.up();await p.waitForTimeout(300);
+  await p.mouse.move(svg2.x+svg2.width*0.4+120,svg2.y+100,{steps:8});await p.mouse.up();await p.waitForTimeout(300);
+  const nachZ=await p.evaluate(()=>ZEIT.x0),soll=-120*(vorZ.W/svg2.width)/vorZ.P*vorZ.L;
   ok(await zeitraum()!==zv&&!(await p.$eval('#dlg',d=>d.open)),'Gezoomt in der Grafik ziehen verschiebt beide zugleich – ohne etwas zu öffnen');
+  ok(Math.abs((nachZ-vorZ.x0)-soll)<Math.abs(soll)*0.1,'… und genau so weit, wie man zieht: 120 px = '+(soll/864e5).toFixed(1)+' Tage ('+((nachZ-vorZ.x0)/864e5).toFixed(1)+')');
   const marken=await p.$$eval('#cKb .tafel:not(.km)',(ts,re)=>ts.map(t=>[...t.querySelectorAll('svg text')].filter(x=>new RegExp(re).test(x.textContent)).map(x=>x.textContent).join(' ')),DAT.source);
   ok(marken.length===2&&marken[0]===marken[1],'Beide Achsen zeigen dieselben Daten ('+marken[0].slice(0,40)+' …)');
+  /* Strg + Rad am kürzesten Ausschnitt: nichts verschiebt sich */
+  for(let i=0;i<6&&!(await gesperrt('#cKb [data-tun="zoomEin"]'));i++){await p.click('#cKb [data-tun="zoomEin"]');await p.waitForTimeout(150)}
+  const amMin=await zeitraum(),svg3=await (await p.$('#cKb svg.spur')).boundingBox();
+  await p.mouse.move(svg3.x+svg3.width-30,svg3.y+80);
+  await p.keyboard.down('Control');for(let i=0;i<3;i++){await p.mouse.wheel(0,-150);await p.waitForTimeout(60)}await p.keyboard.up('Control');
+  await p.waitForTimeout(250);
+  ok(await zeitraum()===amMin,'Am kürzesten Ausschnitt: Strg + Rad hinein verschiebt nichts ('+amMin+')');
+  /* Ein Klick in die Grafik nimmt der Seite Bild↓ nicht weg */
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(100);
+  const kopfG=await (await p.$('#cKb .tafel .tafelKopf h3')).boundingBox();
+  await p.mouse.click(kopfG.x+2,kopfG.y+2);await p.keyboard.press('PageDown');await p.waitForTimeout(300);
+  ok((await p.evaluate(()=>window.scrollY))>100&&await zeitraum()===amMin,'Nach einem Mausklick in die Grafiken blättert Bild↓ die Seite – die Zeit bleibt');
+  await p.evaluate(()=>window.scrollTo(0,0));await p.waitForTimeout(100);
   /* Tastatur in den Grafiken */
   await p.focus('#cKb .tafeln');
   const vorTaste=await zeitraum();
   await p.keyboard.press('ArrowRight');await p.waitForTimeout(200);
+  if(await zeitraum()===vorTaste){await p.keyboard.press('ArrowLeft');await p.waitForTimeout(200)}
   ok(await zeitraum()!==vorTaste,'Pfeiltaste in den Grafiken verschiebt');
   await p.keyboard.press('0');await p.waitForTimeout(200);
   ok(await zeitraum()===z0,'«0» zeigt wieder alles');
@@ -308,6 +343,13 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   const tkStellen=await p.evaluate(()=>new Set(db.messungen.map(m=>m.stelle)).size);
   ok(tkStellen>1?await p.$('#cTank .zeitzeile .zzLinks .seg')!==null:await p.$eval('#cTank .zzLinks',e=>e.innerHTML==='')&&await p.$('#cTank .zzText')!==null,'Die Wahl der Stelle steht in der Zeitzeile, wenn es mehr als eine gibt ('+tkStellen+')');
   ok(/Punkte: jede Messung|Punkt = Mittel/.test(await p.$eval('#cTank .dichteInfo',e=>e.textContent)),'Im Kopf des pH steht, was ein Punkt ist');
+  const vg=await p.$$eval('#cTank [data-tun="zeitVorgabe"]',es=>es.map(e=>e.dataset.v));
+  if(vg.length>1){
+    const v=vg[vg.length-1];
+    await p.focus(`#cTank [data-tun="zeitVorgabe"][data-v="${v}"]`);await p.keyboard.press('Enter');await p.waitForTimeout(300);
+    ok(await p.evaluate(v=>document.activeElement&&document.activeElement.dataset.v===v&&document.activeElement.classList.contains('on'),v),'Fester Zeitraum mit der Tastatur: der Fokus bleibt auf dem Knopf');
+    await p.click('#cTank [data-tun="zeitVorgabe"][data-v="alles"]');await p.waitForTimeout(250);
+  }
   ok(await p.$('#cTank .kmZ[data-k="m|biovin"]')!==null||!(await p.evaluate(()=>kmListe('tank').some(z=>z.key==='m|biovin'))),'Biovin steht hier, sofern gegeben');
   await p.click('#tkListe summary');await p.waitForTimeout(200);
   await p.click('#view button[data-tun="messungWeg"]');await p.waitForTimeout(300);
@@ -345,6 +387,46 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     ok(breit<=392,t+': keine seitliche Rollbalken auf der Seite ('+breit+' px)');
   }
   await p.screenshot({path:shots+'/handy.png',fullPage:true});
+
+  console.log('\n── Handy mit Fingern ──');
+  {
+    const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});
+    const h=await ctx.newPage();
+    h.on('pageerror',e=>stoerung.push('pageerror (Handy): '+e.message));
+    h.on('dialog',d=>d.accept());
+    await h.goto('file://'+path);await h.waitForTimeout(1200);
+    await h.setInputFiles('#fileJson',daten);await h.waitForTimeout(900);
+    if(await h.$eval('#dlg',d=>d.open))await h.click('#dlgFoot button.primary');
+    await h.waitForTimeout(300);
+    const cdp=await ctx.newCDPSession(h);
+    const tp=(id,x,y)=>({x,y,id,radiusX:4,radiusY:4,force:1});
+    const L=()=>h.evaluate(()=>ZEIT.x1-ZEIT.x0),X0=()=>h.evaluate(()=>ZEIT.x0);
+    await h.$eval('#cKb svg.spur',e=>e.scrollIntoView({block:'center'}));await h.waitForTimeout(200);
+    const r=await (await h.$('#cKb svg.spur')).boundingBox();
+    const cy=r.y+r.height*0.45,cx=r.x+r.width*0.6;
+    const L0=await L();
+    /* Zwei Finger auseinander */
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[tp(1,cx-20,cy)]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[tp(1,cx-20,cy),tp(2,cx+20,cy)]});
+    for(let i=1;i<=8;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[tp(1,cx-20-i*8,cy),tp(2,cx+20+i*8,cy)]});await h.waitForTimeout(30)}
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[tp(2,cx+84,cy)]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await h.waitForTimeout(300);
+    const L1=await L();
+    ok(L1<L0*0.8,'Zwei Finger auseinander zoomen hinein ('+(L0/864e5).toFixed(0)+' → '+(L1/864e5).toFixed(0)+' Tage)');
+    /* Danach ein Finger seitwärts: verschieben, nicht zoomen */
+    const x0a=await X0();
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[tp(3,cx-60,cy)]});
+    for(let i=1;i<=8;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[tp(3,cx-60+i*12,cy)]});await h.waitForTimeout(30)}
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await h.waitForTimeout(300);
+    ok(Math.abs((await L())-L1)<L1*0.01&&(await X0())<x0a,'Danach wischt ein Finger seitwärts: verschoben, gleich lang');
+    /* Tippen auf einen Namen im Kulturmanagement: «Zeilen verwalten» */
+    const nm=await (await h.$('#cKb .kmZ .kmTitel')).boundingBox();
+    await h.touchscreen.tap(nm.x+nm.width/2,nm.y+nm.height/2);await h.waitForTimeout(400);
+    ok(await h.$eval('#dlg',d=>d.open)&&await h.$eval('#dlgTitel',e=>e.textContent)==='Kulturmanagement · Zeilen','Ein Tippen auf den Namen einer Zeile öffnet «Zeilen verwalten»');
+    await ctx.close();
+  }
 
   console.log('\n── Ergebnis ──');
   if(stoerung.length){fehler+=stoerung.length;stoerung.forEach(x=>console.log('  ✗',x))}

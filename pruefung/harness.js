@@ -37,7 +37,7 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'GW_PARAM','GW_MAKRO','GW_MIKRO','inMgL','einheit','nz','esc','NAME','NCC','INS','leer','migriere','optimum','optText','lage',
  'EVTYPEN','EVTYP_ALT','evTypDef','evEinheit','STELLEN','PRODUKTE_VORGABE','STELLEN_VORGABE','TABS','AKTION','render',
  'vAnalysen','vKombi','vTank','vMaske','vEinst','berichte','berichtVon','berichtSchluessel','berichtTitel','detail','wertMitOptimum',
- 'pruefdialog','GRUPPEN','zeitBild','zeitBereich','VERDICHT','verdichtStufe','achsenSchritt','bereichText','STUFEN_TAGE','vorgabeAktiv','naechsterPunkt','kmTafel','kmBalkenSvg','zeitMarken','dunkler','tippBau','farbenFuer','spurGruppen',
+ 'pruefdialog','GRUPPEN','zeitBild','zeitBereich','VERDICHT','verdichtStufe','achsenSchritt','bereichText','STUFEN_TAGE','vorgabeAktiv','naechsterPunkt','kmTafel','kmBalkenSvg','zeitMarken','markenDuenn','kmOrdnen','datumsText','zeitSetzen','dunkler','tippBau','farbenFuer','spurGruppen',
  'groessenordnung','STOFFREIHE','gwProben','gwStelle','gwName','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar',
  'stellenDb','stellenListe','stellenVorschlag','stellenDialog','messStelle','tankStellen','HERKUNFT',
  'beigabeSpannenMittel','beigabeLaeuft','beigabeSumme','beigabeHand','mittelKurz','MITTEL_FARBE','BEIGABE_LUECKE',

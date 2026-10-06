@@ -166,7 +166,7 @@ button.klein.offen{color:var(--ink)}
    solange die Grafiken weitergehen. */
 .rollleiste{position:sticky;bottom:0;z-index:6;margin:12px -18px -18px;padding:5px 18px;background:rgba(255,255,255,.96);
   border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);box-shadow:0 -4px 10px rgba(20,29,23,.05)}
-.rbBahn{display:flex;align-items:stretch;position:relative;outline:none;user-select:none;-webkit-user-select:none}
+.rbBahn{display:flex;align-items:stretch;position:relative;outline:none;user-select:none;-webkit-user-select:none;touch-action:pan-y}
 .rbBahn:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
 .rbSpur{position:relative;flex:1;cursor:default}
 .rbSpur:before{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
@@ -864,6 +864,9 @@ const FARBEN=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A71
    Stattdessen traegt jedes anfassbare Element data-tipp mit fertigem,
    bereits maskiertem HTML; ein einziger Zeiger-Beobachter zeigt es an. */
 let TIPP=null;
+/* Am Finger zeigt das erste Tippen, das zweite öffnet: was zuletzt gezeigt
+   wurde. Gehört zum Kästchen und verschwindet mit ihm. */
+let TIPP_FEST=null;
 function tippKasten(){
   if(!TIPP){TIPP=document.createElement('div');TIPP.className='tipp';document.body.appendChild(TIPP)}
   return TIPP;
@@ -879,7 +882,8 @@ function tippZeigen(html,x,y){
   if(ly<8)ly=8;
   t.style.left=lx+'px';t.style.top=ly+'px';
 }
-const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an')};
+/* Verschwindet das Kästchen, ist auch das «erste Tippen» vergessen. */
+const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an');TIPP_FEST=null};
 /* Ein Beobachter fuer das ganze Dokument statt einer Bindung je Diagramm:
    ueberlebt jedes Neuzeichnen, weil er nicht an den Elementen haengt. */
 document.addEventListener('mousemove',ev=>{
@@ -889,7 +893,7 @@ document.addEventListener('mousemove',ev=>{
   tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
 },{passive:true});
 document.addEventListener('mouseleave',tippWeg);
-window.addEventListener('scroll',()=>{tippWeg();if(typeof TIPP_FEST!=='undefined')TIPP_FEST=null},{passive:true});
+window.addEventListener('scroll',tippWeg,{passive:true});
 document.addEventListener('click',ev=>{
   const t=ev.target&&ev.target.closest?ev.target.closest('[data-tipp]'):null;
   if(t&&t.dataset.tun===undefined)tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
@@ -976,14 +980,24 @@ function zeitBereich(o){
   const p=(b-a)*0.04;
   return {g0:a-p,g1:b+p,letzte:letzte>-Infinity?letzte:b};
 }
-/* Nicht mehr Datumsmarken, als nebeneinander Platz haben. */
+/* Nicht mehr Datumsmarken, als nebeneinander Platz haben. Ausgedünnt wird
+   nach der Zeit selbst (m.o zählt die Schritte seit 1970), nicht nach dem
+   Platz in der Liste – sonst wechseln die Beschriftungen beim Verschieben.
+   Bei Stunden bleibt Mitternacht mit dem Datum immer stehen. */
+const modulo=(a,k)=>((a%k)+k)%k;
 function markenDuenn(marken,X){
   const gross=marken.filter(m=>!m.klein);
   if(gross.length<2)return marken;
   const abstand=Math.abs(X(gross[1].x)-X(gross[0].x))||1,k=Math.ceil(46/abstand);
   if(k<=1)return marken;
-  const behalten=new Set(gross.filter((m,i)=>i%k===0));
-  return marken.filter(m=>!m.klein&&behalten.has(m));
+  const pt=gross[0].proTag;
+  if(pt){
+    const t=[1,2,3,4,6,8].find(t=>t>=k&&pt%t===0);
+    if(t)return gross.filter(m=>modulo(m.o,t)===0);
+    const tage=Math.ceil(k/pt);
+    return gross.filter(m=>modulo(m.o,pt)===0&&modulo(m.o/pt,tage)===0);
+  }
+  return gross.filter(m=>m.o==null||modulo(m.o,k)===0);
 }
 function zeitAchse(G,y){
   let s=`<line x1="${G.ml}" x2="${G.W-G.mr}" y1="${y}" y2="${y}" stroke="#B9C4B4"/>`;
@@ -1188,8 +1202,9 @@ function kmBalkenSvg(G,spannen){
     out+=`<rect x="${xa}" y="${y}" width="${xb-xa}" height="${KM_H}" rx="4" fill="${f}"${rand}/>`;
     if(spitze)out+=`<path d="M${xb-4} ${y}L${xb+spitze} ${y+KM_H/2}L${xb-4} ${y+KM_H}Z" fill="${f}"/>`;
     const kerben=(s.gaben||[]).filter(g=>g>=Math.max(x0,s.x0)&&g<=Math.min(x1,s.x1)).map(X);
+    /* Unter der Beschriftung keine Kerben – sie liefen durch die Zahlen. */
     if(kerben.length>1&&(kerben[kerben.length-1]-kerben[0])/(kerben.length-1)>=3)
-      out+=kerben.map(k=>`<line x1="${k}" x2="${k}" y1="${y+KM_H-4}" y2="${y+KM_H}" stroke="#fff" stroke-width="1.5" opacity=".7"/>`).join('');
+      out+=kerben.filter(k=>lage!=='innen'||k<xa+4||k>xa+7+tw+3).map(k=>`<line x1="${k}" x2="${k}" y1="${y+KM_H-4}" y2="${y+KM_H}" stroke="#fff" stroke-width="1.5" opacity=".7"/>`).join('');
     if(lage==='innen')out+=`<text x="${xa+7}" y="${y+10.5}" font-size="10.5" font-weight="600" fill="#fff">${esc(t)}</text>`;
     else if(lage==='rechts')out+=`<text x="${xb+spitze+6}" y="${y+10.5}" font-size="10.5" font-weight="600" fill="${dunkel}">${esc(t)}</text>`;
     out+=`</g>`;
@@ -1292,7 +1307,7 @@ function zeitBild(box,o){
      nachgeführt – beim Ziehen dürfen sie den Zeiger nicht verlieren, und
      der Fokus bleibt auf − und +. */
   const tf=box.querySelector?box.querySelector('.tafeln'):null;
-  if(tf){tf.innerHTML=html;zeitzeileStellen(box,o);rollbalkenStellen(box)}
+  if(tf){tf.innerHTML=html;tf.classList.remove('hebt');zeitzeileStellen(box,o);rollbalkenStellen(box)}
   else{
     box.innerHTML=zeitzeileHtml(o)+`<div class="tafeln" tabindex="0" aria-label="Grafiken: Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles">${html}</div>`+rollbalkenHtml();
     if(box.querySelector&&box.querySelector('.tafeln')){zeitBedienung(box);rollbalkenStellen(box)}
@@ -1307,9 +1322,12 @@ function vorgabeAktiv(){
   const v=ZEIT.vorgaben.find(([k])=>k!=='alles'&&Math.abs(L-k*864e5)<=0.03*k*864e5);return v?v[0]:null;
 }
 function bereichText(a,b){
-  const tage=(b-a)/864e5,d=x=>new Date(x).toISOString().slice(0,10);
-  const hm=x=>{const t=new Date(Math.round(x/9e5)*9e5);return String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0')};
-  if(tage<1)return `${fmtK(d(a))} ${hm(a)} – ${hm(b)} · ${Math.round(tage*24)} Stunden`;
+  const tage=(b-a)/864e5;
+  /* Erst auf die Viertelstunde runden, dann Tag und Uhrzeit daraus – sonst
+     steht um 23:55 der Vortag mit 00:00 da. */
+  const r=x=>new Date(Math.round(x/9e5)*9e5),d=x=>r(x).toISOString().slice(0,10);
+  const hm=x=>{const t=r(x);return String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0')};
+  if(tage<1)return `${fmtK(d(a))} ${hm(a)} – ${d(b)!==d(a)?fmtK(d(b))+' ':''}${hm(b)} · ${Math.round(tage*24)} Stunden`;
   if(tage<=4){const n=Math.round(tage*2)/2;return `${fmtK(d(a))} ${hm(a)} – ${fmtK(d(b))} ${hm(b)} · ${Math.floor(n)}${n%1?'½':''} Tag${n===1?'':'e'}`}
   return `${fmtK(d(a))} – ${fmt(d(b))} · ${Math.round(tage)} Tage`;
 }
@@ -1333,9 +1351,17 @@ function zeitzeileHtml(o){
 function zeitzeileStellen(box,o){
   const z=box.querySelector('.zeitzeile');if(!z||!ZEIT)return;
   const t=zeitzeileTeile(o);
-  z.querySelector('.zzLinks').innerHTML=t.links;
+  /* Nur ersetzen, was sich geändert hat – und wer mit der Tastatur auf
+     einem Knopf stand, steht danach wieder darauf. */
+  const fokus=document.activeElement&&z.contains(document.activeElement)&&document.activeElement.dataset
+    ?{tun:document.activeElement.dataset.tun,v:document.activeElement.dataset.v}:null;
+  const links=z.querySelector('.zzLinks'),vg=z.querySelector('.zzVorgabe');
+  if(links._html!==t.links){links.innerHTML=t.links;links._html=t.links}
   z.querySelector('.zzText').textContent=t.text;
-  z.querySelector('.zzVorgabe').innerHTML=t.vorgaben;
+  if(vg._html!==t.vorgaben){vg.innerHTML=t.vorgaben;vg._html=t.vorgaben}
+  if(fokus&&fokus.tun&&!z.contains(document.activeElement)){
+    const b=[...z.querySelectorAll(`[data-tun="${fokus.tun}"]`)].find(x=>x.dataset.v===fokus.v);if(b)b.focus();
+  }
   for(const [tun,x] of [['zoomAus',t.aus],['zoomEin',t.ein]]){
     const b=z.querySelector(`[data-tun="${tun}"]`);if(!b)continue;
     b.title=x.title;b.classList.toggle('aus',x.dis);
@@ -1416,7 +1442,8 @@ function zoomStufe(richtung){
 }
 AKTION.zoomEin=(d,ev,t)=>{if(t&&t.getAttribute&&t.getAttribute('aria-disabled'))return;zoomStufe(1)};
 AKTION.zoomAus=(d,ev,t)=>{if(t&&t.getAttribute&&t.getAttribute('aria-disabled'))return;zoomStufe(-1)};
-const zoomUm=f=>{if(!ZEIT)return;const m=(ZEIT.x0+ZEIT.x1)/2,d=(ZEIT.x1-ZEIT.x0)*f;tippWeg();zeitSetzen(m-d/2,m+d/2)};
+const zoomUm=f=>{if(!ZEIT)return;const L=ZEIT.x1-ZEIT.x0,m=(ZEIT.x0+ZEIT.x1)/2,d=Math.min(ZEIT.g1-ZEIT.g0,Math.max(ZEIT.min,L*f));
+  if(Math.abs(d-L)<L*1e-3)return;tippWeg();zeitSetzen(m-d/2,m+d/2)};
 AKTION.zeitVorgabe=d=>{
   if(!ZEIT)return;tippWeg();
   if(d.v==='alles'){koVon=koBis=null;return zeitZeichnen()}
@@ -1424,7 +1451,13 @@ AKTION.zeitVorgabe=d=>{
   zeitSetzen(bis-(+d.v)*864e5,bis);
 };
 /* Ein verdichteter Punkt: eine Woche um ihn herum – dort steht jede Messung. */
-AKTION.zoomTag=d=>{const t=+d.x;if(!isFinite(t))return;tippWeg();zeitSetzen(t-3.5*864e5,t+3.5*864e5)};
+AKTION.zoomTag=d=>{
+  const t=+d.x;if(!isFinite(t)||!ZEIT)return;tippWeg();
+  /* Eine Woche – auf einem schmalen Handy so viel weniger, dass dort sicher
+     jede Messung einzeln steht. */
+  const P=ZEIT.W-ZEIT.ml-ZEIT.mr,L=Math.max(ZEIT.min,Math.min(7*864e5,0.97*P/VERDICHT.einzeln*864e5));
+  STUFE_ALT='einzeln';zeitSetzen(t-L/2,t+L/2);
+};
 /* «nächste Probe ›»: bei gleicher Länge dorthin, die Probe in der Mitte. */
 AKTION.zeitZu=d=>{const t=+d.x;if(!isFinite(t)||!ZEIT)return;const L=ZEIT.x1-ZEIT.x0;tippWeg();zeitSetzen(t-L/2,t+L/2)};
 AKTION.diagPunkt=d=>{if(DIAG&&DIAG.klick)DIAG.klick(d.id)};
@@ -1434,10 +1467,10 @@ AKTION.linienUm=(d,ev)=>{if(ev.target.checked)linienAn.add(d.ziel);else linienAn
 
 /* ── Zeigen: Zeiger, Datumsschild, nächster Punkt ── */
 function datumsText(t){
-  const d=new Date(t),tag=WOCHENTAG[d.getUTCDay()]+' '+fmtK(d.toISOString().slice(0,10));
-  if(!ZEIT||ZEIT.x1-ZEIT.x0>4*864e5)return tag;
-  const q=new Date(Math.round(t/9e5)*9e5);
-  return tag+' '+String(q.getUTCHours()).padStart(2,'0')+':'+String(q.getUTCMinutes()).padStart(2,'0');
+  const kurz=ZEIT&&ZEIT.x1-ZEIT.x0<=4*864e5;
+  const d=kurz?new Date(Math.round(t/9e5)*9e5):new Date(t),tag=WOCHENTAG[d.getUTCDay()]+' '+fmtK(d.toISOString().slice(0,10));
+  if(!kurz)return tag;
+  return tag+' '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');
 }
 function zeigerSetzen(box,px,datumSvg){
   const an=px!=null&&ZEIT&&px>=ZEIT.ml&&px<=ZEIT.W-ZEIT.mr;
@@ -1463,7 +1496,13 @@ function naechsterPunkt(nr,px,py,weit){
   }
   return best;
 }
-let TIPP_FEST=null,nachZug=false,letzterZeiger='mouse';
+let nachZug=false,letzterZeiger='mouse',zeitLos=null,perTab=false;
+/* Kam man zuletzt mit Tab oder mit Maus bzw. Finger? (:focus-visible hilft
+   hier nicht – jeder Tastendruck macht den Fokus «sichtbar».) */
+document.addEventListener('keydown',ev=>{if(ev.key==='Tab')perTab=true},true);
+document.addEventListener('pointerdown',()=>{perTab=false},true);
+window.addEventListener('pointerup',ev=>{if(zeitLos)zeitLos(ev)});
+window.addEventListener('pointercancel',ev=>{if(zeitLos)zeitLos(ev)});
 function punktZeigen(box,svg,t){
   for(const c of box.querySelectorAll('.ring')){if(c.ownerSVGElement!==svg||!t){c.setAttribute('cx',-99);c.setAttribute('cy',-99)}}
   if(!t){svg&&(svg.style.cursor='');return}
@@ -1484,25 +1523,34 @@ function zeitBedienung(box){
   const datumSvg=svg=>{if(!svg)return null;if(svg.classList.contains('spur'))return svg;
     return tf.querySelector(`svg.spur[data-spur="${ZEIT.kmOben}"]`)};
   let zug=null;const finger=new Map();let zange=null;
-  const ende=()=>{if(zug&&zug.bewegt){nachZug=true;setTimeout(()=>{nachZug=false},60);ruhig(0)}zug=null;box.classList.remove('zieht')};
+  const ende=()=>{
+    if(zug&&(zug.bewegt||zug.verworfen)){nachZug=true;setTimeout(()=>{nachZug=false},60);if(zug.bewegt)ruhig(0)}
+    zug=null;box.classList.remove('zieht');
+  };
   tf.addEventListener('pointerdown',ev=>{
     letzterZeiger=ev.pointerType||'mouse';
     if(!ZEIT||kmZug||(ev.pointerType==='mouse'&&ev.button!==0))return;
     const svg=ev.target.closest&&ev.target.closest('svg.zb');
     if(!svg||ev.target.closest('.kmZName')||ev.target.closest('[data-tun="kmEreignisse"]'))return;
-    const {px,py}=svgPos(svg,ev);if(px<ZEIT.ml)return;
+    const {px}=svgPos(svg,ev);if(px<ZEIT.ml)return;
     if(ev.pointerType==='touch'){
+      /* Ein neuer erster Finger: was noch von früher in der Liste steht, ist
+         längst abgehoben (sein pointerup kam woanders an). */
+      if(ev.isPrimary){finger.clear();zange=null}
       finger.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
       if(finger.size===2){
-        /* Zwei Finger: zoomen um ihre Mitte */
+        /* Zwei Finger: zoomen um ihre Mitte. Beide werden hier gefangen –
+           das Element unter dem ersten Finger wird beim Zeichnen ersetzt. */
         const [a,b]=[...finger.values()],r=svg.getBoundingClientRect(),k=(ZEIT.W||1)/(r.width||1);
         const mx=((a.x+b.x)/2-r.left)*k;
         zange={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,t:zeitVon(mx),anteil:(mx-ZEIT.ml)/P(),L:ZEIT.x1-ZEIT.x0,svg};
-        zug=null;ruhig();try{tf.setPointerCapture(ev.pointerId)}catch(e){}
+        zug=null;ruhig();for(const id of finger.keys())try{tf.setPointerCapture(id)}catch(e){}
         return;
       }
     }
-    zug={id:ev.pointerId,svg,px,py,cx:ev.clientX,cy:ev.clientY,x0:ZEIT.x0,x1:ZEIT.x1,bewegt:false,achse:null,typ:ev.pointerType};
+    /* Der Massstab wird jetzt gemessen: das SVG unter dem Zeiger wird beim
+       ersten Neuzeichnen ersetzt und hat danach keine Breite mehr. */
+    zug={id:ev.pointerId,k:(ZEIT.W||1)/(svg.getBoundingClientRect().width||1),cx:ev.clientX,cy:ev.clientY,x0:ZEIT.x0,x1:ZEIT.x1,bewegt:false,verworfen:false,achse:null,typ:ev.pointerType};
   });
   tf.addEventListener('pointermove',ev=>{
     if(!ZEIT||kmZug)return;
@@ -1513,7 +1561,11 @@ function zeitBedienung(box){
       return;
     }
     const svg=ev.target.closest&&ev.target.closest('svg.zb');
+    /* Losgelassen, wo es niemand gemeldet hat (ausserhalb, Fensterwechsel):
+       ohne gedrückte Taste gibt es keinen Zug. */
+    if(zug&&ev.pointerId===zug.id&&zug.typ!=='touch'&&!(ev.buttons&1))ende();
     if(zug&&ev.pointerId===zug.id){
+      if(zug.verworfen)return;
       const dx=ev.clientX-zug.cx,dy=ev.clientY-zug.cy;
       if(!zug.bewegt){
         if(zug.typ==='touch'){
@@ -1521,13 +1573,14 @@ function zeitBedienung(box){
           zug.achse=Math.abs(dx)>1.2*Math.abs(dy)?'x':'y';
           if(zug.achse==='y'){zug=null;return}
         }else if(Math.abs(dx)<4)return;
-        if(koVon==null){if(zug.typ!=='touch')zug=null;return}   /* ungezoomt gibt es nichts zu verschieben */
+        /* Ungezoomt gibt es nichts zu verschieben – der Klick beim Loslassen
+           öffnet dann aber auch nichts. */
+        if(koVon==null){if(zug.typ!=='touch')zug.verworfen=true;return}
         zug.bewegt=true;ruhig();
         try{tf.setPointerCapture(ev.pointerId)}catch(e){}
         box.classList.add('zieht');tippWeg();TIPP_FEST=null;punktZeigen(box,null,null);
       }
-      const k=(ZEIT.W||1)/(zug.svg.getBoundingClientRect().width||1);
-      const d=-dx*k/P()*(zug.x1-zug.x0);
+      const d=-dx*zug.k/P()*(zug.x1-zug.x0);
       zeitSetzen(zug.x0+d,zug.x1+d,true);
       return;
     }
@@ -1535,30 +1588,40 @@ function zeitBedienung(box){
     if(!svg){punktZeigen(box,null,null);zeigerSetzen(box,null,null);return}
     const {px,py}=svgPos(svg,ev);
     zeigerSetzen(box,px,datumSvg(svg));
-    if(svg.classList.contains('spur')&&!TIPP_FEST){
+    if(svg.classList.contains('spur')){
       const t=naechsterPunkt(+svg.dataset.spur,px,py,20);
       if(t)punktZeigen(box,svg,t);
       else{punktZeigen(box,null,null);if(!ev.target.closest('[data-tipp]'))tippWeg()}
-    }
+    }else punktZeigen(box,null,null);
   });
   const los=ev=>{
     if(ev.pointerType==='touch'){finger.delete(ev.pointerId);if(finger.size<2&&zange){zange=null;ruhig(150)}}
     if(zug&&ev.pointerId===zug.id)ende();
   };
   tf.addEventListener('pointerup',los);tf.addEventListener('pointercancel',los);
+  /* Auch was ausserhalb endet (der Finger hebt über dem Rollbalken ab):
+     ein Fänger fürs ganze Fenster, immer für die jüngste Grafik. */
+  zeitLos=los;
   tf.addEventListener('pointerleave',ev=>{if(!zug&&ev.pointerType==='mouse'){zeigerSetzen(box,null,null);punktZeigen(box,null,null);kmBandWeg(box)}});
   /* Klick: nach einem Ziehen verschluckt. Mit dem Finger zeigt das erste
      Tippen das Kästchen, das zweite öffnet. Sonst: der nächste Punkt. */
   tf.addEventListener('click',ev=>{
     if(nachZug){ev.stopPropagation();ev.preventDefault();return}
-    if(ev.target.closest&&ev.target.closest('.kmZName')&&!ev.target.closest('button')){ev.stopPropagation();return}
+    /* Der Name einer Zeile: mit der Maus erledigt das Ziehen den Klick
+       (kmZugEnde), mit Finger oder Stift öffnet er «Zeilen verwalten». */
+    if(ev.target.closest&&ev.target.closest('.kmZName')&&!ev.target.closest('button')){
+      ev.stopPropagation();
+      const z=ev.target.closest('.kmZ');
+      if(letzterZeiger!=='mouse'&&z&&z.dataset.k&&z.dataset.k!=='klapp'){tippWeg();AKTION.kmBearbeiten({k:z.dataset.k})}
+      return;
+    }
     const tun=ev.target.closest&&ev.target.closest('[data-tun]');
     const svg=ev.target.closest&&ev.target.closest('svg.spur');
     let t=null,ziel=null;
     if(svg){const {px,py}=svgPos(svg,ev);t=naechsterPunkt(+svg.dataset.spur,px,py,letzterZeiger==='touch'?28:20);if(t)ziel='p'+svg.dataset.spur+':'+t.cx+':'+t.cy}
     if(letzterZeiger==='touch'){
       const balken=tun&&tun.dataset.tun==='spanne'?tun:null;
-      if(balken)ziel='b'+balken.dataset.id;
+      if(balken)ziel='b'+balken.dataset.id;else kmBandWeg(box);
       if(ziel&&ziel!==TIPP_FEST){
         TIPP_FEST=ziel;
         if(balken){const r=balken.getBoundingClientRect();tippZeigen(String(balken.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top);kmBandZeigen(box,balken)}
@@ -1585,7 +1648,12 @@ function zeitBedienung(box){
       ev.preventDefault();tippWeg();
       if(koVon==null&&dy>0)return;
       const f=Math.max(0.75,Math.min(1.33,Math.exp(dy*0.003))),m=zeitVon(px);
-      ruhig(150);zeitSetzen(m-(m-ZEIT.x0)*f,m+(ZEIT.x1-m)*f,true);
+      /* Erst die Länge in ihre Grenzen, dann um den Zeiger legen – am
+         kürzesten Ausschnitt darf weiteres Hineinzoomen nichts verschieben. */
+      const L=ZEIT.x1-ZEIT.x0,L2=Math.min(ZEIT.g1-ZEIT.g0,Math.max(ZEIT.min,L*f));
+      if(Math.abs(L2-L)<L*1e-3)return;
+      const a=(m-ZEIT.x0)/L;
+      ruhig(150);zeitSetzen(m-a*L2,m+(1-a)*L2,true);
     }else if(Math.abs(dx)>Math.abs(dy)*1.5||(ev.shiftKey&&dy)){
       ev.preventDefault();
       if(koVon==null)return;
@@ -1603,6 +1671,11 @@ function zeitBedienung(box){
   /* Tastatur – nur, wenn die Grafiken selbst den Fokus haben. */
   tf.addEventListener('keydown',ev=>{
     if(ev.target!==tf||!ZEIT)return;
+    /* Bild↑/↓, Pos1 und Ende gehören der Seite – ausser man ist mit der
+       Tastatur (Tab) hergekommen und es ist gezoomt. Ein Mausklick in die
+       Grafik nimmt der Seite das Blättern nicht weg. */
+    if(/^(PageUp|PageDown|Home|End)$/.test(ev.key)&&(!perTab||koVon==null))return;
+    if(/^Arrow(Left|Right)$/.test(ev.key)&&koVon==null)return;
     const L=ZEIT.x1-ZEIT.x0,schieb=f=>{ev.preventDefault();ruhig(150);zeitSetzen(ZEIT.x0+f*L,ZEIT.x1+f*L)};
     if(ev.key==='ArrowLeft')schieb(ev.shiftKey?-0.5:-0.1);
     else if(ev.key==='ArrowRight')schieb(ev.shiftKey?0.5:0.1);
@@ -1613,7 +1686,7 @@ function zeitBedienung(box){
     else if(ev.key==='+'||ev.key==='='||ev.key==='Add'){ev.preventDefault();zoomStufe(1)}
     else if(ev.key==='-'||ev.key==='Subtract'){ev.preventDefault();zoomStufe(-1)}
     else if(ev.key==='0'){ev.preventDefault();AKTION.zeitVorgabe({v:'alles'})}
-    else if(ev.key==='Escape'){TIPP_FEST=null;tippWeg();punktZeigen(box,null,null)}
+    else if(ev.key==='Escape'){tippWeg();punktZeigen(box,null,null);kmBandWeg(box)}
   });
   /* Zeigen auf einen Balken: sein Zeitraum als blasses Band in allen Grafiken. */
   tf.addEventListener('pointerover',ev=>{
@@ -1623,7 +1696,7 @@ function zeitBedienung(box){
   });
   tf.addEventListener('pointerout',ev=>{
     const g=ev.target.closest&&ev.target.closest('g.spb');if(g&&!(ev.relatedTarget&&g.contains(ev.relatedTarget)))kmBandWeg(box);
-    const chip=ev.target.closest&&ev.target.closest('.chip.on[data-k],[data-tun="tkStelle"]');
+    const chip=ev.target.closest&&ev.target.closest('.chip[data-k],[data-tun="tkStelle"]');
     if(chip&&!(ev.relatedTarget&&chip.contains(ev.relatedTarget)))reiheHeben(box,null);
   });
   rollbalkenBedienung(box);
@@ -1650,7 +1723,7 @@ function reiheHeben(box,el){
   if(!k||k==='alle')return tf.classList.remove('hebt');
   hebUhr=setTimeout(()=>{
     const gs=[...tf.querySelectorAll('g.reihe')];
-    if(new Set(gs.map(g=>g.dataset.reihe)).size<2)return;
+    if(new Set(gs.map(g=>g.dataset.reihe)).size<2)return tf.classList.remove('hebt');
     gs.forEach(g=>g.classList.toggle('an',g.dataset.reihe===k));tf.classList.add('hebt');
   },150);
 }
@@ -1733,25 +1806,26 @@ function zeitMarken(x0,x1){
     while(d.getUTCHours()%schritt)d.setUTCHours(d.getUTCHours()+1);
     for(;+d<=x1;d.setUTCHours(d.getUTCHours()+schritt)){
       const h=d.getUTCHours();
-      out.push({x:+d,text:h===0?fmtK(d.toISOString().slice(0,10)):String(h).padStart(2,'0')+':00'});
+      out.push({x:+d,o:Math.round(+d/36e5/schritt),proTag:24/schritt,text:h===0?fmtK(d.toISOString().slice(0,10)):String(h).padStart(2,'0')+':00'});
     }
   }else if(t<=16){                                  /* Tage */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
     const schritt=t<=9?1:2;
-    for(let i=0;+d<=x1;d.setUTCDate(d.getUTCDate()+1),i++){
-      if(+d>=x0&&i%schritt===0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+    for(;+d<=x1;d.setUTCDate(d.getUTCDate()+1)){
+      const tag=Math.round(+d/864e5);
+      if(+d>=x0&&tag%schritt===0)out.push({x:+d,o:tag/schritt,text:fmtK(d.toISOString().slice(0,10))});
       if(t<=10)for(const h of [6,12,18]){const x=+d+h*36e5;if(x>=x0&&x<=x1)out.push({x,klein:true})}
     }
   }else if(t<=70){                                  /* Wochen */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
     while(d.getUTCDay()!==1)d.setUTCDate(d.getUTCDate()+1);
     for(;+d<=x1;d.setUTCDate(d.getUTCDate()+7))
-      if(+d>=x0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+      if(+d>=x0)out.push({x:+d,o:Math.round((+d/864e5-4)/7),text:fmtK(d.toISOString().slice(0,10))});
   }else{                                            /* Monate */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),1));
     const N=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
     for(;+d<=x1;d.setUTCMonth(d.getUTCMonth()+1))
-      if(+d>=x0)out.push({x:+d,text:N[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2)});
+      if(+d>=x0)out.push({x:+d,o:d.getUTCFullYear()*12+d.getUTCMonth(),text:N[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2)});
   }
   out.sort((a,b)=>a.x-b.x);
   return out.some(m=>!m.klein)?out:[{x:x0,text:fmtK(new Date(x0).toISOString().slice(0,10))}].concat(out);
@@ -1804,8 +1878,8 @@ function render(){
   /* Jeder Reiter behält in dieser Sitzung seinen Ausschnitt; beim Neuladen
      steht wieder alles da. */
   if(letzterTab!==tab){
-    if(letzterTab)ZEIT_JE_TAB[letzterTab]={koVon,koBis};
-    const z=ZEIT_JE_TAB[tab];koVon=z?z.koVon:null;koBis=z?z.koBis:null;STUFE_ALT=null;
+    if(letzterTab)ZEIT_JE_TAB[letzterTab]={koVon,koBis,stufe:STUFE_ALT};
+    const z=ZEIT_JE_TAB[tab];koVon=z?z.koVon:null;koBis=z?z.koBis:null;STUFE_ALT=z?z.stufe:null;
   }
   try{el('view').innerHTML=paketHinweis()+ANSICHT[tab]()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
@@ -2839,9 +2913,18 @@ function mittelZeitraumDazu(mittel,von,bis,notiz){
   return true;
 }
 AKTION.massnahmeSpeichern=()=>{
-  const was=el('mnWas').value,von=el('mnVon').value,dauer=el('mnDauer').value;
+  let was=el('mnWas').value;
+  const von=el('mnVon').value,dauer=el('mnDauer').value;
   const notiz=(el('mnNotiz').value||'').trim()||null;
   if(!von)return toast('Bitte einen Beginn eintragen.');
+  /* Ein neuer Name, den es schon gibt (gleich, nur anders geschrieben),
+     kommt in dieselbe Zeile – eine eigene Massnahme oder ein Mittel. */
+  if(was==='neu'){
+    const n=(el('mnName').value||'').trim().replace(/\s+/g,' ').toLowerCase();
+    const eigen=n&&[...new Set(beigabeHand(h=>!h.mittel).map(h=>h.name))].find(x=>x.toLowerCase()===n);
+    const mittel=n&&!eigen&&evMittelListe().find(([k,t])=>(mittelKurz(k)||t||'').toLowerCase()===n||String(t||'').toLowerCase()===n);
+    if(eigen)was='n|'+eigen;else if(mittel)was='m|'+mittel[0];
+  }
   if(was.indexOf('t|')===0){
     const typ=was.slice(2);
     db.ereignisse.push({id:uid(),datum:von,zeit:null,typ,titel:null,mittel:null,menge:null,einheit:null,jeReservoir:false,
@@ -2929,23 +3012,39 @@ AKTION.kmAlle=d=>{kmAus=d.v==='an'?new Set():new Set(kmListe().map(x=>x.key));km
 /* Eine Zeile an eine neue Stelle ihrer Gruppe (Balken oder Ereignisse).
    Gemerkt wird die ganze Reihenfolge, damit sie auch im anderen Reiter gilt
    – Biovin, das im einen Reiter fehlt, behält dabei seinen Platz. */
-function kmVerschieben(k,ziel){
-  const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===k);if(!z)return false;
-  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ')).map(x=>x.key);
-  ziel=Math.max(0,Math.min(gr.length-1,ziel));
-  if(gr.indexOf(k)===ziel)return false;
-  const neu=gr.filter(x=>x!==k);neu.splice(ziel,0,k);
-  const voll=kmListe().map(x=>x.key),plaetze=voll.map((x,i)=>gr.includes(x)?i:-1).filter(i=>i>=0);
-  plaetze.forEach((p,j)=>{voll[p]=neu[j]});
+/* Eine neue Reihenfolge für einige Zeilen (die gezeigten): sie nehmen die
+   Plätze ein, die sie schon hatten. Was nicht dabei ist – Biovin im Reiter
+   Blattsaft & Giesswasser, ausgeblendete Zeilen in der Tafel –, bleibt, wo
+   es war. */
+function kmOrdnen(keys){
+  const voll=kmListe().map(x=>x.key),teil=new Set(keys);
+  const plaetze=voll.map((x,i)=>teil.has(x)?i:-1).filter(i=>i>=0);
+  if(plaetze.length!==keys.length)return false;
+  if(plaetze.every((p,j)=>voll[p]===keys[j]))return false;
+  plaetze.forEach((p,j)=>{voll[p]=keys[j]});
   kmReihe=voll;
   kmDialogNeu();zeitZeichnen();ansichtMerken();
   return true;
+}
+/* Zeile k an Platz «ziel» unter «gr» (Standard: alle Zeilen ihrer Gruppe
+   in diesem Reiter, wie im Dialog). */
+function kmVerschieben(k,ziel,gr){
+  if(!gr){const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===k);if(!z)return false;
+    gr=l.filter(x=>(x.art==='typ')===(z.art==='typ')).map(x=>x.key)}
+  if(!gr.includes(k))return false;
+  ziel=Math.max(0,Math.min(gr.length-1,ziel));
+  if(gr.indexOf(k)===ziel)return false;
+  const neu=gr.filter(x=>x!==k);neu.splice(ziel,0,k);
+  return kmOrdnen(neu);
 }
 AKTION.kmSchieben=d=>{
   const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===d.k);if(!z)return;
   const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ'));
   kmVerschieben(d.k,gr.indexOf(z)+(+d.r));
 };
+/* Die Schlüssel der Zeilen, die neben einer Zeile stehen (Tafel: nur die
+   gezeigten; Dialog: alle). */
+const kmGeschwister=zeile=>[...zeile.parentElement.children].filter(r=>r.matches('.kmZeile,.kmZ')&&r.dataset.k&&r.dataset.k!=='klapp').map(r=>r.dataset.k);
 /* Ordnen per Ziehen, wie eine Warteschlange – in der Tafel und im Dialog
    derselbe Code. Maus: am Griff sofort, am Namen ab 4 px; Finger: nur am
    Griff. Die Zeile folgt dem Zeiger, die anderen rücken auf; Esc bricht ab.
@@ -2954,12 +3053,39 @@ AKTION.kmSchieben=d=>{
 let kmZug=null;
 function kmZugEnde(abbrechen){
   const z=kmZug;if(!z)return;
-  kmZug=null;
+  kmZug=null;cancelAnimationFrame(z.rollen||0);
   z.zeilen.forEach(r=>{r.style.transform=''});z.zeile.classList.remove('zieht');z.gruppe.classList.remove('ordnet');
   document.documentElement.classList.remove('ordnetGerade');
-  if(!abbrechen&&z.aktiv&&z.ziel!==z.von){kmVerschieben(z.zeile.dataset.k,z.ziel);kmAnsage(z.zeile.dataset.k)}
+  /* Das Ziel zählt unter den Zeilen, die zu sehen waren. */
+  const keys=z.zeilen.map(r=>r.dataset.k);
+  if(!abbrechen&&z.aktiv&&z.ziel!==z.von){kmVerschieben(z.zeile.dataset.k,z.ziel,keys);kmAnsage(z.zeile.dataset.k,keys)}
   else if(!abbrechen&&!z.aktiv&&z.name)AKTION.kmBearbeiten({k:z.zeile.dataset.k});
   if(z.nachholen)render();
+}
+/* Die gezogene Zeile an die Höhe des Zeigers; die anderen rücken auf. */
+function kmZugStellen(z){
+  const dy=z.y+z.oben()-z.start;
+  z.zeile.style.transform=`translateY(${dy}px)`;
+  const m=z.mitten[z.von]+dy;let ziel=z.von;
+  for(let i=0;i<z.zeilen.length;i++){if(i<z.von&&m<z.mitten[i]){ziel=i;break}if(i>z.von&&m>z.mitten[i])ziel=i}
+  z.ziel=ziel;
+  z.zeilen.forEach((r,i)=>{if(i===z.von)return;
+    const s=(z.von<ziel&&i>z.von&&i<=ziel)?-z.hoehe:(z.von>ziel&&i>=ziel&&i<z.von)?z.hoehe:0;
+    r.style.transform=s?`translateY(${s}px)`:''});
+}
+/* Am Rand des Fensters (unter dem klebenden Kopf) bzw. des Dialogs rollt es
+   mit – auch wenn der Zeiger dort stillsteht. */
+function kmZugRollen(){
+  const z=kmZug;if(!z||!z.aktiv)return;
+  z.rollen=0;
+  let oben,unten;
+  if(z.sc){const r=z.sc.getBoundingClientRect();oben=r.top;unten=r.bottom}
+  else{const k=document.querySelector('header.top');oben=k?Math.max(0,k.getBoundingClientRect().bottom):0;unten=window.innerHeight-34}
+  const v=z.y<oben+40?-Math.min(12,(oben+40-z.y)/3+2):z.y>unten-40?Math.min(12,(z.y-(unten-40))/3+2):0;
+  if(!v)return;
+  const vor=z.oben();(z.sc||window).scrollBy(0,v);
+  if(z.oben()!==vor)kmZugStellen(z);
+  z.rollen=requestAnimationFrame(kmZugRollen);
 }
 document.addEventListener('pointerdown',ev=>{
   if(ev.button>0||kmZug)return;
@@ -2973,52 +3099,52 @@ document.addEventListener('pointerdown',ev=>{
   const zeilen=[...gruppe.children].filter(r=>r.matches('.kmZeile,.kmZ')&&r.dataset.k&&r.dataset.k!=='klapp');
   const sc=gruppe.closest('.dlg-b'),oben=()=>sc?sc.scrollTop:(window.scrollY||window.pageYOffset||0);
   const fang=griff||name;
-  kmZug={zeile,gruppe,zeilen,fang,sc,oben,name:!!name,aktiv:false,nachholen:false,id:ev.pointerId,
+  kmZug={zeile,gruppe,zeilen,fang,sc,oben,name:!!name,aktiv:false,nachholen:false,id:ev.pointerId,rollen:0,y:ev.clientY,
     von:zeilen.indexOf(zeile),ziel:zeilen.indexOf(zeile),start:ev.clientY+oben(),
     mitten:zeilen.map(r=>{const b=r.getBoundingClientRect();return b.top+b.height/2+oben()}),hoehe:zeile.getBoundingClientRect().height||22};
   try{fang.setPointerCapture(ev.pointerId)}catch(e){}
+  /* Geht der Fang verloren, ohne dass ein pointerup kam (Fensterwechsel,
+     Kontextmenü), ist der Zug vorbei. Nach einem pointerup ist kmZug schon
+     leer – dann tut das nichts. */
+  fang.addEventListener('lostpointercapture',()=>{if(kmZug&&kmZug.fang===fang)kmZugEnde(true)},{once:true});
   ev.preventDefault();
 });
 document.addEventListener('pointermove',ev=>{
   const z=kmZug;if(!z||ev.pointerId!==z.id)return;
-  /* Am Rand des Fensters (bzw. des Dialogs) rollt es mit. */
-  const rand=z.sc?z.sc.getBoundingClientRect():{top:0,bottom:window.innerHeight};
-  const unten=z.sc?rand.bottom:rand.bottom-34;
-  if(z.aktiv&&ev.clientY<rand.top+40)(z.sc||window).scrollBy(0,-Math.min(12,rand.top+40-ev.clientY));
-  else if(z.aktiv&&ev.clientY>unten-40)(z.sc||window).scrollBy(0,Math.min(12,ev.clientY-(unten-40)));
-  const dy=ev.clientY+z.oben()-z.start;
+  if(ev.pointerType==='mouse'&&!(ev.buttons&1))return kmZugEnde(true);
+  z.y=ev.clientY;
   if(!z.aktiv){
-    if(Math.abs(dy)<4||z.zeilen.length<2)return;
+    if(Math.abs(z.y+z.oben()-z.start)<4||z.zeilen.length<2)return;
     z.aktiv=true;z.zeile.classList.add('zieht');z.gruppe.classList.add('ordnet');
     document.documentElement.classList.add('ordnetGerade');tippWeg();
   }
-  z.zeile.style.transform=`translateY(${dy}px)`;
-  const m=z.mitten[z.von]+dy;let ziel=z.von;
-  for(let i=0;i<z.zeilen.length;i++){if(i<z.von&&m<z.mitten[i]){ziel=i;break}if(i>z.von&&m>z.mitten[i])ziel=i}
-  z.ziel=ziel;
-  z.zeilen.forEach((r,i)=>{if(i===z.von)return;
-    const s=(z.von<ziel&&i>z.von&&i<=ziel)?-z.hoehe:(z.von>ziel&&i>=ziel&&i<z.von)?z.hoehe:0;
-    r.style.transform=s?`translateY(${s}px)`:''});
+  kmZugStellen(z);
+  if(!z.rollen)z.rollen=requestAnimationFrame(kmZugRollen);
 });
 document.addEventListener('pointerup',ev=>{if(kmZug&&ev.pointerId===kmZug.id)kmZugEnde(false)});
 document.addEventListener('pointercancel',ev=>{if(kmZug&&ev.pointerId===kmZug.id)kmZugEnde(true)});
+window.addEventListener('blur',()=>{if(kmZug)kmZugEnde(true)});
 document.addEventListener('keydown',ev=>{
   if(kmZug&&ev.key==='Escape'){ev.preventDefault();ev.stopPropagation();return kmZugEnde(true)}
   const g=ev.target&&ev.target.closest?ev.target.closest('.kmGriff'):null;
   if(!g||(ev.key!=='ArrowUp'&&ev.key!=='ArrowDown'))return;
   ev.preventDefault();
-  const k=g.dataset.k,imDialog=!!g.closest('#dlgBody');
-  AKTION.kmSchieben({k,r:ev.key==='ArrowUp'?'-1':'1'});
-  const wo=imDialog?el('dlgBody'):document.querySelector('.tafeln');
+  const k=g.dataset.k,imDialog=!!g.closest('#dlgBody'),zeile=g.closest('.kmZeile,.kmZ');
+  /* Ein Platz weiter unter den Zeilen, die man sieht – in der Tafel also
+     über ausgeblendete hinweg. */
+  const keys=zeile?kmGeschwister(zeile):[];
+  kmVerschieben(k,keys.indexOf(k)+(ev.key==='ArrowUp'?-1:1),keys);
+  const wo=imDialog?el('dlgBody'):g.closest('.tafeln');
   const neu=wo&&wo.querySelector(`.kmGriff[data-k="${CSS.escape(k)}"]`);if(neu)neu.focus();
-  kmAnsage(k);
+  kmAnsage(k,keys);
 },true);
-/* Für Bildschirmleser: wo die Zeile jetzt steht. */
-function kmAnsage(k){
+/* Für Bildschirmleser: wo die Zeile jetzt steht – unter den gezeigten. */
+function kmAnsage(k,keys){
   const a=el('ansage');if(!a)return;
   const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===k);if(!z)return;
-  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ'));
-  a.textContent=`${z.name}: Platz ${gr.indexOf(z)+1} von ${gr.length}`;
+  let gr=l.filter(x=>(x.art==='typ')===(z.art==='typ')).map(x=>x.key);
+  if(keys){const teil=new Set(keys);gr=gr.filter(x=>teil.has(x))}
+  a.textContent=`${z.name}: Platz ${gr.indexOf(k)+1} von ${gr.length}`;
 }
 /* Eine ganze Zeile löschen: alle Gaben eines Mittels, alle Zeiträume einer
    Massnahme, alle Einträge eines Ereignisses. Nachgefragt wird mit Zahl. */
@@ -3084,7 +3210,17 @@ function vTank(){
   const farbe={},form={};
   stellen.forEach((st,i)=>{farbe[st]=STELLE_FARBE[i%STELLE_FARBE.length];form[st]=FORMEN[i%FORMEN.length]});
   const sicht=()=>alle.filter(m=>tkStelle==='alle'||messStelle(m)===tkStelle);
+  /* Die Reihen samt Kästchen kosten bei stündlichen Messungen viel mehr als
+     das Zeichnen selbst. Beim Ziehen und Zoomen ändert sich an ihnen nichts –
+     sie werden nur neu gebaut, wenn Messungen oder die Stelle wechseln. */
+  let vorrat=null;
   function zeichnen(){
+    const schl=[db.messungen,db.messungen.length,tkStelle];
+    if(!vorrat||vorrat.schl.some((x,i)=>x!==schl[i]))vorrat={schl,tafeln:tafelnBauen()};
+    zeitBild(el('cTank'),{dicht:true,punktR:4,minTage:0.25,stufen:STUFEN_TAGE.tank,zeitLinks:stelleWahl(),
+      vorgaben:[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']],tafeln:vorrat.tafeln,km:kmDaten('tank'),kmNach:0});
+  }
+  function tafelnBauen(){
     const ms=sicht(),lg=messLage(ms,messStelle),mx=m=>lg.x.get(m);
     const reihe=(k,name,einh,dez)=>stellen.filter(st=>tkStelle==='alle'||st===tkStelle).map(st=>{
       const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>mx(a)-mx(b));
@@ -3099,8 +3235,7 @@ function vTank(){
       {kopf:'pH',linien:'ph',rechts:'%%DICHTE%%',spuren:[{serien:reihe('ph','pH','',2),hoehe:170,aria:'pH',leerWort:'Messung',leerText:'kein pH in diesem Zeitraum'}]},
       {kopf:'EC',linien:'ec',neben:esc('mS/cm'+(alle.some(m=>m.ecFrisch!=null)?' · Ring: frisch angesetzt':'')),spuren:[{serien:ec,hoehe:170,aria:'EC',leerWort:'Messung',leerText:'kein EC in diesem Zeitraum'}]}];
     if(alle.some(m=>m.o2!=null))tafeln.push({kopf:'Sauerstoff',linien:'o2',neben:'mg/l',spuren:[{serien:reihe('o2','Sauerstoff','mg/l',1),hoehe:140,aria:'Sauerstoff',leerWort:'Messung',leerText:'kein Sauerstoff in diesem Zeitraum'}]});
-    zeitBild(el('cTank'),{dicht:true,punktR:4,minTage:0.25,stufen:STUFEN_TAGE.tank,zeitLinks:stelleWahl(),
-      vorgaben:[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']],tafeln,km:kmDaten('tank'),kmNach:0});
+    return tafeln;
   }
   /* Die Stelle steht links in der Zeitzeile – das spart eine eigene Leiste. */
   function stelleWahl(){
@@ -4488,9 +4623,12 @@ document.addEventListener('drop',e=>{
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 /* Die Diagramme rechnen mit der Breite ihres Kastens; nach einer Änderung
    der Fenstergrösse werden sie neu gezeichnet – die Seite bleibt stehen. */
-let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
-  if(el('dlg').open)return;
-  if(DIAG)diagFrisch()},250)});
+/* Neu gezeichnet wird nur, wenn sich die Breite ändert – am Handy feuert
+   resize auch, wenn beim Scrollen die Adressleiste kommt und geht. */
+let rt,breiteAlt=window.innerWidth;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  if(el('dlg').open||window.innerWidth===breiteAlt)return;
+  breiteAlt=window.innerWidth;
+  if(DIAG&&DIAG.zeichnen)zeitZeichnen()},250)});
 document.addEventListener('keydown',e=>{
   if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();AKTION.sichern()}
 });

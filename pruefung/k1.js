@@ -392,6 +392,49 @@ console.log('\n════ «Ältere Daten übernommen»: einmal und nicht wied
   delete global.localStorage;
 }
 
+console.log('\n════ Aus der Prüfung: Achse, Rundung, Ziehen, gleiche Namen ════');
+{
+  /* Stunden auf einem schmalen Handy: das Datum (Mitternacht) bleibt stehen */
+  const x0=+new Date('2026-10-04T04:00:00Z'),x1=x0+2.5*864e5,P=232,X=v=>(v-x0)/(x1-x0)*P;
+  const m=A.markenDuenn(A.zeitMarken(x0,x1),X).map(t=>t.text);
+  ok(m.some(t=>/^\d\d\.\d\d\.$/.test(t))&&m.length>=3,'2½ Tage auf 232 px: unter den Stunden steht das Datum ('+m.join(' ')+')');
+  const x0b=x0+3*36e5,Xb=v=>(v-x0b)/(x1-x0)*P;
+  const mb=A.markenDuenn(A.zeitMarken(x0b,x0b+(x1-x0)),Xb).filter(t=>t.x>=x0b&&t.x<=x1).map(t=>t.x);
+  const ma=A.markenDuenn(A.zeitMarken(x0,x1),X).filter(t=>t.x>=x0b&&t.x<=x1).map(t=>t.x);
+  ok(ma.join()===mb.join(),'Um drei Stunden verschoben: dieselben Marken – beim Ziehen springt nichts');
+  const t0=+new Date('2026-09-03T00:00:00Z'),L=12*864e5;
+  const tage=a=>A.markenDuenn(A.zeitMarken(a,a+L),v=>(v-a)/L*700).map(t=>t.x);
+  const a1=tage(t0),a2=tage(t0+864e5);
+  ok(a1.filter(x=>x>=t0+864e5).every(x=>a2.includes(x))&&a2.filter(x=>x<=t0+L).every(x=>a1.includes(x)),'Tage im Zweierschritt: ein Tag weiter – dieselben Daten, nicht abwechselnd gerade und ungerade');
+  /* Kurz vor Mitternacht */
+  const z=s=>+new Date(s);
+  ok(A.bereichText(z('2026-10-04T23:55:00Z'),z('2026-10-05T23:55:00Z'))==='05.10. 00:00 – 06.10. 00:00 · 1 Tag','23:55 wird auf 00:00 des nächsten Tages gerundet – samt Datum');
+  ok(/^05\.10\. 20:00 – 06\.10\. 02:00 · 6 Stunden$/.test(A.bereichText(z('2026-10-05T20:00:00Z'),z('2026-10-06T02:00:00Z'))),'Unter einem Tag über Mitternacht: das Enddatum steht dabei');
+  /* Ziehen in der Tafel, wenn eine Zeile ausgeblendet ist */
+  A.setDb(A.leer());A.setKmAus(new Set());
+  for(const n of ['Aa','Bb','Cc','Dd'])plus('neu','2026-09-0'+(1+['Aa','Bb','Cc','Dd'].indexOf(n)),'laeuft','','',n);
+  A.setTab('kombi');
+  A.kmOrdnen(['n|Aa','n|Dd','n|Bb','n|Cc']);
+  A.setKmAus(new Set(['n|Dd']));
+  const sicht=['n|Aa','n|Bb','n|Cc'];
+  A.kmVerschieben('n|Aa',1,sicht);
+  const reihe=A.kmListe().filter(x=>x.art==='eigen').map(x=>x.key);
+  ok(reihe.filter(k=>sicht.includes(k)).join(' ')==='n|Bb n|Aa n|Cc'&&reihe[1]==='n|Dd','Aa unter Bb gezogen, Dd ausgeblendet: zu sehen ist Bb, Aa, Cc – Dd bleibt auf seinem Platz ('+reihe.join(' ')+')');
+  A.setKmAus(new Set());
+  /* Gleicher Name, anders geschrieben: dieselbe Zeile */
+  plus('neu','2026-05-01','tag','','','  aa ');
+  ok(A.kmListe().filter(x=>x.art==='eigen'&&/^aa$/i.test(x.name)).length===1&&A.beigabeHand(h=>h.name==='Aa').length===2,'«aa» im Mai landet in der Zeile «Aa» – nicht in einer zweiten');
+  /* Klick auf den Tagespunkt auf einem schmalen Handy */
+  const d=A.leer();for(let i=0;i<60;i++){const t=new Date(Date.UTC(2026,6,1)+i*864e5).toISOString().slice(0,10);
+    for(const h of ['07:00','12:00','17:00'])d.messungen.push({id:'m'+i+h,datum:t,zeit:h,stelle:'vorne',ph:6+(i%5)*0.1,ec:1.2,quelle:'excel'})}
+  A.setDb(d);A.setTab('tank');A.setZeit(null,null);
+  $('cTank').clientWidth=300;A.vTank();A.nachRenderRun();
+  let Z=A.getZeit();const blk=Z.ZEIT.treffer[0].find(t=>t.block!=null);
+  A.AKTION.zoomTag({x:String(blk.block)});Z=A.getZeit();
+  ok(Z.ZEIT.stufe==='einzeln','Auf 300 px Breite: Anklicken eines Tagespunkts zeigt jede Messung ('+((Z.koBis-Z.koVon)/864e5).toFixed(1)+' Tage)');
+  A.AKTION.zeitVorgabe({v:'alles'});delete $('cTank').clientWidth;
+}
+
 console.log('\n════ Keine Spur der alten Auswertung ════');
 {
   const src=require('fs').readFileSync(__dirname+'/app.js','utf8');

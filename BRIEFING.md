@@ -89,13 +89,22 @@ Schwellen, Kernnährstoffe, «Wesentlich». **Ihre Daten bleiben im Bestand**
   − / +, **Strg + Rad** (Mac: ⌘ + Rad oder zwei Finger), am Handy mit zwei
   Fingern. Seitwärts wischen oder Umschalt + Rad verschiebt. **In der
   Grafik ziehen verschiebt nur, wenn gezoomt ist** (sonst passiert nichts,
-  und ein Klick bleibt ein Klick). Tastatur in den Grafiken: Pfeile
-  verschieben, + / − zoomen, 0 zeigt alles, Esc schliesst das Kästchen.
+  und auch der Klick beim Loslassen öffnet nichts). Der Massstab wird beim
+  Drücken gemessen – das SVG darunter wird beim ersten Neuzeichnen ersetzt.
+  Tastatur in den Grafiken: Pfeile verschieben, + / − zoomen, 0 zeigt
+  alles, Esc schliesst das Kästchen; Bild↑/↓, Pos1 und Ende blättern die
+  Seite, ausser man kam mit Tab in die Grafiken und es ist gezoomt
+  (`perTab`).
 - **Zeigen:** Es gibt keine unsichtbaren Trefferkreise mehr. Jede Grafik
   führt eine nach x sortierte Trefferliste (`ZEIT.treffer`); der nächste
   Punkt in 20 px (Finger 28 px) bekommt einen Ring und das Kästchen. Klick
   öffnet den Bericht bzw. die Messung. Am Handy zeigt das erste Tippen,
-  das zweite öffnet.
+  das zweite öffnet (`TIPP_FEST`, verschwindet mit dem Kästchen).
+- **Datumsachse ruhig:** ausgedünnt wird nach der Zeit selbst (`m.o`), nicht
+  nach dem Platz in der Liste – beim Verschieben wechseln die Beschriftungen
+  nicht, und bei Stunden bleibt Mitternacht mit dem Datum immer stehen.
+- **Tank schnell:** die Reihen samt Kästchen werden nur neu gebaut, wenn
+  Messungen oder die Stelle wechseln, nicht in jedem Bild beim Ziehen.
 - **«Punkte verbinden»** steht bei den Nährstoffen jeder Grafik und gilt je
   Grafik (`linienAn`: blatt, wasser, ph, ec, o2) – persönlich gemerkt.
 - **Dichte Messungen** (nur Tank, `VERDICHT` = 30 bzw. 14 Bildpunkte je
@@ -219,7 +228,9 @@ am Griff ⋮⋮ (Maus und Finger) packen und ziehen; die übrigen weichen aus,
 am Rand wird gerollt, Esc bricht ab. Dasselbe im Dialog «Zeilen verwalten»,
 dort ausserdem mit der Tastatur (Griff anwählen, Pfeil hoch/runter), «zeigen»
 und «löschen». Ein Klick auf einen Namen ohne zu ziehen öffnet den Dialog
-mit dieser Zeile hervorgehoben. Geordnet wird innerhalb der Balken bzw. der
+mit dieser Zeile hervorgehoben (am Handy: ein Tippen auf den Namen).
+Gezählt wird unter den Zeilen, die man sieht – ausgeblendete behalten ihren
+Platz (`kmOrdnen`). Geordnet wird innerhalb der Balken bzw. der
 Ereignisse (`kmVerschieben`); Biovin, das im Reiter Blattsaft & Giesswasser
 fehlt, behält dabei seinen Platz. Während gezogen wird, wartet jedes
 Neuzeichnen (`kmZug.nachholen`).
@@ -228,7 +239,9 @@ Neuzeichnen (`kmZug.nachholen`).
 einem Tag), Beginn, Dauer (läuft noch · bis · nur dieser Tag), Notiz. Ein
 Mittel, dessen Zeitraum schon in einem Balken liegt, bleibt unverändert
 (mit Hinweis); sonst entsteht ein Zeitraum von Hand, vereinigt mit den
-Balken desselben Mittels, die er berührt (`mittelZeitraumDazu`).
+Balken desselben Mittels, die er berührt (`mittelZeitraumDazu`). Wer
+unter «Neue Massnahme …» einen Namen tippt, den es schon gibt (Gross- und
+Kleinschreibung egal) oder der ein Mittel ist, landet in dessen Zeile.
 Reihenfolge (`kmReihe`), Ausblenden (`kmAus`, oben «n ausgeblendet») und
 Klappzustand (`kmEreignisseOffen`) sind persönlich (localStorage);
 **löschen** nimmt die Einträge selbst weg – alle Gaben eines Mittels samt
@@ -326,7 +339,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# ohne Browser (664 Einzelprüfungen)
+# ohne Browser (672 Einzelprüfungen; im Browser rund 330)
 for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1; do node pruefung/$t.js; done
 
 # im Browser (Chromium + playwright; NODE_PATH mit pdfjs-dist@3.11.174, jsqr, pngjs)
