@@ -37,11 +37,11 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'GW_PARAM','GW_MAKRO','GW_MIKRO','inMgL','einheit','nz','esc','NAME','NCC','INS','leer','migriere','optimum','optText','lage',
  'EVTYPEN','EVTYP_ALT','evTypDef','evEinheit','STELLEN','PRODUKTE_VORGABE','STELLEN_VORGABE','TABS','AKTION','render',
  'vAnalysen','vKombi','vTank','vMaske','vEinst','berichte','berichtVon','berichtSchluessel','berichtTitel','detail','wertMitOptimum',
- 'pruefdialog','GRUPPEN','zeitBild','zeitBereich','DICHT_PX','zeitMarken','spannenZeilen','spannenSvg','dunkler','tippBau','farbenFuer','spurGruppen',
+ 'pruefdialog','GRUPPEN','zeitBild','zeitBereich','VERDICHT','verdichtStufe','achsenSchritt','bereichText','STUFEN_TAGE','vorgabeAktiv','naechsterPunkt','kmTafel','kmBalkenSvg','zeitMarken','dunkler','tippBau','farbenFuer','spurGruppen',
  'groessenordnung','STOFFREIHE','gwProben','gwStelle','gwName','stelleVon','stelleTitel','stelleName','stelleSchluessel','gwSichtbar',
  'stellenDb','stellenListe','stellenVorschlag','stellenDialog','messStelle','tankStellen','HERKUNFT',
  'beigabeSpannenMittel','beigabeLaeuft','beigabeSumme','beigabeHand','mittelKurz','MITTEL_FARBE','BEIGABE_LUECKE',
- 'kmListe','kmBalken','kmDaten','kmBearbeitenHtml','KM_NICHT_IM_KOMBI','MITTEL_WEG','bestandBereinigen','mittelZeitraumDazu','evMenge','evAngaben','evNotiz','evMittelListe','eigeneFarbe','typKurz',
+ 'kmListe','kmBalken','kmDaten','kmBearbeitenHtml','kmVerschieben','hinweisSchluessel','hinweisGesehen','KM_NICHT_IM_KOMBI','MITTEL_WEG','bestandBereinigen','mittelZeitraumDazu','evMenge','evAngaben','evNotiz','evMittelListe','eigeneFarbe','typKurz',
  'paketNeues','PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte',
  'zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','heute','sichern','laden','datenAusText','datenAusSeite',
  'seiteMitDaten','seiteMerken','sichernJson','vereinigen','ONLINE','onlineStand','ansichtMerken','ansichtLaden',
@@ -50,8 +50,8 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
   ', setDb:x=>{db=x}, getDb:()=>db, setTab:t=>{tab=t}, getTab:()=>tab, setKmAus:x=>{kmAus=x}, getKmAus:()=>kmAus,'+
-  ' setKombi:o=>{if(o.blatt)kbBlatt=o.blatt;if(o.wasser)kbWasser=o.wasser;if(o.etage)kbEtage=o.etage;if(o.skala)kbSkala=o.skala;if(o.linien)kbLinien=o.linien},'+
-  ' getKombi:()=>({blatt:kbBlatt,wasser:kbWasser,etage:kbEtage,skala:kbSkala,linien:kbLinien}), resetKombi:()=>{kbBlatt=null;kbWasser=null},'+
+  ' setKombi:o=>{if(o.blatt)kbBlatt=o.blatt;if(o.wasser)kbWasser=o.wasser;if(o.etage)kbEtage=o.etage;if(o.skala)kbSkala=o.skala;if(o.linien){if(o.linien===\'reihe\'){linienAn.add(\'blatt\');linienAn.add(\'wasser\')}else{linienAn.delete(\'blatt\');linienAn.delete(\'wasser\')}}},'+
+  ' getKombi:()=>({blatt:kbBlatt,wasser:kbWasser,etage:kbEtage,skala:kbSkala,linien:linienAn.has(\'blatt\')?\'reihe\':\'keine\'}), resetKombi:()=>{kbBlatt=null;kbWasser=null},'+
   ' setTabPruef:x=>{TABPRUEF=x}, setPruef:(v,b)=>{PRUEF=v;PRUEF_BEARB=!!b}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH,'+
-  ' getDiag:()=>DIAG, getZeit:()=>({ZEIT,koVon,koBis,zeitWahl}), setZeit:(v,b)=>{koVon=v;koBis=b}, getKm:()=>({reihe:kmReihe,offen:kmEreignisseOffen}), setKmOffen:x=>{kmEreignisseOffen=x}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ' getDiag:()=>DIAG, getZeit:()=>({ZEIT,koVon,koBis,wahl:vorgabeAktiv()}), setZeit:(v,b)=>{koVon=v;koBis=b}, getKm:()=>({reihe:kmReihe,offen:kmEreignisseOffen}), setKmOffen:x=>{kmEreignisseOffen=x}, getLinien:()=>linienAn, setLinien:x=>{linienAn=new Set(x)}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
 module.exports=fn(module,{},require,global.document,global.window,global);

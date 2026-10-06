@@ -199,8 +199,8 @@ console.log('\n════ Balken je Mittel ════');
   ok(!ohne.some(t=>/^EM|^Halades/.test(t))&&ohne.some(t=>/^Biovin/.test(t)),'EM und Halades ausgeblendet – die übrigen bleiben');
   A.AKTION.kmBearbeiten();
   const w=document.getElementById('dlgBody').innerHTML,wf=document.getElementById('dlgFoot').innerHTML;
-  ok(/data-aend="kmAn" data-k="m\|em"/.test(w)&&/data-tun="kmSchieben"/.test(w)&&/data-tun="kmLoeschen"/.test(w)&&/data-tun="kmAlle"/.test(wf)&&/Ereignisse/.test(w),
-     '«Zeilen ordnen und ausblenden»: je Zeile hoch, runter, zeigen, löschen – dazu «alle»');
+  ok(/data-aend="kmAn" data-k="m\|em"/.test(w)&&/class="kmGriff" data-k="m\|em"/.test(w)&&/data-tun="kmLoeschen"/.test(w)&&/data-tun="kmAlle"/.test(wf)&&/Ereignisse/.test(w)&&!/data-tun="kmSchieben"/.test(w),
+     '«Zeilen verwalten»: je Zeile ein Griff zum Ziehen, zeigen, löschen – dazu «alle»; keine ↑↓-Knöpfe mehr');
   A.AKTION.kmAn({k:'m|em'});
   ok(!A.getKmAus().has('m|em'),'Ein Klick blendet EM wieder ein');
   A.AKTION.kmAlle({v:'an'});
@@ -269,27 +269,37 @@ console.log('\n════ Balken von Hand: Beginn, Ende, läuft ════')
   ok(Array.isArray(A.migriere({schema:10,analysen:[],ereignisse:[],messungen:[]}).db.beigabeZeiten),'Alte Bestände bekommen eine leere Liste');
 }
 
-console.log('\n════ Balken in Zeilen: je Mittel eine ════');
+console.log('\n════ Kulturmanagement: eine Zeile je Mittel, nie zwei ════');
 {
-  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setKmAus(new Set());
-  const alle=A.kmBalken(),bal=alle.filter(b=>!b.marke),marken=alle.filter(b=>b.marke);
-  const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01'),X=v=>100+(v-x0)/(x1-x0)*900;
-  const Z=A.spannenZeilen(alle,X,x0,x1);
-  const zeilen=new Set(alle.map(b=>b.zeile));
-  ok(Z.n===zeilen.size,`${alle.length} Balken und Marken in ${Z.n} Zeilen – eine je Mittel und je Art (${zeilen.size})`);
-  const zeileVon=t=>Z.liste.find(x=>x.sp.text===t).z;
-  ok(zeileVon('Biovin 06.05.–26.05.')===zeileVon('Biovin 28.07.–26.08.'),'Biovin Mai und Biovin August teilen sich eine Zeile');
-  let stoss=null;for(const a of Z.liste)for(const b of Z.liste)if(a!==b&&a.z===b.z&&!a.sp.marke&&a.xa<b.xa&&a.ende>b.links)stoss=a.sp.text;
-  ok(!stoss,'Keine Beschriftung stösst an den nächsten Balken derselben Zeile'+(stoss?': '+stoss:''));
-  ok(Z.liste.every(x=>x.innen?x.xb-x.xa>=x.sp.text.length*6.4+18:true),'Weisse Schrift nur, wo sie in den Balken passt – sonst dunkel daneben');
-  const R=A.spannenZeilen(bal,X,x0,x1,1000);
-  ok(R.liste.filter(x=>x.lage==='rechts').every(x=>x.ende-12<=1000),'Keine Beschriftung ragt über den rechten Rand');
-  ok(R.liste.some(x=>x.lage==='links'),'Kurze Balken am rechten Rand tragen ihre Beschriftung links davor');
-  const svgB=A.spannenSvg(Z,300,104);
-  ok((svgB.match(/<path d="M/g)||[]).length===bal.filter(x=>x.laeuft).length,'Jeder laufende Balken endet in einer Spitze ('+bal.filter(x=>x.laeuft).length+')');
-  ok(/height="18"/.test(svgB)&&/font-size="11" font-weight="600" fill="#fff"/.test(svgB),'18 Bildpunkte hoch, weisse, halbfette Schrift');
-  const eng=A.spannenZeilen(bal,v=>100+(v-x0)/(x1-x0)*250,x0,x1);
-  ok(eng.n>A.spannenZeilen(bal,X,x0,x1).n,'Wird es eng, bekommt ein Mittel eine zweite Zeile, statt dass Text übereinanderliegt');
+  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setKmAus(new Set());A.setKmOffen(false);A.setTab('tank');A.setZeit(null,null);
+  const km=A.kmDaten('tank'),box=document.getElementById('probeKM');
+  const zeichne=()=>{A.zeitBild(box,{tafeln:[{kopf:'pH',spuren:[{serien:[]}]}],km:A.kmDaten('tank'),kmNach:0});return box.innerHTML};
+  const h=zeichne();
+  const zeilen=[...h.matchAll(/<div class="kmZ[^"]*" data-k="([^"]+)"/g)].map(m=>m[1]).filter(k=>k!=='klapp');
+  ok(zeilen.length===km.zeilen.length&&new Set(zeilen).size===zeilen.length,`${km.zeilen.length} Mittel, ${zeilen.length} Zeilen – jedes genau eine`);
+  const zeile=k=>{const i=h.indexOf(`data-k="${k}"`),r=h.slice(i+5),j=r.search(/<div class="kmZ[ "]/);return j<0?r:r.slice(0,j)};
+  ok((zeile('m|biovin').match(/class="spb"/g)||[]).length===2,'Biovin im Mai und Biovin ab Ende Juli in derselben Zeile');
+  ok((zeile('m|epsotop').match(/class="spb"/g)||[]).length===2,'Magnesium im Mai und Magnesium seit Juli ebenso');
+  ok(/class="kmTitel">Magnesium</.test(zeile('m|epsotop'))&&/>seit 28\.07\.</.test(zeile('m|epsotop')),'Links der Name, im Balken nur das Datum');
+  ok(!/>Magnesium seit|>Biovin 0/.test(h),'Kein Name mehr im Balken');
+  const kmTeil=h.slice(h.indexOf('kmZeilen2'),h.indexOf('class="rollleiste"'));
+  ok(!/text-anchor="end"/.test(kmTeil),'Nie Text links vom Balken');
+  const laufen=km.zeilen.flatMap(z=>z.spannen).filter(s=>s.laeuft).length;
+  ok((kmTeil.match(/<path d="M/g)||[]).length===laufen,'Jeder laufende Balken endet in einer Spitze ('+laufen+')');
+  ok(/stroke="#fff" stroke-width="1.5" opacity=".7"/.test(kmTeil),'Die einzelnen Gaben stehen als feine Kerben im Balken');
+  /* Schmal: Text, der nicht passt, fällt weg – keine zweite Zeile */
+  const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01');
+  const G={W:420,ml:140,mr:12,x0,x1,X:v=>140+(v-x0)/(x1-x0)*268};
+  const eng=A.kmBalkenSvg(G,km.zeilen.find(z=>z.key==='m|halades').spannen);
+  ok(/class="spb"/.test(eng.svg)&&!/<text/.test(eng.svg),'Wird es eng, verschwindet die Beschriftung – der Balken bleibt in seiner Zeile');
+  /* Beim Verschieben bleiben die Zeilen stehen, auch ohne Balken */
+  A.setZeit(+new Date('2026-06-05'),+new Date('2026-06-25'));
+  const h2=zeichne();
+  const zeilen2=[...h2.matchAll(/<div class="kmZ[^"]*" data-k="([^"]+)"/g)].map(m=>m[1]).filter(k=>k!=='klapp');
+  ok(zeilen2.join()===zeilen.join()&&/class="kmZ ohne" data-k="m\|kali"/.test(h2),'Im Juni läuft kaum etwas – die Zeilen bleiben trotzdem, blass, damit nichts springt');
+  A.setZeit(null,null);
+  ok(/▸ Ereignisse \(\d\)/.test(h)&&(h.match(/<circle[^>]*data-tun="kmEreignisse"/g)||[]).length>3,'Ereignisse eingeklappt: eine Zeile mit einem Punkt je Tag');
+  ok(h.indexOf('>Kulturmanagement<')>h.indexOf('<h3>pH</h3>'),'Die Tafel steht nach der ersten Grafik (kmNach)');
 }
 
 console.log('\n════ Paketfassung 2: gezielt nur das Neue ergänzen ════');
@@ -333,18 +343,20 @@ console.log('\n════ Ereignisse ohne Mittel: Marken, eine Zeile je Art �
   ok(zwei&&/Wasserzugabe/.test(zwei.tipp),'Zwei am selben Tag: eine Marke mit Zahl, das Kästchen nennt beide');
   const misch=marken.find(m=>m.kennung==='t|Umpumpen|2026-09-24');
   ok(misch&&/08:30/.test(misch.tipp)&&/gemischt/.test(misch.tipp),'Das Kästchen nennt Uhrzeit und Notiz');
-  const x0=+new Date('2026-04-20'),x1=+new Date('2026-10-01'),X=v=>104+(v-x0)/(x1-x0)*800;
-  const Z=A.spannenZeilen(marken,X,x0,x1);
-  const svg=A.spannenSvg(Z,300,104);
-  ok(/>Neuansatz<\/text>/.test(svg)&&/text-anchor="end"/.test(svg),'Die Zeilennamen stehen links am Rand');
+  A.setKmOffen(true);A.setZeit(null,null);
+  const pb=document.getElementById('probeMarken');
+  A.zeitBild(pb,{tafeln:[{kopf:'pH',spuren:[{serien:[]}]}],km:A.kmDaten('tank'),kmNach:0});
+  const svg=pb.innerHTML;
+  ok(/class="kmTitel">Tank neu angesetzt</.test(svg)&&/▾ Ereignisse/.test(svg),'Aufgeklappt: je Art eine Zeile, links benannt');
   ok(/>2<\/text>/.test(svg)&&/<circle/.test(svg),'Marke mit Zahl, sonst ein Punkt');
   A.AKTION.spanne({id:'t|Umpumpen|2026-09-24'});
   ok(/Umpumpen · 24\.09\.2026/.test(document.getElementById('dlgTitel').textContent)&&/data-tun="evWeg"/.test(document.getElementById('dlgBody').innerHTML),'Anklicken zeigt die Einträge des Tages, einzeln entfernbar');
   const box=document.getElementById('probeDiagramm');
   A.zeitBild(box,{tafeln:[{kopf:'pH',spuren:[{serien:[{id:'s',farbe:'#000',form:'kreis',punkte:[{x:+new Date('2026-05-01'),y:6},{x:+new Date('2026-09-15'),y:7}]}]}]}],
-    km:{spannen:A.kmBalken(),typen:['Umpumpen'],offen:true}});
+    km:A.kmDaten('tank')});
   const h=box.innerHTML;
-  ok(/>Kulturmanagement</.test(h)&&(h.match(/class="spb"/g)||[]).length===A.kmBalken().length,'Unter den Grafiken das Kulturmanagement – aufgeklappt jeder Balken, jede Marke');
+  ok(/>Kulturmanagement</.test(h)&&(h.match(/class="spb"/g)||[]).length===A.kmBalken('tank').length,'Das Kulturmanagement – aufgeklappt jeder Balken, jede Marke');
+  A.setKmOffen(false);
   ok(!/>Logbuch</.test(h),'Eine eigene Logbuch-Zeile gibt es nicht mehr');
 }
 

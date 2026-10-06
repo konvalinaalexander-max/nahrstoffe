@@ -108,34 +108,42 @@ console.log('\n════ Blattsaft & Giesswasser: zwei Fenster ════')
   ok(/data-tun="kbStoff" data-k="K"/.test(svg)&&/data-tun="kbWass" data-k="gw_K"/.test(svg),'Jede Grafik hat ihre Auswahl in der eigenen Kopfzeile – zum Anklicken');
   ok(svg.indexOf('data-tun="kbStoff"')<svg.indexOf('>Giesswasser<')&&svg.indexOf('data-tun="kbWass"')>svg.indexOf('>Giesswasser<'),'Die Nährstoffe des Blattsafts über seiner Grafik, die des Wassers über der seinen');
   ok(!/data-k="Mo"/.test(svg),'Zur Wahl steht nur, was je gemessen wurde (Molybdän lag immer unter der Nachweisgrenze)');
-  ok(/data-tun="kbEtage"/.test(svg)&&/data-aend="linienUm"/.test(svg)&&/data-tun="kbSkala"/.test(svg),'Blatt, Anzeige – und «Punkte verbinden» in der Zoomleiste');
+  ok(/data-tun="kbEtage"/.test(svg)&&/data-tun="kbSkala"/.test(svg),'Blatt und Anzeige in der Kopfzeile des Blattsafts');
+  ok(/data-aend="linienUm" data-ziel="blatt"/.test(svg)&&/data-aend="linienUm" data-ziel="wasser"/.test(svg)&&
+     svg.indexOf('data-ziel="blatt"')<svg.indexOf('>Giesswasser<')&&svg.indexOf('data-ziel="wasser"')>svg.indexOf('>Giesswasser<'),'«Punkte verbinden» bei den Nährstoffen – je Grafik ein eigener Schalter');
   ok(!/Frage|Erwartung|widerlegen|Stickstoffform|eigene Auswahl/.test(h+svg),'Keine vorformulierten Fragen');
   ok(/>Blattsaft</.test(svg)&&/>Giesswasser</.test(svg)&&/>Kulturmanagement</.test(svg)&&/Noch keine Massnahme eingetragen/.test(svg),'Zwei Grafiken und das Kulturmanagement – auch leer, damit man etwas eintragen kann');
-  ok(svg.indexOf('>Blattsaft<')<svg.indexOf('>Giesswasser<')&&svg.indexOf('>Giesswasser<')<svg.indexOf('>Kulturmanagement<'),'Blattsaft oben, Giesswasser darunter, dann das Kulturmanagement');
+  ok(svg.indexOf('>Blattsaft<')<svg.indexOf('>Kulturmanagement<')&&svg.indexOf('>Kulturmanagement<')<svg.indexOf('>Giesswasser<'),'Blattsaft oben, dann das Kulturmanagement, dann das Giesswasser – nah bei beiden');
   const kmTeil=svg.slice(svg.indexOf('>Kulturmanagement<'));
   ok(kmTeil.indexOf('data-tun="massnahmeNeu"')>=0&&kmTeil.indexOf('data-tun="massnahmeNeu"')<kmTeil.indexOf('<svg'),'Gleich unter der Überschrift «Kulturmanagement» der Knopf «＋ Massnahme eintragen»');
-  const svgs=svg.match(/<svg[^>]*role="img"/g)||[];
-  const achsen=svg.split('<svg').slice(1).filter(s=>/>(Jul|Aug|Sep) 26</.test(s)||/>\d\d\.\d\d\.</.test(s)).length;
-  ok(svgs.length===3&&achsen===3,'Blattsaft, Giesswasser und Kulturmanagement: je eine eigene Grafik mit eigener Datumsachse ('+svgs.length+' / '+achsen+')');
-  ok(/class="zoomleiste"/.test(svg)&&/data-tun="zoomEin"/.test(svg)&&/data-tun="zoomAus"/.test(svg)&&/class="zlBahn"/.test(svg),'Darunter eine Zoomleiste: −, +, Schiebebalken');
+  const spuren=svg.split('<svg class="zb spur"').slice(1);
+  const achsen=spuren.filter(s=>/>(Jul|Aug|Sep) 26</.test(s)||/>\d\d\.\d\d\.</.test(s)).length;
+  ok(spuren.length===2&&achsen===2,'Blattsaft und Giesswasser: je eine eigene Grafik mit eigener Datumsachse ('+spuren.length+' / '+achsen+')');
+  ok(svg.indexOf('class="zeitzeile"')<svg.indexOf('>Blattsaft<')&&/data-tun="zoomAus"[^>]*>−<\/button><button data-tun="zoomEin"/.test(svg),'Oben die Zeitzeile mit − und + ganz rechts');
+  ok(/class="rollleiste"/.test(svg)&&/class="rbDaumen"/.test(svg)&&!/zlGriff|zlMonate|zlFenster/.test(svg),'Unten ein schlichter Rollbalken – ohne Griffe, ohne Monatsnamen');
   const F=A.farbenFuer(['K']);
   ok((svg.match(new RegExp('fill="'+F.K+'"','g'))||[]).length===6,'Kalium oben (4 Proben) und unten (2) in derselben Farbe');
-  ok(/Optimum \(Labor\)/.test(svg),'Ein Nährstoff allein in seiner Spur: das Optimum des Labors als Band');
-  const tipps=[...svg.matchAll(/class="hit"[^>]*data-tipp="([^"]*)"/g)].map(m=>m[1]);
+  ok(!/class="hit"/.test(svg),'Keine unsichtbaren Trefferkreise mehr – Zeigen sucht den nächsten Punkt');
+  const tipps=A.getZeit().ZEIT.treffer.flat().map(t=>t.tipp);
   ok(tipps.length===6&&tipps.every(t=>/Anklicken öffnet den Bericht/.test(t)),'Jeder Punkt hat sein Kästchen und öffnet den Bericht');
   ok(tipps.some(t=>/Optimum \(Labor\)/.test(t)&&/Kulturbild/.test(t)&&/junges Blatt/.test(t)),'Kästchen: Wert, Optimum, Blatt, Kulturbild');
   A.getDiag().klick('a2');
   ok($('dlgTitel').textContent==='Blattsaft · Satz 28-478 · 18.08.2026','Ein Klick auf einen Punkt öffnet den Bericht');
   A.setKombi({etage:'alt'});A.vKombi();A.nachRenderRun();
-  ok(([...$('cKb').innerHTML.matchAll(/class="hit"/g)]).length===4,'Nur altes Blatt: zwei Punkte oben, zwei unten');
+  ok(A.getZeit().ZEIT.treffer.flat().length===4,'Nur altes Blatt: zwei Punkte oben, zwei unten');
   A.setKombi({etage:'beide',blatt:['K','Ca','Fe']});A.vKombi();A.nachRenderRun();
   const t2=[...$('cKb').innerHTML.matchAll(/font-weight="600" fill="#141D17">([^<]*)</g)].map(m=>m[1]);
   ok(t2.includes('Eisen')&&t2.some(t=>/Kalium/.test(t)&&/Calcium/.test(t)),'Kalium und Calcium teilen eine Achse, Eisen bekommt seine eigene ('+t2.join(' | ')+')');
+  ok(/>Optimum \(Labor\)<\/text>/.test($('cKb').innerHTML),'Eisen allein in seiner Spur: das Optimum des Labors als Band');
+  const ticks=[...$('cKb').innerHTML.matchAll(/font-family="JetBrains Mono,monospace">([^<]*)</g)].map(m=>+m[1].replace(/['’]/g,''));
+  ok(ticks.length>4&&ticks.every(v=>[1,2,2.5,5].some(s=>{const m=Math.pow(10,Math.floor(Math.log10(Math.abs(v)||1)));return v===0||Math.abs(v/m/s-Math.round(v/m/s))<1e-6||Math.abs(v/(m/10)/s-Math.round(v/(m/10)/s))<1e-6})),'Runde Werte an der y-Achse ('+ticks.join(' ')+')');
   A.setKombi({skala:'lage'});A.vKombi();A.nachRenderRun();
   const s3=$('cKb').innerHTML;
   ok(/>Optimum</.test(s3)&&/>darunter</.test(s3)&&/>darüber</.test(s3)&&/Lage im Optimum des Labors/.test(s3),'Anzeige «Lage im Optimum»: ein Fenster, darunter – Optimum – darüber');
-  A.setKombi({skala:'wert',linien:'reihe'});A.vKombi();A.nachRenderRun();
-  ok(/<polyline/.test($('cKb').innerHTML),'Linien je Reihe');
+  A.setKombi({skala:'wert'});A.setLinien(['blatt']);A.vKombi();A.nachRenderRun();
+  {const s=$('cKb').innerHTML,gw=s.indexOf('>Giesswasser<');
+   ok(/<polyline/.test(s.slice(0,gw))&&!/<polyline/.test(s.slice(gw)),'«Punkte verbinden» beim Blattsaft verbindet nur dort');}
+  A.setLinien([]);
   A.setKombi({blatt:[],wasser:['gw_K'],linien:'keine'});
   const h4=A.vKombi();A.nachRenderRun();
   ok(/Kein Wert gewählt/.test($('cKb').innerHTML),'Nichts gewählt: das Fenster sagt es');
@@ -168,11 +176,14 @@ console.log('\n════ pH & EC am Tank ════');
   const svg=$('cTank').innerHTML;
   ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Rendert sauber');
   ok(/<h3>pH<\/h3>/.test(svg)&&/<h3>EC<\/h3>/.test(svg)&&/<h3>Sauerstoff<\/h3>/.test(svg),'Drei Grafiken: pH, EC, Sauerstoff');
-  ok((svg.match(/<svg[^>]*role="img"/g)||[]).length===4,'Jede mit eigener Datumsachse, dazu das Kulturmanagement');
-  ok(/data-tun="tkStelle" data-v="Reservoir vorne"/.test(h)&&/data-tun="zeitVorgabe" data-v="7"/.test(svg)&&/data-aend="linienUm"/.test(svg),'Stelle oben; Zeitraum und «Punkte verbinden» in der Zoomleiste');
+  ok((svg.match(/<svg class="zb spur"/g)||[]).length===3,'Jede mit eigener Datumsachse');
+  ok(svg.indexOf('<h3>pH</h3>')<svg.indexOf('>Kulturmanagement<')&&svg.indexOf('>Kulturmanagement<')<svg.indexOf('<h3>EC</h3>'),'Das Kulturmanagement gleich unter pH, vor EC');
+  {const zz=svg.slice(svg.indexOf('class="zeitzeile"'),svg.indexOf('class="tafeln"'));
+   ok(/data-tun="tkStelle" data-v="Reservoir vorne"/.test(zz)&&/data-tun="zeitVorgabe" data-v="7"/.test(zz)&&/data-tun="zoomEin"/.test(zz),'Oben in einer Zeile: links die Stelle, rechts Zeitraum und − +');}
+  ok(['ph','ec','o2'].every(k=>new RegExp('data-aend="linienUm" data-ziel="'+k+'"').test(svg)),'«Punkte verbinden» im Kopf von pH, EC und Sauerstoff, je eigens');
   ok(/Alle Messungen als Liste \(4\)/.test(h)&&/<details class="aufklapp">/.test(h)&&(h.match(/data-tun="messungWeg"/g)||[]).length===4,'Darunter die Liste aller Messungen – eingeklappt');
   ok(h.indexOf('04.10.2026')<h.indexOf('30.09.2026')&&h.indexOf('30.09.2026')<h.indexOf('01.07.2026'),'Neueste zuerst');
-  ok(/>Maske</.test(h)&&/>Paket</.test(h)&&/>Excel</.test(h),'Die Herkunft steht dabei');
+  ok(/>Mobile App</.test(h)&&/>Paket</.test(h)&&/>Excel</.test(h),'Die Herkunft steht dabei');
   ok(/title="Tabelle, Zeile 9"/.test(h),'Der Beleg aus dem Paket als Hinweis');
   ok(!/Sättigung|Annahme|Kachel|Trend/.test(h+svg),'Keine Grenzen, keine Kacheln, keine Deutung');
   A.AKTION.tkStelle({v:'Reservoir hinten'});
@@ -187,48 +198,50 @@ console.log('\n════ pH & EC am Tank ════');
 
 console.log('\n════ Kulturmanagement: Biovin, Ereignisse, Reihenfolge, Löschen ════');
 {
-  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setKmAus(new Set());A.setKmOffen(false);A.setTab('kombi');
-  ok(!A.kmListe('kombi').some(z=>z.key==='m|biovin')&&A.kmListe('tank').some(z=>z.key==='m|biovin'),'Biovin steht im Reiter Blattsaft & Giesswasser nicht, im Reiter pH & EC am Tank schon');
+  A.setDb(A.leer());A.AKTION.paketAn({id:'reservoir-2026'});A.setKmAus(new Set());A.setKmOffen(false);A.setTab('kombi');A.setZeit(null,null);
+  ok(!A.kmListe('kombi').some(z=>z.key==='m|biovin')&&A.kmListe('tank').some(z=>z.key==='m|biovin'),'Biovin steht im Reiter Blattsaft & Giesswasser nicht, im Reiter pH, EC & O₂ schon');
   ok(A.getDb().ereignisse.filter(e=>e.mittel==='biovin').length===12,'Die zwölf Biovin-Gaben selbst bleiben im Bestand');
   const kd=A.kmDaten('kombi');
-  ok(!kd.spannen.some(s=>/^Biovin/.test(s.text||''))&&!kd.spannen.some(s=>s.marke),'Von Haus aus: Balken ohne Biovin, Ereignisse eingeklappt');
-  ok(['Wasserzugabe','Tank neu angesetzt','Umpumpen','Gerätekalibrierung','Notiz'].every(t=>kd.typen.includes(t)),'Die Klappzeile kennt die Ereignisse: '+kd.typen.join(', '));
-  const box=$('kmProbe');A.zeitBild(box,{tafeln:[],km:kd});
-  ok(/▸ Ereignisse zeigen \(\d\): Wasserzugabe · Neuansatz · Umpumpen · Kalibrierung/.test(box.innerHTML)&&!/>Neuansatz<\/text>/.test(box.innerHTML),'Eine Zeile «▸ Ereignisse zeigen …» statt der Zeilen mit Marken');
+  ok(!kd.zeilen.some(z=>z.key==='m|biovin')&&kd.zeilen.every(z=>z.spannen.every(s=>!s.marke)),'Von Haus aus: Balken ohne Biovin, die Ereignisse für sich');
+  ok(['Wasserzugabe','Tank neu angesetzt','Umpumpen','Gerätekalibrierung','Notiz'].every(t=>kd.typen.some(z=>z.name===t)),'Die Ereignisse: '+kd.typen.map(z=>z.name).join(', '));
+  const box=$('kmProbe');A.zeitBild(box,{tafeln:[],km:kd,kmNach:-1});
+  ok(/▸ Ereignisse \(\d\)/.test(box.innerHTML)&&!/class="kmTitel">Tank neu angesetzt</.test(box.innerHTML),'Eingeklappt: eine Zeile «▸ Ereignisse» mit Punkten statt einer Zeile je Art');
   A.AKTION.kmBearbeiten();
-  ok(/Biovin steht in diesem Reiter nicht/.test($('dlgBody').innerHTML)&&!/>Biovin</.test($('dlgBody').innerHTML),'«Zeilen ordnen»: Biovin fehlt hier – mit einem Satz, warum');
+  ok(/Biovin steht in diesem Reiter nicht/.test($('dlgBody').innerHTML)&&!/>Biovin</.test($('dlgBody').innerHTML),'«Zeilen verwalten»: Biovin fehlt hier – mit einem Satz, warum');
   A.AKTION.kmEreignisse();
-  ok(A.getKm().offen&&A.kmDaten('kombi').spannen.some(s=>s.marke),'Ein Klick klappt die Ereignisse auf');
-  A.zeitBild(box,{tafeln:[],km:A.kmDaten('kombi')});
-  ok(/▾ Ereignisse verbergen/.test(box.innerHTML)&&/>Neuansatz<\/text>/.test(box.innerHTML),'… dann stehen sie in ihren Zeilen, mit «▾ Ereignisse verbergen»');
+  ok(A.getKm().offen,'Ein Klick klappt die Ereignisse auf');
+  A.zeitBild(box,{tafeln:[],km:A.kmDaten('kombi'),kmNach:-1});
+  ok(/▾ Ereignisse/.test(box.innerHTML)&&/class="kmTitel">Tank neu angesetzt</.test(box.innerHTML),'… dann steht jede Art in ihrer Zeile');
   A.AKTION.kmEreignisse();
   ok(!A.getKm().offen,'Und wieder zu');
+  ok(/data-tun="massnahmeNeu"/.test(box.innerHTML)&&box.innerHTML.indexOf('>Kulturmanagement<')<box.innerHTML.indexOf('data-tun="massnahmeNeu"')&&box.innerHTML.indexOf('data-tun="massnahmeNeu"')<box.innerHTML.indexOf('class="kmZ'),'«＋ Massnahme eintragen» direkt unter der Überschrift, vor den Zeilen');
 
   A.setTab('tank');
   const vor=A.kmListe('tank').filter(z=>z.art!=='typ').map(z=>z.key);
-  A.AKTION.kmSchieben({k:vor[1],r:'-1'});
+  ok(A.kmVerschieben(vor[1],0)===true,'Ziehen und Ablegen: die zweite Zeile ganz nach oben');
   const nach=A.kmListe('tank').filter(z=>z.art!=='typ').map(z=>z.key);
-  ok(nach[0]===vor[1]&&nach[1]===vor[0]&&nach.length===vor.length,'↑ tauscht eine Zeile mit der darüber ('+vor[1]+')');
+  ok(nach[0]===vor[1]&&nach[1]===vor[0]&&nach.length===vor.length,'… sie steht jetzt oben, die übrigen rücken nach ('+vor[1]+')');
   ok(A.kmBalken('tank').filter(b=>!b.marke)[0].zeile===vor[1],'Die Balken folgen der neuen Reihenfolge');
-  A.AKTION.kmSchieben({k:nach[0],r:'-1'});
-  ok(A.kmListe('tank')[0].key===nach[0],'Ganz oben geht es nicht weiter hinauf');
-  A.AKTION.kmSchieben({k:nach[0],r:'1'});
-  ok(A.kmListe('tank').filter(z=>z.art!=='typ')[1].key===nach[0],'↓ wieder hinunter');
+  A.kmVerschieben(vor[1],vor.length+5);
+  ok(A.kmListe('tank').filter(z=>z.art!=='typ').slice(-1)[0].key===vor[1],'Über das Ende hinaus: sie landet zuunterst');
+  A.AKTION.kmSchieben({k:vor[1],r:'-1'});
+  ok(A.kmListe('tank').filter(z=>z.art!=='typ').slice(-2)[0].key===vor[1],'Mit der Tastatur (Pfeil hoch am Griff) um einen Platz');
   const typen=A.kmListe('tank').filter(z=>z.art==='typ').map(z=>z.key);
-  A.AKTION.kmSchieben({k:typen[typen.length-1],r:'-1'});
+  A.kmVerschieben(typen[typen.length-1],0);
   const typen2=A.kmListe('tank').filter(z=>z.art==='typ').map(z=>z.key);
-  ok(typen2[typen.length-2]===typen[typen.length-1]&&A.kmListe('tank')[0].art!=='typ','Ereignisse ordnen sich unter sich – sie rutschen nie zwischen die Balken');
+  ok(typen2[0]===typen[typen.length-1]&&A.kmListe('tank')[0].art!=='typ','Ereignisse ordnen sich unter sich – sie rutschen nie zwischen die Balken');
   A.setTab('kombi');
   const k0=A.kmListe('kombi').filter(z=>z.art!=='typ').map(z=>z.key);
-  A.AKTION.kmSchieben({k:k0[2],r:'-1'});
+  A.kmVerschieben(k0[2],1);
   const k1=A.kmListe('kombi').filter(z=>z.art!=='typ').map(z=>z.key);
-  ok(k1[1]===k0[2]&&k1[2]===k0[1],'Im Reiter ohne Biovin verschiebt ↑ um eine sichtbare Zeile');
-  ok(A.kmListe('tank').some(z=>z.key==='m|biovin'),'… und Biovin bleibt im anderen Reiter erhalten');
+  ok(k1[1]===k0[2]&&k1[2]===k0[1],'Im Reiter ohne Biovin zählt nur, was sichtbar ist');
+  const voll=A.kmListe('tank').map(z=>z.key);
+  ok(voll.includes('m|biovin')&&A.getKm().reihe.includes('m|biovin'),'… und Biovin behält im anderen Reiter seinen Platz');
   {
     const speicher={};global.localStorage={getItem:k=>speicher[k]??null,setItem:(k,v)=>{speicher[k]=String(v)}};
     A.ansichtMerken();
     const a=JSON.parse(speicher['basilikum.ansicht']);
-    ok(Array.isArray(a.kmReihe)&&a.kmReihe.indexOf(k0[2])<a.kmReihe.indexOf(k0[1])&&a.kmEreignisseOffen===false,'Reihenfolge und Klappzustand werden auf diesem Gerät gemerkt');
+    ok(Array.isArray(a.kmReihe)&&a.kmReihe.indexOf(k0[2])<a.kmReihe.indexOf(k0[1])&&a.kmEreignisseOffen===false&&a.tab===undefined,'Reihenfolge und Klappzustand werden auf diesem Gerät gemerkt – der Reiter nicht');
     delete global.localStorage;
   }
 
@@ -249,61 +262,88 @@ console.log('\n════ Kulturmanagement: Biovin, Ereignisse, Reihenfolge, L
   ok(!A.beigabeHand(x=>x.name==='Schattierung').length&&A.beigabeHand(x=>x.mittel==='kali').length===1,'… bei einer eigenen Massnahme: beide Zeiträume, nichts sonst');
   A.setKmOffen(false);
   plus('t|Umpumpen','2026-10-01','tag','','');
-  ok(A.getKm().offen&&A.kmDaten('tank').spannen.some(s=>s.marke&&s.zeile==='t|Umpumpen'),'Wer ein Ereignis einträgt, sieht es gleich: die Ereignisse klappen auf');
+  ok(A.getKm().offen&&A.kmDaten('tank').typen.some(z=>z.key==='t|Umpumpen'&&z.spannen.length),'Wer ein Ereignis einträgt, sieht es gleich: die Ereignisse klappen auf');
+  A.setKmAus(new Set(['m|kali']));
+  const kb=$('kmProbe2');A.zeitBild(kb,{tafeln:[],km:A.kmDaten('tank'),kmNach:-1});
+  ok(/data-tun="kmBearbeiten">1 ausgeblendet</.test(kb.innerHTML),'Ist etwas ausgeblendet, steht es da – «1 ausgeblendet» öffnet die Verwaltung');
+  A.setKmAus(new Set());
 }
 
-console.log('\n════ Zoomen: Knöpfe statt Mausrad ════');
+console.log('\n════ Zoomen: − und + oben, Stufen, Grenzen ════');
 {
   const d=A.leer();
   for(let t=0;t<150;t++){const dt=new Date(Date.UTC(2026,4,1)+t*864e5).toISOString().slice(0,10);d.messungen.push({id:'d'+t,datum:dt,zeit:'08:00',stelle:'vorne',ph:6.5,ec:1,quelle:'excel'})}
   ['07:00','09:00','11:00','13:00','15:00','17:00'].forEach((z,i)=>d.messungen.push({id:'s'+i,datum:'2026-09-20',zeit:z,stelle:'vorne',ph:5.8+i*0.1,ec:1.2,quelle:'erfassen'}));
   A.setDb(d);A.setTab('tank');A.setZeit(null,null);A.vTank();A.nachRenderRun();
   let Z=A.getZeit();
-  ok(Z.koVon===null&&Z.ZEIT&&Z.ZEIT.x0===Z.ZEIT.g0&&Z.ZEIT.x1===Z.ZEIT.g1,'Zu Beginn ist alles sichtbar');
-  const ganz=Z.ZEIT.g1-Z.ZEIT.g0;
+  const tage=()=>Math.round((Z.koBis-Z.koVon)/864e5*100)/100;
+  ok(Z.koVon===null&&Z.ZEIT&&Z.ZEIT.x0===Z.ZEIT.g0&&Z.ZEIT.x1===Z.ZEIT.g1&&Z.wahl==='alles','Zu Beginn ist alles sichtbar, «alles» hervorgehoben');
   A.AKTION.zoomEin();Z=A.getZeit();
-  ok(Math.abs((Z.koBis-Z.koVon)-ganz*0.6)<1e3&&Math.abs((Z.koVon+Z.koBis)/2-(Z.ZEIT.g0+Z.ZEIT.g1)/2)<1e3,'«+» zeigt 60 % des Zeitraums, um die Mitte');
-  ok(Z.zeitWahl===null,'Von Hand gezoomt: kein fester Zeitraum hervorgehoben');
-  A.AKTION.zoomAus();Z=A.getZeit();
-  ok(Z.koVon===null&&Z.zeitWahl==='alles','«−» zurück: wieder alles, und «alles» ist hervorgehoben');
-  A.AKTION.zoomAus();
-  ok(A.getZeit().koVon===null,'Weiter hinaus als alles geht es nicht');
-  for(let i=0;i<40;i++)A.AKTION.zoomEin();Z=A.getZeit();
-  ok(Math.abs((Z.koBis-Z.koVon)-0.25*864e5)<1e3,'Hinein höchstens bis auf sechs Stunden');
+  ok(tage()===90&&Z.koBis===Z.ZEIT.g1&&Z.wahl==='90','«+» springt auf die nächste Stufe: 3 Monate, das Neueste bleibt rechts im Bild');
+  const stufen=[];for(let i=0;i<12;i++){A.AKTION.zoomEin();Z=A.getZeit();stufen.push(tage())}
+  ok(stufen.slice(0,8).join(' ')==='42 21 14 7 3 1 0.5 0.25'&&stufen[11]===0.25,'Weiter: 6 Wochen, 3 Wochen, 2 Wochen, 1 Woche, 3 Tage, 1 Tag, 12 Stunden, 6 Stunden – dann ist Schluss ('+stufen.join(' ')+')');
+  ok(/data-tun="zoomEin"[^>]*aria-disabled="true"/.test($('cTank').innerHTML),'Am Ende ist «+» gedimmt');
+  const zurueck=[];for(let i=0;i<12;i++){A.AKTION.zoomAus();Z=A.getZeit();zurueck.push(Z.koVon===null?'alles':tage())}
+  ok(zurueck.slice(0,9).join(' ')==='0.5 1 3 7 14 21 42 90 alles','«−» geht dieselben Stufen zurück bis «alles» ('+zurueck.slice(0,9).join(' ')+')');
+  ok(/data-tun="zoomAus"[^>]*aria-disabled="true"/.test($('cTank').innerHTML),'Bei «alles» ist «−» gedimmt');
   A.AKTION.zeitVorgabe({v:'7'});Z=A.getZeit();
-  ok(Z.zeitWahl==='7'&&Math.round((Z.koBis-Z.koVon)/864e5)===7&&Z.koBis>=Z.ZEIT.letzte,'«1 Woche»: die letzten sieben Tage bis zur jüngsten Messung');
+  ok(Z.wahl==='7'&&tage()===7&&Z.koBis>=Z.ZEIT.letzte,'«1 Woche»: die letzten sieben Tage bis zur jüngsten Messung');
+  const mitte=Z.ZEIT.g0+50*864e5;A.setZeit(mitte-7*864e5,mitte+7*864e5);A.getDiag().zeichnen();
+  A.AKTION.zoomEin();Z=A.getZeit();
+  ok(tage()===7&&Math.abs((Z.koVon+Z.koBis)/2-mitte)<1e3,'Mitten in den Daten zoomt «+» um die Mitte');
   A.setZeit(Z.ZEIT.g0-50*864e5,Z.ZEIT.g0-40*864e5);A.getDiag().zeichnen();Z=A.getZeit();
-  ok(Z.koVon===Z.ZEIT.g0&&Math.round((Z.koBis-Z.koVon)/864e5)===10,'Ein Ausschnitt vor dem ersten Wert wird an den Anfang geschoben – man verliert sich nicht');
+  ok(Z.koVon===Z.ZEIT.g0&&tage()===10,'Ein Ausschnitt vor dem ersten Wert wird an den Anfang geschoben – man verliert sich nicht');
   A.AKTION.zeitVorgabe({v:'alles'});
   ok(A.getZeit().koVon===null,'«alles»');
   const s=$('cTank').innerHTML;
-  ok(/data-tun="zeitVorgabe" data-v="alles"/.test(s)&&/data-tun="zeitVorgabe" data-v="90"/.test(s)&&/data-tun="zeitVorgabe" data-v="42"/.test(s),'Feste Zeiträume: alles, 3 Monate, 6 Wochen, 1 Woche');
-  ok(/class="zeiger"/.test(s)&&(s.match(/class="zeiger"/g)||[]).length===3,'Jede Grafik hat ihren Zeiger – er steht in allen am selben Tag');
-}
-
-console.log('\n════ Viele Messungen am Tag: zusammengefasst, bis man hineinzoomt ════');
-{
-  A.setZeit(null,null);A.vTank();A.nachRenderRun();
-  let s=$('cTank').innerHTML;
-  ok(/class="zbHinweis/.test(s),'Weit herausgezoomt: ein Satz erklärt Punkt und Strich');
-  const tag=+new Date('2026-09-20');
-  const m=s.match(new RegExp('data-tipp="([^"]*)" data-tun="zoomTag" data-x="'+tag+'"'));
-  ok(!!m,'Der 20.09. mit sieben Messungen ist ein Punkt – anklickbar, er zoomt auf den Tag');
-  const tipp=m?m[1].replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/<[^>]+>/g,' ').replace(/\s+/g,' '):'';
-  ok(/Messungen: 7/.test(tipp)&&/tiefster Wert: 5.8/.test(tipp)&&/höchster Wert: 6.5/.test(tipp)&&/Mittelwert: 6.1/.test(tipp),'Das Kästchen nennt Anzahl, Mittelwert, tiefsten und höchsten Wert ('+tipp.trim()+')');
-  ok((s.match(/class="hit"/g)||[]).length===300,'Je Tag ein Punkt: 150 Tage, pH und EC – 300');
-  ok((s.match(/stroke-width="3" stroke-linecap="round" opacity=".3"/g)||[]).length===2,'Nur der Tag mit mehreren Messungen hat einen Strich (pH und EC)');
-  A.AKTION.zoomTag({x:String(tag)});
-  s=$('cTank').innerHTML;
-  const Z=A.getZeit();
-  ok(Z.koVon===tag-0.5*864e5&&Z.koBis===tag+1.5*864e5,'Anklicken zeigt den Tag mit seinen Nachbarn');
-  ok(!/zbHinweis/.test(s)&&!/data-tun="zoomTag"/.test(s)&&(s.match(/class="hit"/g)||[]).length===16,'Hineingezoomt: jede Messung einzeln (je acht für pH und EC)');
+  ok(/data-tun="zeitVorgabe" data-v="alles"/.test(s)&&/data-tun="zeitVorgabe" data-v="90"/.test(s)&&/data-tun="zeitVorgabe" data-v="42"/.test(s)&&/data-tun="zeitVorgabe" data-v="7"/.test(s),'Feste Zeiträume: alles, 3 Monate, 6 Wochen, 1 Woche');
+  ok((s.match(/class="zeiger"/g)||[]).length>=2&&(s.match(/class="zeigerDatum"/g)||[]).length===2&&(s.match(/class="ring"/g)||[]).length===2,'Jede Grafik hat Zeiger, Datumsschild und Ring für den nächsten Punkt');
+  ok(/23\.04\.|\d\d\.\d\d\. – \d\d\.\d\d\.2026 · \d+ Tage/.test(s),'Oben steht der Zeitraum mit seiner Länge');
+  ok(A.bereichText(Date.UTC(2026,8,24,6),Date.UTC(2026,8,26,18))==='24.09. 06:00 – 26.09. 18:00 · 2½ Tage'&&A.bereichText(Date.UTC(2026,8,24,6),Date.UTC(2026,8,24,18))==='24.09. 06:00 – 18:00 · 12 Stunden','Kurze Zeiträume mit Uhrzeit');
+  /* Der nächste Punkt – man muss ihn nicht genau treffen */
   A.AKTION.zeitVorgabe({v:'7'});
-  s=$('cTank').innerHTML;
-  ok(!/zbHinweis/.test(s),'Bei einer Woche stehen die Messungen schon einzeln');
+  const l=A.getZeit().ZEIT.treffer[0],p=l[Math.floor(l.length/2)];
+  ok(A.naechsterPunkt(0,p.cx+12,p.cy+5,20)===p&&A.naechsterPunkt(0,p.cx,p.cy+40,20)===null,'Zeigen 13 px neben einem Punkt trifft ihn, 40 px daneben nicht');
+  A.AKTION.zeitVorgabe({v:'alles'});
+  /* Ausschnitt je Reiter, nur in dieser Sitzung */
+  A.AKTION.zeitVorgabe({v:'7'});
+  A.setTab('kombi');A.render();A.setTab('tank');A.render();A.nachRenderRun();
+  ok(Math.round((A.getZeit().koBis-A.getZeit().koVon)/864e5)===7,'Zum anderen Reiter und zurück: der Ausschnitt ist noch da');
+  A.AKTION.zeitVorgabe({v:'alles'});
 }
 
-console.log('\n════ Einträge der Maske ════');
+console.log('\n════ Viele Messungen am Tag: Stufen statt Haufen ════');
+{
+  ok(A.verdichtStufe(40,null)==='einzeln'&&A.verdichtStufe(20,null)==='halb'&&A.verdichtStufe(8,null)==='tag','Ab 30 Bildpunkten je Tag jede Messung, ab 14 je halber Tag, darunter je Tag');
+  ok(A.verdichtStufe(28,'einzeln')==='einzeln'&&A.verdichtStufe(26,'einzeln')==='halb'&&A.verdichtStufe(13,'halb')==='halb'&&A.verdichtStufe(12,'halb')==='tag'&&A.verdichtStufe(13,'einzeln')==='halb',
+     'Zurück zur gröberen Stufe erst unter 90 % – beim Zoomen flackert nichts');
+  A.setZeit(null,null);A.vTank();A.nachRenderRun();
+  let s=$('cTank').innerHTML,Z=A.getZeit();
+  ok(Z.ZEIT.stufe==='tag'&&/Punkt = Mittel je Tag/.test(s),'Alles im Blick: je Tag ein Punkt – der Kopf von pH sagt es');
+  const tag=+new Date('2026-09-20');
+  const blk=Z.ZEIT.treffer[0].find(t=>t.block!=null&&Math.floor(t.block/864e5)*864e5===tag);
+  ok(!!blk,'Der 20.09. mit sieben Messungen ist ein Punkt – anklickbar');
+  const tipp=blk?blk.tipp.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '):'';
+  ok(/Messungen: 7 \(07:00 bis 17:00\)/.test(tipp)&&/tiefster Wert: 5.8/.test(tipp)&&/höchster Wert: 6.5/.test(tipp)&&/Mittelwert: 6.1/.test(tipp)&&/So 20\.09\.2026/.test(tipp),'Das Kästchen: Tag, Anzahl mit Uhrzeiten, Mittelwert, tiefster und höchster Wert ('+tipp.trim()+')');
+  ok(Z.ZEIT.treffer.flat().length===300,'Je Tag ein Punkt: 150 Tage, pH und EC – 300');
+  ok((s.match(/stroke-width="3" stroke-linecap="round" opacity=".3"/g)||[]).length===2,'Nur der Tag mit mehreren Messungen hat einen Strich (pH und EC)');
+  A.AKTION.zeitVorgabe({v:'42'});s=$('cTank').innerHTML;Z=A.getZeit();
+  const am20=Z.ZEIT.treffer[0].filter(t=>(t.block!=null?Math.floor(t.block/864e5)*864e5:null)===tag||/20\.09\.2026/.test(t.tipp));
+  ok(Z.ZEIT.stufe==='halb'&&am20.length===2&&/Punkt = Mittel je halben Tag/.test(s),'6 Wochen: der 20.09. als Vormittag und Nachmittag – zwei Punkte statt einem');
+  ok(/00–12 Uhr/.test(am20.map(t=>t.tipp).join(' '))&&/12–24 Uhr/.test(am20.map(t=>t.tipp).join(' ')),'… im Kästchen mit dem halben Tag');
+  A.AKTION.zoomTag({x:String(blk.block)});s=$('cTank').innerHTML;Z=A.getZeit();
+  const L=(Z.koBis-Z.koVon)/864e5,drin=A.getDb().messungen.filter(m=>{const x=+new Date(m.datum)+(+m.zeit.slice(0,2))*36e5;return x>=Z.koVon&&x<=Z.koBis}).length;
+  ok(Math.round(L)===7&&Z.ZEIT.stufe==='einzeln'&&Z.ZEIT.treffer[0].length===drin&&/Punkte: jede Messung/.test(s),'Anklicken: eine Woche um den Punkt, jede Messung einzeln ('+drin+')');
+  A.AKTION.zeitVorgabe({v:'alles'});
+  /* Ohne Uhrzeit: nie in einen halben Tag einsortiert */
+  const d2=A.getDb();['a','b','c'].forEach((k,i)=>d2.messungen.push({id:'u'+k,datum:'2026-09-10',stelle:'vorne',ph:6+i*0.2,ec:1,quelle:'excel'}));
+  A.vTank();A.nachRenderRun();A.AKTION.zeitVorgabe({v:'42'});Z=A.getZeit();
+  const u=Z.ZEIT.treffer[0].filter(t=>/10\.09\.2026/.test(t.tipp));
+  ok(u.length===2&&u.some(t=>/als Tag zusammengefasst/.test(t.tipp)),'Messungen ohne Uhrzeit bilden ihren eigenen Punkt für den Tag – keine erfundene Tageszeit');
+  A.AKTION.zeitVorgabe({v:'alles'});
+}
+
+console.log('\n════ Einträge der Mobile App ════');
 {
   const d=A.leer();
   d.messungen=[{id:'m1',datum:'2026-10-04',zeit:'07:45',stelle:'Reservoir vorne',ph:6.1,ec:1.31,o2:6.2,wer:'MK',notiz:'nach Regen',quelle:'erfassen',erfasst:'2026-10-04T05:46:00Z'},
@@ -320,7 +360,7 @@ console.log('\n════ Einträge der Maske ════');
   ok(!/07:45/.test(A.vMaske())&&/08:10/.test(A.vMaske()),'Filter: nur Beigaben');
   A.AKTION.meFilter({v:'alle'});
   A.setDb(A.leer());
-  ok(/Noch nichts aus der Maske/.test(A.vMaske()),'Ohne Einträge: ein Hinweis');
+  ok(/Noch nichts aus der Mobile App/.test(A.vMaske()),'Ohne Einträge: ein Hinweis');
 }
 
 console.log('\n════ Persönliche Ansicht ════');
@@ -331,10 +371,24 @@ console.log('\n════ Persönliche Ansicht ════');
   A.setTab('analysen');A.setKombi({blatt:['NO3'],wasser:[],etage:'beide',skala:'wert'});A.setKmAus(new Set());
   A.ansichtLaden();
   const k=A.getKombi();
-  ok(A.getTab()==='tank'&&k.blatt.join()==='K,Fe'&&k.wasser.join()==='gw_NO3'&&k.etage==='jung'&&k.skala==='lage'&&A.getKmAus().has('m|em'),'Reiter, Auswahl und ausgeblendete Balken überstehen das Neuladen');
+  ok(k.blatt.join()==='K,Fe'&&k.wasser.join()==='gw_NO3'&&k.etage==='jung'&&k.skala==='lage'&&A.getKmAus().has('m|em'),'Auswahl und ausgeblendete Balken überstehen das Neuladen');
+  ok(A.getTab()==='analysen'&&!/"tab"/.test(speicher['basilikum.ansicht']),'Der Reiter nicht – die Seite öffnet immer mit Blattsaft & Giesswasser');
   speicher['basilikum.ansicht']=JSON.stringify({tab:'giess',kbEtage:'quer',kbBlatt:'kaputt'});
   A.setTab('kombi');A.ansichtLaden();
   ok(A.getTab()==='kombi'&&A.getKombi().etage==='jung','Ein alter Reiter («giess») und Unsinn werden ignoriert');
+  delete global.localStorage;
+}
+
+console.log('\n════ «Ältere Daten übernommen»: einmal und nicht wieder ════');
+{
+  const speicher={};global.localStorage={getItem:k=>speicher[k]??null,setItem:(k,v)=>{speicher[k]=String(v)}};
+  const k=A.hinweisSchluessel(['5 Einträge zu einem Mittel, das nicht mehr geführt wird, sind entfernt.']);
+  ok(!A.hinweisGesehen(k),'Zuerst: noch nicht gesehen');
+  A.AKTION.hinweisVerstanden({k});
+  ok(A.hinweisGesehen(k),'«Verstanden» merkt ihn sich auf diesem Gerät');
+  ok(A.hinweisSchluessel(['5 Einträge zu einem Mittel, das nicht mehr geführt wird, sind entfernt.'])===k&&A.hinweisSchluessel(['etwas anderes'])!==k,'Derselbe Wortlaut kommt nicht wieder – ein neuer schon');
+  global.localStorage={getItem(){throw new Error('gesperrt')},setItem(){throw new Error('gesperrt')}};
+  ok(A.hinweisGesehen(k)===false,'Ist der Speicher gesperrt, läuft alles weiter – der Hinweis darf dann erneut kommen');
   delete global.localStorage;
 }
 

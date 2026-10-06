@@ -59,7 +59,7 @@ for(const t of ['vAnalysen','vKombi','vTank','vMaske','vEinst']){
   catch(e){bad.push(t+' WIRFT '+e.message)}
 }
 ok(!bad.length,'Alle fünf Reiter rendern die geladene Datei sauber'+(bad.length?': '+bad.join(', '):''));
-ok(A.TABS.map(t=>t[1]).join('|')==='Blattsaft & Giesswasser|Analysen|pH & EC am Tank|Einträge Maske|Einstellungen','Fünf Reiter, Blattsaft & Giesswasser zuerst');
+ok(A.TABS.map(t=>t[1]).join('|')==='Blattsaft & Giesswasser|pH, EC & O₂|Einträge Mobile App|Analysen|Einstellungen','Fünf Reiter: Blattsaft & Giesswasser, pH, EC & O₂, Einträge Mobile App, Analysen, Einstellungen');
 
 console.log('\n════ Der Bericht: Werte, Optimum, sonst nichts ════');
 const d=A.leer();

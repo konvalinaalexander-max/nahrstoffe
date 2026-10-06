@@ -124,54 +124,107 @@ details[open]>summary:before{content:'▾ '}
 .chip.stoff .dot{width:9px;height:9px}
 /* ── Zeitbild: getrennte Grafiken, ein Zeitraum ──
    Jede Grafik ist so breit wie ihr Kasten; gescrollt wird nur die Seite.
-   Kein overflow am Kasten – sonst klebt die Zoomleiste nicht unten. */
+   Kein overflow am Kasten – sonst klebt der Rollbalken nicht unten. */
+html,body{overscroll-behavior-x:none}
 .zeitbild{position:relative}
-.zeitbild .bild svg{display:block;user-select:none;-webkit-user-select:none;touch-action:pan-y pinch-zoom}
-.zeitbild.gezoomt .bild svg{cursor:grab}
-.zeitbild.zieht .bild svg,.zeitbild.zieht .bild svg *{cursor:grabbing!important}
-.zeitbild .hit{fill:transparent}
-.zeitbild .hit:hover{fill:rgba(20,29,23,.10)}
+.zeitbild svg.zb{display:block;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+.zeitbild.gezoomt svg.zb{cursor:grab}
+.zeitbild.zieht svg.zb,.zeitbild.zieht svg.zb *{cursor:grabbing!important}
+.tafeln{outline:none;border-radius:8px}
+.tafeln:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.tafeln.hebt g.reihe:not(.an){opacity:.22}
+g.reihe{transition:opacity .12s}
+.zbLink{cursor:pointer;text-decoration:underline}
 .spb rect,.spb path,.spb circle{transition:filter .12s}.spb:hover rect,.spb:hover path,.spb:hover circle{filter:brightness(1.12) saturate(1.1)}
-.kmAuf:hover{fill:var(--line2)}
 .tafel+.tafel{border-top:1px solid var(--line2);margin-top:10px;padding-top:12px}
 .tafelKopf{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:0 0 8px;min-height:30px}
 .tafelKopf h3{font-size:15.5px}
 .tafelKopf .neben{font-size:12px;color:var(--muted)}
-.tafelKopf .rechts{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-left:auto}
+.tafelKopf .rechts{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-left:auto;min-width:0}
 .tafelKopf .lab2{font-size:11.5px;color:var(--muted);font-weight:500}
 .tafel>.wahl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.wahl .trenner{width:1px;height:18px;background:var(--line);margin:0 4px 0 auto}
 input[type=checkbox]{accent-color:var(--ok)}
-.kmKnoepfe{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:2px 0 8px}
-.zbHinweis{margin:0 0 8px;padding:6px 10px;background:var(--card2);border:1px solid var(--line2);border-radius:var(--rs)}
-/* Die Zoomleiste klebt am unteren Bildrand, solange man in den Grafiken ist. */
-.zoomleiste{position:sticky;bottom:0;z-index:6;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;
-  margin:12px -18px -18px;padding:10px 18px;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);
-  border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);box-shadow:0 -6px 16px rgba(20,29,23,.05)}
+.verbinden{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+.verbinden svg{fill:currentColor;color:#4F5E53}
+.verbinden:has(input:checked){color:var(--ink)}
+.dichteInfo{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+button.klein.offen{color:var(--ink)}
+/* Zeitzeile oben: Zeitraum, feste Zeiträume, − und + */
+.zeitzeile{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;min-height:36px;padding-bottom:10px;margin-bottom:12px;border-bottom:1px solid var(--line2)}
+.zzLinks{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.zzLinks .lab2{font-size:11.5px;color:var(--muted);font-weight:500}
+.zzRechts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-left:auto;justify-content:flex-end}
+.zzText{font-size:12px;color:var(--muted);white-space:nowrap;min-width:30ch;text-align:right}
+.zzVorgabe .kurz{display:none}
 .zlZoom{display:inline-flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;flex:none}
 .zlZoom button{border:0;border-radius:0;width:40px;height:32px;padding:0;font-size:20px;line-height:1;background:none;color:var(--ink)}
 .zlZoom button+button{border-left:1px solid var(--line2)}
-.zlZoom button:hover:not(:disabled){background:var(--line2)}
-.zlBahn{position:relative;flex:1 1 260px;min-width:170px;height:32px;background:var(--card2);border:1px solid var(--line);border-radius:8px;
-  cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
-.zlMonate i{position:absolute;top:0;bottom:0;border-left:1px solid var(--line2)}
-.zlMonate span{position:absolute;top:8px;margin-left:4px;font-size:10.5px;color:#9AA796;white-space:nowrap;pointer-events:none}
-.zlFenster{position:absolute;top:2px;bottom:2px;min-width:16px;background:rgba(44,122,75,.16);border:1.5px solid var(--ok);border-radius:6px;cursor:grab}
-.zlBahn.zieht .zlFenster{cursor:grabbing}
-.zoomleiste:not(.gezoomt) .zlFenster{background:rgba(44,122,75,.06);border-color:var(--ok-line)}
-.zlGriff{position:absolute;top:0;bottom:0;width:14px;cursor:ew-resize}
-.zlGriff.l{left:-3px}.zlGriff.r{right:-3px}
-.zlGriff:after{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:4px;border-radius:2px;background:var(--ok);opacity:.75}
-.zoomleiste:not(.gezoomt) .zlGriff:after{opacity:.3}
-.zlText{font-size:12px;white-space:nowrap}
-.zlLinien{display:inline-flex;gap:5px;align-items:center;color:var(--muted);white-space:nowrap;cursor:pointer}
+.zlZoom button:hover:not(.aus){background:var(--line2)}
+.zlZoom button.aus{opacity:.4;cursor:default}
+/* Rollbalken unten – wie im Browser, nur waagrecht. Klebt am Bildrand,
+   solange die Grafiken weitergehen. */
+.rollleiste{position:sticky;bottom:0;z-index:6;margin:12px -18px -18px;padding:5px 18px;background:rgba(255,255,255,.96);
+  border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);box-shadow:0 -4px 10px rgba(20,29,23,.05)}
+.rbBahn{display:flex;align-items:stretch;position:relative;outline:none;user-select:none;-webkit-user-select:none}
+.rbBahn:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.rbSpur{position:relative;flex:1;cursor:default}
+.rbSpur:before{content:'';position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.rbDaumen{position:absolute;top:50%;transform:translateY(-50%)}
+.rbPfeil{display:none;border:0;border-radius:0;padding:0;width:16px;background:none;color:#606060;align-items:center;justify-content:center}
+.rbPfeil svg{fill:currentColor}
+.rbWin .rbBahn{height:16px;background:#F1F1F1}
+.rbWin .rbPfeil{display:flex}
+.rbWin .rbPfeil:hover{background:#DADADA}.rbWin .rbPfeil:active{background:#C8C8C8}
+.rbWin .rbDaumen{height:10px;border-radius:3px;background:#C1C1C1}
+.rbWin .rbDaumen:hover{background:#A8A8A8}
+.rbWin .rollleiste.zieht .rbDaumen{background:#787878}
+.rbMac .rbBahn{height:14px;background:#FAFAFA;border-top:1px solid #EDEDED}
+.rbMac .rbDaumen{height:7px;border-radius:3.5px;background:rgba(0,0,0,.30);transition:height .12s,background .12s}
+.rbMac .rbBahn:hover .rbDaumen,.rbMac .rollleiste.zieht .rbDaumen{height:9px;background:rgba(0,0,0,.48)}
+.rbTouch .rbPfeil{display:none}
+.rbTouch .rbBahn{height:32px;background:transparent;border:0;touch-action:none}
+.rbTouch .rbDaumen{height:8px;border-radius:4px;background:rgba(0,0,0,.35)}
+.rollleiste.voll .rbDaumen{background:#DCDCDC!important;height:10px}
+.rbMac .rollleiste.voll .rbDaumen{background:rgba(0,0,0,.12)!important;height:7px}
+.rollleiste.voll .rbPfeil{color:#A3A3A3;pointer-events:none}
+.rbEtikett{position:absolute;bottom:100%;transform:translate(-50%,-4px);background:var(--ink);color:#fff;font-size:11px;padding:3px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;display:none}
+.rollleiste.etikett .rbEtikett{display:block}
+/* Kulturmanagement als Band zwischen den Grafiken */
+.tafel.km{background:#F7F9F5;margin:12px -18px 0;padding:10px 18px 12px;border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.tafel.km+.tafel{border-top:0}
+.kmKnoepfe{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:-2px 0 10px}
+.kmZ{position:relative;height:22px;user-select:none;-webkit-user-select:none}
+.kmZ+.kmZ,.kmZeilen2+.kmZ,.kmZ+.kmZeilen2>.kmZ:first-child{border-top:1px solid #EEF2EA}
+.kmZ:hover{background:#EEF2EA}
+.kmZ svg.kmSvg{position:absolute;left:0;top:0}
+.kmZName{position:absolute;left:0;top:0;height:22px;display:flex;align-items:center;gap:2px;z-index:1;overflow:hidden;cursor:grab}
+.kmTitel{font-size:11.5px;font-weight:500;color:#2E3B32;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.kmZ.ohne .kmTitel{color:#A8B3A4}
+.kmZ .kmGriff{padding:4px 3px;opacity:0;transition:opacity .12s}
+.kmZ:hover .kmGriff,.kmZ .kmGriff:focus-visible{opacity:1}
+@media (hover:none){.kmZ .kmGriff{opacity:1}}
+.kmGriffPlatz{width:16px;flex:none}
+.kmKlapp{border:0;background:none;padding:0 4px;font-size:11.5px;font-weight:500;color:#4F5E53;cursor:pointer}
+.kmKlapp:hover{color:var(--ink)}
+.kmZeilen2.ordnet .kmZ{transition:transform .15s ease}
+.kmZeilen2.ordnet .kmZ.zieht{transition:none;z-index:3;background:#fff;box-shadow:0 6px 16px rgba(20,29,23,.16)}
+.ordnetGerade,.ordnetGerade *{cursor:grabbing!important}
+.kmLeer{font-size:12.5px;color:var(--muted);margin:2px 0}
+.kmZeile.blink{background:#EEF5EC}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* Zeilen ordnen und ausblenden */
 .kmZeilen{border:1px solid var(--line);border-radius:var(--rs);background:#fff}
 .kmZeile{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line2)}
 .kmZeile:last-child{border-bottom:0}
 .kmZeile.aus .kmName{opacity:.55}
 .kmZeile .dot{width:11px;height:11px;border-radius:50%;flex:none}
-.kmPfeile{display:inline-flex;flex:none}
-.kmPfeile button{padding:2px 8px;font-size:15px}
+.kmGriff{flex:none;border:0;background:none;padding:6px 4px;cursor:grab;touch-action:none;color:#9AA796;line-height:0;border-radius:6px}
+.kmGriff svg{fill:currentColor}
+.kmGriff:hover,.kmGriff:focus-visible{color:var(--ink);background:var(--line2)}
+.kmZeilen.ordnet .kmZeile{transition:transform .15s ease}
+.kmZeilen.ordnet .kmZeile.zieht{transition:none;position:relative;z-index:3;background:#fff;box-shadow:0 8px 22px rgba(20,29,23,.18);border-radius:var(--rs)}
+.kmZeilen.ordnet .kmGriff{cursor:grabbing}
 .kmName{flex:1;display:flex;flex-direction:column;line-height:1.3;min-width:0}
 .kmZeigen{display:inline-flex;gap:5px;align-items:center;white-space:nowrap;cursor:pointer}
 .kmWeg:hover{color:var(--alarm)!important}
@@ -199,8 +252,9 @@ input[type=checkbox]{accent-color:var(--ok)}
   #qrDruck h1{font-size:26pt;margin:0 0 12mm}#qrDruck .qr svg{width:120mm;height:120mm}
   #qrDruck p{font-size:16pt;margin:8mm 0 0}#qrDruck .klein{font-size:13pt;color:#444;margin-top:4mm}}
 @media (max-width:700px){main{padding:12px}.card{padding:14px}.topbar{padding:10px 12px}.wz>.lab{min-width:0;flex-basis:100%}
-  .zoomleiste{margin:12px -14px -14px;padding:8px 14px;gap:8px}.zlBahn{flex:1 1 150px;min-width:0}.zlText,.zlLinien{display:none}
-  .tafelKopf .rechts{margin-left:0}}
+  .rollleiste{margin:12px -14px -14px;padding:4px 14px}.tafel.km{margin:12px -14px 0;padding:10px 14px 12px}
+  .tafelKopf .rechts{margin-left:0}.zzRechts{margin-left:0;justify-content:flex-start}.zzText{min-width:0;text-align:left;font-size:11.5px;flex-basis:100%}
+  .zzVorgabe .lang{display:none}.zzVorgabe .kurz{display:inline}.zlZoom button{width:44px;height:36px}.wahl .trenner{margin-left:4px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -213,14 +267,15 @@ input[type=checkbox]{accent-color:var(--ok)}
     </div>
     <div style="flex:1"></div>
     <span id="stand" class="tiny muted"></span>
-    <a id="erfassenLink" href="/maske" target="_blank" rel="noopener" hidden title="Die Eingabemaske fürs Handy am Tank" style="font-size:13px;margin-right:4px">Maske ↗</a>
-    <button data-tun="qr" id="knopfQr" hidden title="QR-Code zur Eingabemaske – zum Ausdrucken und an den Tank hängen">QR-Code</button>
+    <a id="erfassenLink" href="/maske" target="_blank" rel="noopener" hidden title="Die Mobile App fürs Handy am Tank" style="font-size:13px;margin-right:4px">Mobile App ↗</a>
+    <button data-tun="qr" id="knopfQr" hidden title="QR-Code zur Mobile App – zum Ausdrucken und an den Tank hängen">QR-Code</button>
     <button data-tun="dateiOeffnen" id="knopfOeffnen">Datei öffnen</button>
     <button data-tun="sichern" id="knopfSichern" class="primary" title="Schreibt diese Seite neu: eine HTML-Datei, Werkzeug und Daten in einem.">Sichern</button>
   </div>
   <nav id="nav"></nav>
 </header>
 <main id="view"></main>
+<div id="ansage" class="sr" aria-live="polite"></div>
 <dialog id="dlg" aria-labelledby="dlgTitel">
   <div class="dlg-h"><h2 id="dlgTitel"></h2><button data-tun="dlgZu">Schliessen</button></div>
   <div class="dlg-b" id="dlgBody"></div>
@@ -802,7 +857,6 @@ function lage(v,o){
 
 /* ══════════ 5 · Diagramme ══════════ */
 const FARBEN=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A7118','#556B2F'];
-const svgAuf=(w,h,t)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(t)}" style="display:block">`;
 
 /* ── Sofort-Tooltip ──────────────────────────────────────
    Der eingebaute <title>-Tooltip der Browser erscheint erst nach rund einer
@@ -829,12 +883,13 @@ const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an')};
 /* Ein Beobachter fuer das ganze Dokument statt einer Bindung je Diagramm:
    ueberlebt jedes Neuzeichnen, weil er nicht an den Elementen haengt. */
 document.addEventListener('mousemove',ev=>{
+  if(ev.target&&ev.target.closest&&ev.target.closest('svg.spur'))return;   /* dort sucht das Zeitbild den nächsten Punkt */
   const t=ev.target&&ev.target.closest?ev.target.closest('[data-tipp]'):null;
   if(!t)return tippWeg();
   tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
 },{passive:true});
 document.addEventListener('mouseleave',tippWeg);
-window.addEventListener('scroll',tippWeg,{passive:true});
+window.addEventListener('scroll',()=>{tippWeg();if(typeof TIPP_FEST!=='undefined')TIPP_FEST=null},{passive:true});
 document.addEventListener('click',ev=>{
   const t=ev.target&&ev.target.closest?ev.target.closest('[data-tipp]'):null;
   if(t&&t.dataset.tun===undefined)tippZeigen(t.dataset.tipp,ev.clientX,ev.clientY);
@@ -862,34 +917,60 @@ const zeichen=(form,farbe)=>`<svg width="14" height="12" viewBox="0 0 14 12" ari
 
 /* ── Zeitbild: getrennte Grafiken, eine gemeinsame Zeit ──────────────────
    Jede Grafik steht für sich – Blattsaft, Giesswasser; pH, EC, Sauerstoff –,
-   mit eigener y-Achse und eigener Datumsachse, damit man das Datum nicht
-   ganz unten suchen muss. Gemeinsam ist nur der Zeitraum: Zoomen und
-   Verschieben wirkt auf alle gleichzeitig, und der Zeiger steht in allen am
-   selben Tag. Darunter das Kulturmanagement, ganz unten die Zoomleiste mit
-   − und +, einem Schiebebalken für den sichtbaren Ausschnitt und festen
-   Zeiträumen. Sie bleibt am unteren Bildrand stehen, solange man in den
-   Grafiken ist.
-   Das Mausrad scrollt die Seite, es zoomt nicht – zu leicht passiert das aus
-   Versehen. Gezoomt wird mit den Knöpfen, mit Strg + Rad oder mit zwei
-   Fingern auf dem Trackpad.
+   mit eigener y-Achse und eigener Datumsachse. Gemeinsam ist nur der
+   Zeitraum: Zoomen und Verschieben wirkt auf alle gleichzeitig, der Zeiger
+   steht in allen am selben Tag. Zwischen den Grafiken das Kulturmanagement,
+   eine Zeile je Mittel.
+   Oben die Zeitzeile: Zeitraum, feste Zeiträume, − und +. Unten ein
+   schlichter Rollbalken wie im Browser, nur waagrecht – im Aussehen an
+   Windows bzw. Mac angelehnt, im Verhalten überall gleich.
+   Das Mausrad scrollt die Seite, es zoomt nie – zu leicht passiert das aus
+   Versehen. Gezoomt wird mit − und +, mit Strg + Rad oder zwei Fingern.
+   Ziehen in der Grafik verschiebt (nur wenn gezoomt). Zeigen sucht den
+   nächsten Punkt – man muss ihn nicht genau treffen.
    Jede Spur hat ihre eigene y-Achse – Blattsaft in ppm und Wasser in mmol/l
-   messen verschiedene Dinge, und zwischen ihnen steht die Wurzel. Sie
-   ineinander umzurechnen würde eine Massenbilanz suggerieren, die es nicht
-   gibt.
-   o = {tafeln:[{kopf,neben,rechts,wahl,spuren:[{titel,serien,yTyp:'wert'|'lage',band,bandLabel,yLabel,hoehe,leerText}]}],
-        km:{spannen,typen,offen},linien,aufKlick,punktR,dicht,minTage,vorgaben,vorgabe}
-   Eine Reihe: {farbe,form,name,einh,dez,punkte:[{x,y,tipp,kennung}]}            */
-let ZEIT=null;            /* die letzte Zeichnung: Gesamtbereich, Ausschnitt, Geometrie */
-let zeitWahl='alles';     /* welcher feste Zeitraum gerade gilt – null, wenn von Hand gezoomt */
-/* Liegen die Tage enger als so viele Bildpunkte, werden mehrere Messungen
-   eines Tages zu einem Punkt (Mittelwert) mit Strich (tiefster bis höchster
-   Wert). Beim Hineinzoomen erscheint wieder jede einzelne. */
-const DICHT_PX=36;
+   messen verschiedene Dinge. Sie ineinander umzurechnen würde eine
+   Massenbilanz suggerieren, die es nicht gibt.
+   o = {tafeln:[{kopf,neben,rechts,wahl,linien,spuren:[{titel,serien,yTyp:'wert'|'lage',band,bandLabel,yLabel,hoehe,leerText,leerWort}]}],
+        km,kmNach,aufKlick,punktR,dicht,minTage,stufen,vorgaben,zeitLinks}
+   Eine Reihe: {farbe,form,name,einh,dez,stelle,reihe,punkte:[{x,y,tipp,kennung,ohneZeit}]}   */
+let ZEIT=null;              /* die letzte Zeichnung: Gesamtbereich, Ausschnitt, Geometrie, Treffer */
+let koVon=null,koBis=null;  /* der sichtbare Ausschnitt – null heisst: alles */
+const ZEIT_JE_TAB={};       /* Ausschnitt je Reiter, nur für diese Sitzung – Neuladen zeigt alles */
+/* Ruhige y-Achsen: solange gezogen, gerollt oder gezoomt wird, bleibt jede
+   y-Achse, wie sie war; danach wird sie einmal neu bestimmt. */
+let RUHIG=false,ruhigUhr=null;
+const Y_LETZT=new Map();
+let STUFE_ALT=null;         /* Verdichtungsstufe der letzten Zeichnung (gegen Flackern) */
+let clipNr=0;
+const MAC=(()=>{try{return /Mac|iPhone|iPad/.test((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'')}catch(e){return false}})();
+const WOCHENTAG=['So','Mo','Di','Mi','Do','Fr','Sa'];
+/* Der Rollbalken sieht aus wie der des Systems – Mac oder Windows (auch
+   Linux); mit dem Finger etwas grösser. Das Verhalten ist überall gleich. */
+try{const d=document.documentElement;d.classList.add(MAC?'rbMac':'rbWin');
+  if(window.matchMedia&&matchMedia('(pointer:coarse)').matches)d.classList.add('rbTouch')}catch(e){}
+
+/* Verdichtung (nur Tank): bei vielen Messungen dicht beieinander wird ein
+   Zeitfenster zu einem Punkt (Mittelwert, an der mittleren Messzeit) mit
+   Strich vom tiefsten zum höchsten Wert. Drei Stufen, nach Bildpunkten je
+   Tag: ab 30 jede Messung (am Laptop bis gut vier Wochen Ausschnitt), ab 14
+   je halber Tag (00–12, 12–24 Uhr), darunter je Tag. Zurück zur gröberen
+   Stufe erst unter 90 % der Schwelle – beim stufenlosen Zoomen flackert
+   nichts. Über einen Tag hinaus wird nie zusammengefasst. */
+const VERDICHT={einzeln:30,halb:14};
+function verdichtStufe(p,alt){
+  const reihe=['tag','halb','einzeln'];
+  let s=p>=VERDICHT.einzeln?'einzeln':p>=VERDICHT.halb?'halb':'tag';
+  if(alt&&reihe.indexOf(s)<reihe.indexOf(alt))
+    for(let i=reihe.indexOf(alt);i>reihe.indexOf(s);i--)if(p>=VERDICHT[reihe[i]]*0.9){s=reihe[i];break}
+  return s;
+}
 function zeitBereich(o){
   let a=Infinity,b=-Infinity,letzte=-Infinity;
   for(const t of o.tafeln||[])for(const sp of t.spuren||[])for(const se of sp.serien||[])for(const q of se.punkte||[]){
     if(q.x<a)a=q.x;if(q.x>b)b=q.x;if(q.x>letzte)letzte=q.x}
-  for(const s of (o.km&&o.km.spannen)||[]){if(s.x0<a)a=s.x0;if(s.x1>b)b=s.x1}
+  const km=o.km||{};
+  for(const z of (km.zeilen||[]).concat(km.typen||[]))for(const s of z.spannen||[]){if(s.x0<a)a=s.x0;if(s.x1>b)b=s.x1}
   if(!(b>=a)){b=Date.now();a=b-90*864e5}
   if(a===b){a-=6048e5;b+=6048e5}
   const p=(b-a)*0.04;
@@ -897,31 +978,49 @@ function zeitBereich(o){
 }
 /* Nicht mehr Datumsmarken, als nebeneinander Platz haben. */
 function markenDuenn(marken,X){
-  if(marken.length<2)return marken;
-  const abstand=Math.abs(X(marken[1].x)-X(marken[0].x))||1,k=Math.ceil(46/abstand);
-  return k>1?marken.filter((m,i)=>i%k===0):marken;
+  const gross=marken.filter(m=>!m.klein);
+  if(gross.length<2)return marken;
+  const abstand=Math.abs(X(gross[1].x)-X(gross[0].x))||1,k=Math.ceil(46/abstand);
+  if(k<=1)return marken;
+  const behalten=new Set(gross.filter((m,i)=>i%k===0));
+  return marken.filter(m=>!m.klein&&behalten.has(m));
 }
 function zeitAchse(G,y){
   let s=`<line x1="${G.ml}" x2="${G.W-G.mr}" y1="${y}" y2="${y}" stroke="#B9C4B4"/>`;
   for(const t of markenDuenn(zeitMarken(G.x0,G.x1),G.X)){
     const x=G.X(t.x);if(x<G.ml-1||x>G.W-G.mr+1)continue;
-    s+=`<line x1="${x}" x2="${x}" y1="${y}" y2="${y+4}" stroke="#8C9A88"/>`+
+    s+=t.klein?`<line x1="${x}" x2="${x}" y1="${y}" y2="${y+3}" stroke="#B9C4B4"/>`
+      :`<line x1="${x}" x2="${x}" y1="${y}" y2="${y+4}" stroke="#8C9A88"/>`+
        `<text x="${x}" y="${y+16}" text-anchor="middle" font-size="10.5" fill="#697A6C">${esc(t.text)}</text>`;
   }
   return s;
 }
-/* Eine Spur: Titel, Fläche, Punkte, Datumsachse – ein eigenes SVG. */
+/* Runde Werte an der y-Achse: Schritte 1, 2, 2,5 oder 5 mal eine Zehnerpotenz,
+   drei bis fünf Linien – man liest ab, ohne zu rechnen. */
+function achsenSchritt(lo,hi){
+  let span=hi-lo;if(!(span>0))span=Math.abs(hi)||1;
+  const roh=span/4,mag=Math.pow(10,Math.floor(Math.log10(roh)));
+  const schritt=[1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=5)||10*mag;
+  const y0=Math.floor(lo/schritt+1e-9)*schritt,y1=Math.ceil(hi/schritt-1e-9)*schritt;
+  const dez=Math.max(0,-Math.floor(Math.log10(schritt)+1e-9)+(Math.abs(schritt/mag-2.5)<1e-9?1:0));
+  const marken=[];for(let v=y0;v<=y1+schritt*1e-6;v+=schritt)marken.push(+v.toFixed(10));
+  return {y0,y1:y1>y0?y1:y0+schritt,marken,dez};
+}
+/* Eine Spur: Titel, Fläche, Punkte, Datumsachse – ein eigenes SVG. Die
+   Punkte gehen als Trefferliste nach G.treffer, damit Zeigen den nächsten
+   findet; unsichtbare Trefferkreise gibt es nicht mehr. */
 function spurSvg(sp,G){
-  const {W,ml,mr,x0,x1,X,r}=G;
+  const {W,ml,mr,x0,x1,X,r}=G,nr=G.treffer.length;
   const kopfH=(sp.titel||sp.yLabel)?20:8,h=sp.hoehe||180,mt=kopfH,unten=kopfH+h,H=unten+26;
   const serien=(sp.serien||[]).filter(se=>se.punkte&&se.punkte.length);
   const sicht=serien.flatMap(se=>se.punkte.filter(p=>p.x>=x0&&p.x<=x1));
   const lageSkala=sp.yTyp==='lage';
-  let y0,y1;
+  let y0,y1,ticks=null,dez=null;
   if(lageSkala){y0=0;y1=3}
+  else if(RUHIG&&Y_LETZT.has(sp.schluessel))[y0,y1,ticks,dez]=Y_LETZT.get(sp.schluessel);
   else{
     const ys=sicht.map(p=>p.y);
-    if(!ys.length){y0=0;y1=1}
+    if(!ys.length){y0=0;y1=1;ticks=[0,0.5,1];dez=1}
     else{
       /* Die Achse folgt den MESSWERTEN. Ein Optimum, das weit über allem
          liegt, würde sonst die Auflösung dorthin ziehen, wo nichts steht.
@@ -933,14 +1032,19 @@ function spurSvg(sp,G){
         if(sp.band[0]!=null&&sp.band[0]>y0-2*spanne&&sp.band[0]<y1+2*spanne)y0=Math.min(y0,sp.band[0]);
         if(sp.band[1]!=null&&sp.band[1]<y1+2*spanne&&sp.band[1]>y0-2*spanne)y1=Math.max(y1,sp.band[1]);
       }
-      const pad=((y1-y0)||Math.abs(y1)||1)*0.16;y0-=pad;y1+=pad;
+      const pad=((y1-y0)||Math.abs(y1)||1)*0.08;y0-=pad;y1+=pad;
       /* Eine negative Konzentration gibt es nicht */
       if(y0<0&&lo>=0)y0=0;
       else if(y0>0&&y0<pad*3)y0=0;
+      const a=achsenSchritt(y0,y1);y0=a.y0;y1=a.y1;ticks=a.marken;dez=a.dez;
+      if(y0<0&&lo>=0){y0=0;ticks=ticks.filter(v=>v>=0)}
     }
+    if(sp.schluessel)Y_LETZT.set(sp.schluessel,[y0,y1,ticks,dez]);
   }
   const Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(unten-mt);
-  let s=svgAuf(W,H,sp.titel||sp.aria||'Verlauf');
+  const cid='zbc'+(++clipNr);
+  let s=`<svg class="zb spur" data-spur="${nr}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(sp.titel||sp.aria||'Verlauf')}" style="display:block">`+
+    `<defs><clipPath id="${cid}"><rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${unten-mt}"/></clipPath></defs>`;
   s+=`<rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${unten-mt}" fill="#fff"/>`;
   if(lageSkala){
     s+=`<rect x="${ml}" y="${Y(3)}" width="${W-ml-mr}" height="${Y(2)-Y(3)}" fill="#F6F7F3"/>`;
@@ -958,154 +1062,318 @@ function spurSvg(sp,G){
         s+=`<text x="${W-mr-4}" y="${b1+12}" text-anchor="end" font-size="10" fill="#2C7A4B">${esc(sp.bandLabel||'Optimum')}</text>`;
       }
     }
-    for(let k=0;k<=3;k++){const v=y0+(y1-y0)*k/3,y=Y(v);
+    for(const v of ticks){const y=Y(v);if(y<mt-0.5||y>unten+0.5)continue;
       s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/>`+
-         `<text x="${ml-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v)}</text>`}
+         `<text x="${ml-8}" y="${y+4}" text-anchor="end" font-size="10" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v,dez)}</text>`}
   }
   if(sp.titel)s+=`<text x="${ml}" y="13" font-size="11.5" font-weight="600" fill="#141D17">${esc(sp.titel)}</text>`;
   if(sp.yLabel)s+=`<text x="${W-mr}" y="13" text-anchor="end" font-size="10.5" fill="#697A6C">${esc(sp.yLabel)}</text>`;
+  /* Das Band eines Balkens aus dem Kulturmanagement, beim Zeigen darauf */
+  s+=`<rect class="kmBand" x="-99" y="${mt}" width="0" height="${unten-mt}" fill="transparent" pointer-events="none"/>`;
 
-  /* Was gezeichnet wird: jeder Punkt – oder, wenn die Tage eng liegen, je
-     Tag ein Punkt für den Mittelwert mit einem Strich vom tiefsten zum
-     höchsten Wert. Ein Tag mit nur einer Messung bleibt ein gewöhnlicher Punkt. */
-  let gefasst=false;
-  const treffer=[],zeichnen=serien.map((se,si)=>{
+  /* Was gezeichnet wird: jeder Punkt – oder, wenn die Messungen eng liegen,
+     je Fenster ein Punkt für den Mittelwert mit einem Strich vom tiefsten
+     zum höchsten Wert (siehe VERDICHT). Ein Fenster mit einer Messung bleibt
+     ein gewöhnlicher Punkt. Messungen ohne Uhrzeit landen nie in einem
+     Halbtagsfenster – das wäre eine Tageszeit, die niemand notiert hat. */
+  const st=G.stufe;
+  const uhr=x=>{const t=new Date(x);return String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0')};
+  const zeichnen=serien.map((se,si)=>{
     const pk=se.punkte.filter(q=>q.x>=x0&&q.x<=x1).sort((a,b)=>a.x-b.x);
-    if(!G.zusammen)return pk.map(q=>({x:X(q.x),y:Y(q.y),q}));
-    const tage=new Map();
-    for(const q of pk){const k=Math.floor(q.x/864e5);if(!tage.has(k))tage.set(k,[]);tage.get(k).push(q)}
-    const versatz=(si-(serien.length-1)/2)*Math.min(4,G.proTag/3);
-    return [...tage].map(([k,l])=>{
+    if(st==='einzeln')return pk.map(q=>({x:X(q.x),y:Y(q.y),q}));
+    const gruppen=new Map();
+    for(const q of pk){
+      const tag=Math.floor(q.x/864e5);
+      const k=st==='tag'?'d'+tag:(q.ohneZeit?'u'+tag:'h'+Math.floor(q.x/432e5));
+      if(!gruppen.has(k))gruppen.set(k,[]);gruppen.get(k).push(q);
+    }
+    const fensterPx=(st==='tag'?1:0.5)*G.proTag,versatz=(si-(serien.length-1)/2)*Math.min(3,fensterPx/4);
+    return [...gruppen].map(([k,l])=>{
       if(l.length===1)return {x:X(l[0].x),y:Y(l[0].y),q:l[0]};
-      gefasst=true;
+      G.gefasst=true;
       let lo=Infinity,hi=-Infinity,sum=0;for(const q of l){sum+=q.y;if(q.y<lo)lo=q.y;if(q.y>hi)hi=q.y}
-      const m=sum/l.length,tag=new Date(k*864e5).toISOString().slice(0,10),e=se.einh?' '+se.einh:'',d=se.dez!=null?se.dez:2;
-      return {x:X(k*864e5+432e5)+versatz,y:Y(m),yLo:Y(lo),yHi:Y(hi),tag:k*864e5,
-        tipp:tippBau((se.name||sp.titel||'')+(se.stelle?' · '+se.stelle:''),se.farbe,[['Tag',fmt(tag)],['Messungen',String(l.length)],
-          ['Mittelwert',nz(m,d)+e],['tiefster Wert',nz(lo,d)+e],['höchster Wert',nz(hi,d)+e]],'Anklicken zoomt auf diesen Tag.')};
+      const mz=l.filter(q=>!q.ohneZeit),tag=Math.floor(l[0].x/864e5)*864e5;
+      const xm=mz.length?mz.reduce((a,q)=>a+q.x,0)/mz.length:tag+432e5;
+      const m=sum/l.length,e=se.einh?' '+se.einh:'',d=se.dez!=null?se.dez:2;
+      const tagText=WOCHENTAG[new Date(tag).getUTCDay()]+' '+fmt(new Date(tag).toISOString().slice(0,10));
+      const halb=k[0]==='h'?(Math.floor(l[0].x/432e5)%2?', 12–24 Uhr':', 00–12 Uhr'):'';
+      const zeiten=!mz.length?(k[0]==='u'?'Uhrzeit nicht erfasst – als Tag zusammengefasst':'Uhrzeit nicht erfasst')
+        :(mz.length===1?uhr(mz[0].x):uhr(mz[0].x)+' bis '+uhr(mz[mz.length-1].x))+(mz.length<l.length?', teils ohne Uhrzeit':'');
+      return {x:X(xm)+versatz,y:Y(m),yLo:Y(lo),yHi:Y(hi),mitte:Math.round(xm),
+        tipp:tippBau((se.name||sp.titel||'')+(se.stelle?' · '+se.stelle:''),se.farbe,[
+          ['Zeitraum',tagText+halb],['Messungen',l.length+' ('+zeiten+')'],
+          ['Mittelwert',nz(m,d)+e],['tiefster Wert',nz(lo,d)+e],['höchster Wert',nz(hi,d)+e]],'Anklicken zeigt jede Messung.')};
     });
   });
-  /* Linien vor den Punkten, damit sie nicht darüber liegen. Verbunden wird
-     nur innerhalb einer Reihe – über zwei Blattetagen oder zwei
-     Entnahmestellen hinweg wäre die Linie eine Behauptung über zwei
-     verschiedene Dinge. */
-  if(G.linien)serien.forEach((se,si)=>{const l=zeichnen[si];if(l.length<2)return;
-    s+=`<polyline fill="none" stroke="${se.farbe}" stroke-width="1.6" opacity=".5" points="${l.map(p=>p.x+','+p.y).join(' ')}"/>`});
-  serien.forEach((se,si)=>{for(const p of zeichnen[si]){
-    if(p.yLo!=null){
-      s+=`<line x1="${p.x}" x2="${p.x}" y1="${p.yHi}" y2="${p.yLo}" stroke="${se.farbe}" stroke-width="3" stroke-linecap="round" opacity=".3"/>`;
-      s+=marke(se.form,p.x,p.y,r,se.farbe,1);
-      treffer.push({cx:p.x,cy:p.y,tipp:p.tipp,tag:p.tag});
-    }else{
-      s+=marke(se.form,p.x,p.y,r,se.farbe,1);
-      treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung});
+  /* Linien, Striche und Punkte: auf die Fläche beschnitten, je Reihe eine
+     Gruppe – zum Hervorheben beim Zeigen auf einen Stoff. Verbunden wird nur
+     innerhalb einer Reihe: über zwei Blattetagen oder zwei Entnahmestellen
+     hinweg wäre die Linie eine Behauptung über zwei verschiedene Dinge. */
+  const treffer=[];
+  s+=`<g clip-path="url(#${cid})">`;
+  serien.forEach((se,si)=>{
+    const l=zeichnen[si];
+    s+=`<g class="reihe" data-reihe="${esc(se.reihe||se.param||se.stelle||'')}">`;
+    if(sp.linien&&l.length>1)s+=`<polyline fill="none" stroke="${se.farbe}" stroke-width="1.6" opacity=".5" points="${l.map(p=>p.x+','+p.y).join(' ')}"/>`;
+    for(const p of l){
+      if(p.yLo!=null){
+        if(p.yLo-p.yHi>=2)s+=`<line x1="${p.x}" x2="${p.x}" y1="${p.yHi}" y2="${p.yLo}" stroke="${se.farbe}" stroke-width="3" stroke-linecap="round" opacity=".3"/>`;
+        s+=marke(se.form,p.x,p.y,r,se.farbe,1);
+        treffer.push({cx:p.x,cy:p.y,tipp:p.tipp,block:p.mitte});
+      }else{
+        s+=marke(se.form,p.x,p.y,r,se.farbe,1);
+        treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung});
+      }
     }
-  }});
-  if(!sicht.length)s+=`<text x="${(ml+W-mr)/2}" y="${(mt+unten)/2+4}" text-anchor="middle" font-size="11.5" fill="#A8B3A4">${esc(sp.leerText||'keine Messung in diesem Zeitraum')}</text>`;
+    s+=`</g>`;
+  });
+  s+=`</g>`;
+  treffer.sort((a,b)=>a.cx-b.cx);
+  G.treffer.push(treffer);
+  if(!sicht.length){
+    s+=`<text x="${(ml+W-mr)/2}" y="${(mt+unten)/2+4}" text-anchor="middle" font-size="11.5" fill="#A8B3A4">${esc(sp.leerText||'keine Messung in diesem Zeitraum')}</text>`;
+    /* Wo es weitergeht: die nächste Probe links und rechts, anklickbar. */
+    let vor=-Infinity,nach=Infinity;
+    for(const se of serien)for(const q of se.punkte){if(q.x<x0&&q.x>vor)vor=q.x;if(q.x>x1&&q.x<nach)nach=q.x}
+    const wort=sp.leerWort||'Probe',tg=x=>fmtK(new Date(x).toISOString().slice(0,10)),yl=(mt+unten)/2+24;
+    if(vor>-Infinity)s+=`<text class="zbLink" x="${ml+10}" y="${yl}" font-size="11.5" fill="#2C7A4B" data-tun="zeitZu" data-x="${vor}">‹ letzte ${esc(wort)} ${tg(vor)}</text>`;
+    if(nach<Infinity)s+=`<text class="zbLink" x="${W-mr-10}" y="${yl}" text-anchor="end" font-size="11.5" fill="#2C7A4B" data-tun="zeitZu" data-x="${nach}">nächste ${esc(wort)} ${tg(nach)} ›</text>`;
+  }
   s+=zeitAchse(G,unten);
-  /* Trefferflächen zuletzt, damit sie oben liegen */
-  for(const t of treffer){
-    const klick=t.tag!=null?` data-tun="zoomTag" data-x="${t.tag}" style="cursor:zoom-in"`
-      :(G.aufKlick&&t.kennung)?` data-tun="diagPunkt" data-id="${esc(t.kennung)}" style="cursor:pointer"`:' style="cursor:help"';
-    s+=`<circle class="hit" cx="${t.cx}" cy="${t.cy}" r="${Math.max(9,r+5)}" data-tipp="${esc(t.tipp||'')}"${klick}/>`;
-  }
   s+=`<line class="zeiger" x1="-99" x2="-99" y1="${mt}" y2="${unten}" stroke="#141D17" stroke-width="1" opacity=".3" pointer-events="none"/>`;
-  return {svg:s+'</svg>',gefasst};
+  s+=`<circle class="ring" cx="-99" cy="-99" r="${r+3}" fill="none" stroke="#141D17" stroke-width="1.5" opacity=".55" pointer-events="none"/>`;
+  s+=`<g class="zeigerDatum" visibility="hidden" pointer-events="none" data-y="${unten+3}"><rect height="18" rx="4" fill="#141D17"/><text y="13" font-size="10.5" fill="#fff" font-family="JetBrains Mono,monospace" text-anchor="middle"></text></g>`;
+  return {svg:s+'</svg>'};
 }
-/* Das Kulturmanagement als eigene Tafel: Überschrift, gleich darunter
-   «＋ Massnahme eintragen», dann die Balken. Die Ereignisse (Wasserzugabe,
-   Neuansatz …) sind eingeklappt – eine Zeile öffnet sie. */
-function kmTafel(km,G){
-  const {W,ml,X,x0,x1}=G;
-  const balken=km.spannen.filter(s=>!s.marke),marken=km.spannen.filter(s=>s.marke);
-  const SB=spannenZeilen(balken,X,x0,x1,W-4);
-  const SM=km.offen?spannenZeilen(marken,X,x0,x1,W-4):{liste:[],n:0,zeilen:[]};
-  let y=6,s='';
-  if(SB.n){s+=spannenSvg(SB,y,ml);y+=SB.n*BALKEN_ZEILE}
-  else{s+=`<text x="${ml}" y="${y+13}" font-size="11.5" fill="#A8B3A4">${km.leerText||'In diesem Zeitraum läuft nichts.'}</text>`;y+=BALKEN_ZEILE}
-  if(km.typen.length){
-    const t=km.offen?'▾ Ereignisse verbergen'
-      :`▸ Ereignisse zeigen (${km.typen.length}): ${km.typen.map(typKurz).join(' · ')}`;
-    s+=`<g data-tun="kmEreignisse" style="cursor:pointer"><rect x="4" y="${y+2}" width="${W-8}" height="22" rx="6" fill="transparent" class="kmAuf"/>`+
-       `<text x="10" y="${y+17}" font-size="11.5" font-weight="500" fill="#4F5E53">${esc(t)}</text></g>`;
-    y+=26;
-    if(SM.n){s+=spannenSvg(SM,y,ml);y+=SM.n*BALKEN_ZEILE}
+
+/* ── Das Kulturmanagement als eigene Tafel zwischen den Grafiken ──
+   Eine Zeile je Mittel bzw. eigene Massnahme, immer genau eine: links der
+   Name mit dem Griff zum Ordnen, rechts die Balken auf derselben Zeitachse.
+   Im Balken nur das Datum – der Name steht links. Passt es weder hinein
+   noch daneben, steht kein Text; das Kästchen beim Zeigen nennt alles. Die
+   Zeilen bleiben stehen, auch wenn im Ausschnitt nichts läuft – beim
+   Verschieben springt nichts. Die Ereignisse sind eingeklappt eine Zeile
+   mit Punkten, aufgeklappt eine Zeile je Art. */
+const KM_Z=22,KM_H=14,KM_ZEICHEN=6.2;
+function kmRaster(G){
+  return markenDuenn(zeitMarken(G.x0,G.x1),G.X).filter(t=>!t.klein).map(t=>{const x=G.X(t.x);
+    return x<G.ml||x>G.W-G.mr?'':`<line x1="${x}" x2="${x}" y1="0" y2="${KM_Z}" stroke="#E2E9DD"/>`}).join('');
+}
+function kmZeileHtml(G,raster,z,inhalt,opt){
+  const leer=!!opt.leer,griff=opt.griff
+    ?`<button class="kmGriff" data-k="${esc(z.key)}" title="Ziehen ändert die Reihenfolge" aria-label="${esc(z.name)} verschieben – Pfeiltasten hoch und runter"><svg width="10" height="14" viewBox="0 0 10 14" aria-hidden="true">${
+      [2.5,7,11.5].map(y=>`<circle cx="2.5" cy="${y}" r="1.4"/><circle cx="7.5" cy="${y}" r="1.4"/>`).join('')}</svg></button>`:'<span class="kmGriffPlatz"></span>';
+  return `<div class="kmZ${leer?' ohne':''}" data-k="${esc(z.key)}">
+    <div class="kmZName" style="width:${G.ml-6}px"${opt.tipp?` data-tipp="${esc(opt.tipp)}"`:''}>${griff}${opt.titel||`<span class="kmTitel">${esc(z.name)}</span>`}</div>
+    <svg class="zb kmSvg" viewBox="0 0 ${G.W} ${KM_Z}" width="${G.W}" height="${KM_Z}" aria-hidden="true">${raster}${inhalt}
+      <line class="zeiger" x1="-99" x2="-99" y1="0" y2="${KM_Z}" stroke="#141D17" stroke-width="1" opacity=".3" pointer-events="none"/></svg></div>`;
+}
+/* Die Balken einer Zeile: im Ausschnitt beschnitten, Beschriftung innen,
+   sonst rechts daneben, wenn bis zum nächsten Balken derselben Zeile Platz
+   ist, sonst keine. Nie links, nie eine zweite Zeile. Die Gaben stehen als
+   feine Kerben im Balken, solange sie nicht dichter als 3 px liegen. */
+function kmBalkenSvg(G,spannen){
+  const {X,x0,x1,W}=G,y=(KM_Z-KM_H)/2;
+  const l=spannen.filter(s=>s.x1>=x0&&s.x0<=x1).sort((a,b)=>a.x0-b.x0).map(s=>{
+    const xa=X(Math.max(x0,s.x0)),xb=Math.max(X(Math.min(x1,s.x1)),xa+6);
+    return {s,xa,xb,spitze:s.laeuft&&s.x1<=x1?7:0};
+  });
+  let out='',vorEnde=-Infinity;
+  l.forEach((e,i)=>{
+    const {s,xa,xb,spitze}=e,f=dunkler(s.farbe,.12),dunkel=dunkler(s.farbe,.35);
+    const t=String(s.datum||''),tw=t.length*KM_ZEICHEN,naechste=i+1<l.length?l[i+1].xa-4:W-4;
+    const lage=xb-xa>=tw+12?'innen':(xb+spitze+6+tw<=naechste?'rechts':null);
+    const rand=xa<vorEnde?' stroke="#fff" stroke-width="1"':'';
+    out+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(s.kennung)}" data-tipp="${esc(s.tipp||'')}" data-x0="${s.x0}" data-x1="${s.x1}" data-farbe="${esc(s.farbe)}">`;
+    out+=`<rect x="${xa}" y="${y}" width="${xb-xa}" height="${KM_H}" rx="4" fill="${f}"${rand}/>`;
+    if(spitze)out+=`<path d="M${xb-4} ${y}L${xb+spitze} ${y+KM_H/2}L${xb-4} ${y+KM_H}Z" fill="${f}"/>`;
+    const kerben=(s.gaben||[]).filter(g=>g>=Math.max(x0,s.x0)&&g<=Math.min(x1,s.x1)).map(X);
+    if(kerben.length>1&&(kerben[kerben.length-1]-kerben[0])/(kerben.length-1)>=3)
+      out+=kerben.map(k=>`<line x1="${k}" x2="${k}" y1="${y+KM_H-4}" y2="${y+KM_H}" stroke="#fff" stroke-width="1.5" opacity=".7"/>`).join('');
+    if(lage==='innen')out+=`<text x="${xa+7}" y="${y+10.5}" font-size="10.5" font-weight="600" fill="#fff">${esc(t)}</text>`;
+    else if(lage==='rechts')out+=`<text x="${xb+spitze+6}" y="${y+10.5}" font-size="10.5" font-weight="600" fill="${dunkel}">${esc(t)}</text>`;
+    out+=`</g>`;
+    vorEnde=Math.max(vorEnde,xb+spitze);
+  });
+  return {svg:out,sichtbar:l.length>0};
+}
+function kmMarkenSvg(G,spannen){
+  const {X,x0,x1}=G,cy=KM_Z/2;let out='',n=0;
+  for(const s of spannen){
+    if(s.x0<x0||s.x0>x1)continue;n++;
+    const cx=X(s.x0),f=dunkler(s.farbe,.12);
+    out+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(s.kennung)}" data-tipp="${esc(s.tipp||'')}" data-x0="${s.x0}" data-x1="${s.x0}" data-farbe="${esc(s.farbe)}">`+
+      ((s.n||1)>1?`<rect x="${cx-9}" y="${cy-7}" width="18" height="14" rx="7" fill="${f}"/><text x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">${s.n}</text>`
+        :`<circle cx="${cx}" cy="${cy}" r="5.5" fill="${f}" stroke="#fff" stroke-width="1.5"/>`)+
+      `<rect x="${cx-10}" y="0" width="20" height="${KM_Z}" fill="transparent"/></g>`;
   }
-  const H=y+30;
-  return `<section class="tafel km"><div class="tafelKopf"><h3>Kulturmanagement</h3></div>
-    <div class="kmKnoepfe"><button data-tun="massnahmeNeu">＋ Massnahme eintragen</button><button class="ghost" data-tun="kmBearbeiten">Zeilen ordnen und ausblenden</button></div>
-    <div class="bild">${svgAuf(W,H,'Kulturmanagement')}${s}${zeitAchse(G,y+4)}
-    <line class="zeiger" x1="-99" x2="-99" y1="2" y2="${y+4}" stroke="#141D17" stroke-width="1" opacity=".3" pointer-events="none"/></svg></div></section>`;
+  return {svg:out,sichtbar:n>0};
 }
+function kmTafel(km,G){
+  const raster=kmRaster(G);
+  const ordnen=km.zeilen.length>1,ordnenT=km.typen.length>1&&km.offen;
+  const nameTipp=z=>tippBau(z.name,z.farbe,[],'Ziehen ändert die Reihenfolge · anklicken: Zeilen verwalten');
+  let rows='';
+  for(const z of km.zeilen){
+    const b=kmBalkenSvg(G,z.spannen);
+    rows+=kmZeileHtml(G,raster,z,b.svg,{griff:ordnen,leer:!b.sichtbar,tipp:nameTipp(z)});
+  }
+  let typen='';
+  if(km.typen.length){
+    const n=km.typen.length;
+    if(!km.offen){
+      /* Eingeklappt: je Tag mit einem Ereignis ein Punkt – man sieht, wann
+         etwas war, ohne aufzuklappen. */
+      const jeTag=new Map();
+      for(const z of km.typen)for(const s of z.spannen){if(s.x0<G.x0||s.x0>G.x1)continue;
+        const tag=new Date(s.x0).toISOString().slice(0,10);if(!jeTag.has(tag))jeTag.set(tag,{x:s.x0,arten:[]});jeTag.get(tag).arten.push(z.name)}
+      const punkte=[...jeTag].map(([tag,v])=>`<circle cx="${G.X(v.x)}" cy="${KM_Z/2}" r="3.2" fill="#8C9A88" style="cursor:pointer" data-tun="kmEreignisse" data-tipp="${esc(tippBau(fmt(tag),'#8C9A88',[v.arten.join(', ')],'Anklicken klappt die Ereignisse auf.'))}"/>`).join('');
+      typen=kmZeileHtml(G,raster,{key:'klapp',name:'Ereignisse'},punkte,{titel:`<button class="kmKlapp" data-tun="kmEreignisse" aria-expanded="false">▸ Ereignisse (${n})</button>`});
+    }else{
+      typen=kmZeileHtml(G,raster,{key:'klapp',name:'Ereignisse'},'',{titel:`<button class="kmKlapp" data-tun="kmEreignisse" aria-expanded="true">▾ Ereignisse</button>`});
+      typen+=`<div class="kmZeilen2" data-gruppe="typen">${km.typen.map(z=>{const m=kmMarkenSvg(G,z.spannen);
+        return kmZeileHtml(G,raster,z,m.svg,{griff:ordnenT,leer:!m.sichtbar,tipp:nameTipp(z)})}).join('')}</div>`;
+    }
+  }
+  const leer=km.leer==='nichts'?'<p class="kmLeer">Noch keine Massnahme eingetragen.</p>'
+    :km.leer==='aus'?'<p class="kmLeer">Alle Zeilen sind ausgeblendet · <button class="ghost klein" data-tun="kmAlle" data-v="an">alle zeigen</button></p>':'';
+  return `<section class="tafel km"><div class="tafelKopf"><h3>Kulturmanagement</h3>${km.ausgeblendet&&km.leer!=='aus'?`<button class="ghost klein kmAusgeblendet" data-tun="kmBearbeiten">${km.ausgeblendet} ausgeblendet</button>`:''}</div>
+    <div class="kmKnoepfe"><button class="klein kmPlus" data-tun="massnahmeNeu">＋ Massnahme eintragen</button><button class="ghost klein" data-tun="kmBearbeiten" title="Zeilen ordnen, ein- und ausblenden, löschen">Zeilen verwalten</button></div>
+    ${km.zeilen.length?`<div class="kmZeilen2" data-gruppe="balken">${rows}</div>`:''}${typen}${leer}</section>`;
+}
+
+/* ── Die Grafiken zeichnen ── */
 function zeitBild(box,o){
   const B=zeitBereich(o);
   const W=Math.max(box.clientWidth||900,300),schmal=W<600;
-  const ml=schmal?86:104,mr=schmal?12:44,minD=(o.minTage||1)*864e5;
+  const ml=schmal?86:140,mr=schmal?12:44,minD=(o.minTage||1)*864e5;
   let x0=koVon,x1=koBis;
   if(x0==null||x1==null||!(x1>x0)||x1-x0>=B.g1-B.g0){x0=B.g0;x1=B.g1;koVon=koBis=null}
   else{
     if(x1-x0<minD){const m=(x0+x1)/2;x0=m-minD/2;x1=m+minD/2}
     if(x0<B.g0){x1+=B.g0-x0;x0=B.g0}
     if(x1>B.g1){x0-=x1-B.g1;x1=B.g1}
-    koVon=x0;koBis=x1;
+    if(x0<B.g0)x0=B.g0;
+    if(x1-x0>=B.g1-B.g0){x0=B.g0;x1=B.g1;koVon=koBis=null}else{koVon=x0;koBis=x1}
   }
-  const X=v=>ml+(v-x0)/((x1-x0)||1)*(W-ml-mr);
-  const proTag=(W-ml-mr)/((x1-x0)/864e5);
-  const G={W,ml,mr,x0,x1,X,r:o.punktR||5,linien:!!o.linien,aufKlick:!!o.aufKlick,proTag,zusammen:!!o.dicht&&proTag<DICHT_PX};
-  ZEIT={g0:B.g0,g1:B.g1,letzte:B.letzte,x0,x1,W,ml,mr,min:minD};
-  let html='',gefasst=false;
-  for(const t of o.tafeln||[]){
+  const P=W-ml-mr,X=v=>ml+(v-x0)/((x1-x0)||1)*P;
+  const proTag=P/((x1-x0)/864e5);
+  const stufe=o.dicht?verdichtStufe(proTag,STUFE_ALT):'einzeln';
+  if(o.dicht)STUFE_ALT=stufe;
+  const G={W,ml,mr,x0,x1,X,r:o.punktR||5,aufKlick:!!o.aufKlick,proTag,stufe,treffer:[],gefasst:false};
+  ZEIT={g0:B.g0,g1:B.g1,letzte:B.letzte,x0,x1,W,ml,mr,min:minD,stufen:o.stufen||[],vorgaben:o.vorgaben||[],
+    treffer:G.treffer,kmOben:-1,aufKlick:!!o.aufKlick,stufe};
+  let html='';
+  /* Das Kulturmanagement steht zwischen den Grafiken (nach der Tafel
+     o.kmNach), damit es nah bei beiden ist. */
+  const kmNach=o.kmNach!=null?o.kmNach:(o.tafeln||[]).length-1;
+  if(o.km&&kmNach<0)html+=kmTafel(o.km,G);
+  (o.tafeln||[]).forEach((t,ti)=>{
     let svgs='';
-    for(const sp of t.spuren||[]){const r=spurSvg(sp,G);svgs+=r.svg;if(r.gefasst)gefasst=true}
+    const verbunden=!!(t.linien&&linienAn.has(t.linien));
+    (t.spuren||[]).forEach((sp,si)=>{
+      const r=spurSvg(Object.assign({schluessel:(t.kopf||ti)+'|'+si+'|'+(sp.titel||'')},sp,{linien:verbunden}),G);svgs+=r.svg});
+    /* «Punkte verbinden» gehört zu den Werten der Grafik, nicht zur Zeit. */
+    const verbinden=t.linien?`<label class="verbinden" title="Verbindet die Punkte einer Reihe in zeitlicher Folge – nur innerhalb derselben ${t.linien==='blatt'?'Blattetage':'Entnahmestelle'}"><input type="checkbox" data-aend="linienUm" data-ziel="${esc(t.linien)}"${verbunden?' checked':''}><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M2 7L8 3L14 6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="2" cy="7" r="1.8"/><circle cx="8" cy="3" r="1.8"/><circle cx="14" cy="6" r="1.8"/></svg>Punkte verbinden</label>`:'';
     html+=`<section class="tafel"><div class="tafelKopf"><h3>${esc(t.kopf||'')}</h3>${t.neben?`<span class="neben">${t.neben}</span>`:''}${
-      t.rechts?`<div class="rechts">${t.rechts}</div>`:''}</div>${t.wahl?`<div class="wahl">${t.wahl}</div>`:''}<div class="bild">${svgs}</div></section>`;
+      t.rechts||(!t.wahl&&verbinden)?`<div class="rechts">${t.rechts||''}${!t.wahl?verbinden:''}</div>`:''}</div>${t.wahl?`<div class="wahl">${t.wahl}<span class="trenner"></span>${verbinden}</div>`:''}<div class="bild">${svgs}</div></section>`;
+    if(o.km&&ti===kmNach){ZEIT.kmOben=G.treffer.length-1;html+=kmTafel(o.km,G)}
+  });
+  /* Was ein Punkt bedeutet, steht fest im Kopf der ersten Tank-Grafik –
+     gleiche Höhe in jeder Stufe, damit beim Zoomen nichts springt. */
+  if(o.dicht){
+    const je=stufe==='halb'?'je halben Tag':'je Tag';
+    const info=G.gefasst&&stufe!=='einzeln'
+      ?`<span class="dichteInfo" data-tipp="${esc(tippBau('Verdichtete Punkte','#4F5E53',[`Liegen die Messungen zu eng, wird ein Punkt der Mittelwert ${stufe==='halb'?'eines halben':'eines ganzen'} Tages. Der Strich reicht vom tiefsten zum höchsten Wert. Eine einzelne Messung bleibt ein gewöhnlicher Punkt.`,`Hineinzoomen zeigt mehr Punkte – ab etwa ${Math.max(1,Math.floor(P/VERDICHT.einzeln))} Tagen Ausschnitt jede Messung.`]))}"><svg width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><line x1="4" x2="4" y1="1" y2="13" stroke="#4F5E53" stroke-width="2.4" stroke-linecap="round" opacity=".35"/><circle cx="4" cy="7" r="3" fill="#4F5E53"/></svg>Punkt = Mittel ${je} · Strich: tiefster bis höchster Wert ⓘ</span>`
+      :'<span class="dichteInfo">Punkte: jede Messung</span>';
+    html=html.replace('%%DICHTE%%',info);
   }
-  if(o.km)html+=kmTafel(o.km,G);
-  if(gefasst)html=`<p class="zbHinweis tiny muted">Viele Messungen am selben Tag: der Punkt ist der Mittelwert des Tages, der Strich reicht vom tiefsten zum höchsten Wert. Hineinzoomen zeigt jede einzelne Messung.</p>`+html;
+  /* Im Browser bleiben Zeitzeile und Rollbalken stehen und werden nur
+     nachgeführt – beim Ziehen dürfen sie den Zeiger nicht verlieren, und
+     der Fokus bleibt auf − und +. */
   const tf=box.querySelector?box.querySelector('.tafeln'):null;
-  if(tf)tf.innerHTML=html;
+  if(tf){tf.innerHTML=html;zeitzeileStellen(box,o);rollbalkenStellen(box)}
   else{
-    box.innerHTML=`<div class="tafeln">${html}</div>${zoomleiste(o)}`;
-    zeitBedienung(box);
+    box.innerHTML=zeitzeileHtml(o)+`<div class="tafeln" tabindex="0" aria-label="Grafiken: Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles">${html}</div>`+rollbalkenHtml();
+    if(box.querySelector&&box.querySelector('.tafeln')){zeitBedienung(box);rollbalkenStellen(box)}
   }
-  zoomleisteStellen(box,o);
 }
-/* ── Die Zoomleiste ── */
-function zoomleiste(o){
-  const v=o.vorgaben||[['alles','alles']];
-  return `<div class="zoomleiste">
-    <span class="zlZoom"><button data-tun="zoomAus" title="Herauszoomen (auch Strg + Mausrad)" aria-label="Herauszoomen">−</button><button data-tun="zoomEin" title="Hineinzoomen (auch Strg + Mausrad)" aria-label="Hineinzoomen">+</button></span>
-    <div class="zlBahn" tabindex="0" role="slider" aria-label="Sichtbarer Zeitraum: ziehen oder mit den Pfeiltasten verschieben" title="Ausschnitt ziehen, Ränder ziehen ändert die Länge">
-      <div class="zlMonate"></div><div class="zlFenster"><span class="zlGriff l"></span><span class="zlGriff r"></span></div></div>
-    <span class="zlText mono"></span>
-    <span class="seg zlVorgabe">${v.map(([k,l])=>`<button data-tun="zeitVorgabe" data-v="${esc(k)}">${esc(l)}</button>`).join('')}</span>
-    <label class="zlLinien small"><input type="checkbox" data-aend="linienUm"> Punkte verbinden</label>
-  </div>`;
+
+/* ── Zeitzeile oben: Zeitraum, feste Zeiträume, − und + ── */
+const STUFEN_TAGE={tank:[90,42,21,14,7,3,1,0.5,0.25],kombi:[180,90,42,21,14]};
+function vorgabeAktiv(){
+  if(!ZEIT)return null;if(koVon==null)return 'alles';
+  const L=ZEIT.x1-ZEIT.x0;
+  const v=ZEIT.vorgaben.find(([k])=>k!=='alles'&&Math.abs(L-k*864e5)<=0.03*k*864e5);return v?v[0]:null;
 }
-function zoomleisteStellen(box,o){
-  const z=box.querySelector?box.querySelector('.zoomleiste'):null;
-  if(!z||!ZEIT)return;
-  const {g0,g1,x0,x1}=ZEIT,ganz=(g1-g0)||1;
-  const f=z.querySelector('.zlFenster');
-  f.style.left=((x0-g0)/ganz*100)+'%';f.style.width=((x1-x0)/ganz*100)+'%';
-  z.classList.toggle('gezoomt',koVon!=null);
+function bereichText(a,b){
+  const tage=(b-a)/864e5,d=x=>new Date(x).toISOString().slice(0,10);
+  const hm=x=>{const t=new Date(Math.round(x/9e5)*9e5);return String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0')};
+  if(tage<1)return `${fmtK(d(a))} ${hm(a)} – ${hm(b)} · ${Math.round(tage*24)} Stunden`;
+  if(tage<=4){const n=Math.round(tage*2)/2;return `${fmtK(d(a))} ${hm(a)} – ${fmtK(d(b))} ${hm(b)} · ${Math.floor(n)}${n%1?'½':''} Tag${n===1?'':'e'}`}
+  return `${fmtK(d(a))} – ${fmt(d(b))} · ${Math.round(tage)} Tage`;
+}
+function zeitzeileTeile(o){
+  const z=ZEIT,L=z.x1-z.x0,ganz=z.g1-z.g0,aktiv=vorgabeAktiv();
+  const kurz={alles:'alles','180':'6 Mt.','90':'3 Mt.','42':'6 Wo.','7':'1 Wo.'};
+  const vorgaben=z.vorgaben.filter(([k])=>k==='alles'||k*864e5<0.97*ganz)
+    .map(([k,l])=>`<button class="${aktiv===k?'on':''}" data-tun="zeitVorgabe" data-v="${esc(k)}"><span class="lang">${esc(l)}</span><span class="kurz">${esc(kurz[k]||l)}</span></button>`).join('');
+  const aus=koVon==null,ein=L<=z.min*1.02;
+  const minText=z.min>=864e5?(z.min/864e5>=7?Math.round(z.min/6048e5)+' Wochen':Math.round(z.min/864e5)+' Tage'):Math.round(z.min/36e5)+' Stunden';
+  const mod=MAC?'⌘ + Mausrad oder zwei Finger':'Strg + Mausrad';
+  return {links:o.zeitLinks||'',text:bereichText(z.x0,z.x1),vorgaben,
+    aus:{dis:aus,title:aus?'Alles ist sichtbar':'Herauszoomen – auch '+mod},
+    ein:{dis:ein,title:ein?'Kürzester Ausschnitt: '+minText:'Hineinzoomen – auch '+mod}};
+}
+function zeitzeileHtml(o){
+  const t=zeitzeileTeile(o),k=(tun,g,x)=>`<button data-tun="${tun}" aria-label="${tun==='zoomEin'?'Hineinzoomen':'Herauszoomen'}" title="${esc(x.title)}"${x.dis?' aria-disabled="true" class="aus"':''}>${g}</button>`;
+  return `<div class="zeitzeile"><div class="zzLinks">${t.links}</div><div class="zzRechts"><span class="zzText mono">${esc(t.text)}</span>
+    <span class="seg zzVorgabe">${t.vorgaben}</span><span class="zlZoom">${k('zoomAus','−',t.aus)}${k('zoomEin','+',t.ein)}</span></div></div>`;
+}
+function zeitzeileStellen(box,o){
+  const z=box.querySelector('.zeitzeile');if(!z||!ZEIT)return;
+  const t=zeitzeileTeile(o);
+  z.querySelector('.zzLinks').innerHTML=t.links;
+  z.querySelector('.zzText').textContent=t.text;
+  z.querySelector('.zzVorgabe').innerHTML=t.vorgaben;
+  for(const [tun,x] of [['zoomAus',t.aus],['zoomEin',t.ein]]){
+    const b=z.querySelector(`[data-tun="${tun}"]`);if(!b)continue;
+    b.title=x.title;b.classList.toggle('aus',x.dis);
+    if(x.dis)b.setAttribute('aria-disabled','true');else b.removeAttribute('aria-disabled');
+  }
   box.classList.toggle('gezoomt',koVon!=null);
-  z.querySelector('.zlText').textContent=bereichText(x0,x1);
-  z.querySelector('[data-tun="zoomAus"]').disabled=koVon==null;
-  z.querySelector('[data-tun="zoomEin"]').disabled=(x1-x0)<=ZEIT.min*1.02;
-  const marken=zeitMarken(g0,g1),k=Math.max(1,Math.ceil(marken.length/8));
-  z.querySelector('.zlMonate').innerHTML=marken.filter((m,i)=>i%k===0)
-    .map(m=>`<i style="left:${(m.x-g0)/ganz*100}%"></i><span style="left:${(m.x-g0)/ganz*100}%">${esc(m.text)}</span>`).join('');
-  for(const b of z.querySelectorAll('[data-tun="zeitVorgabe"]'))b.classList.toggle('on',b.dataset.v===o.vorgabe);
-  const cb=z.querySelector('[data-aend="linienUm"]');if(cb)cb.checked=!!o.linien;
 }
-const bereichText=(a,b)=>{const d=x=>new Date(x).toISOString().slice(0,10);
-  return (b-a)<=3*864e5?`${fmtK(d(a))} ${String(new Date(a).getUTCHours()).padStart(2,'0')}:00 – ${fmtK(d(b))} ${String(new Date(b).getUTCHours()).padStart(2,'0')}:00`
-    :`${fmtK(d(a))} – ${fmt(d(b))}`};
-/* Den Ausschnitt setzen: bleibt im Gesamtbereich, nie enger als erlaubt.
-   «klemmen» schneidet an den Rändern ab (Griff ziehen), sonst wird das
-   ganze Fenster verschoben (Ausschnitt ziehen). */
-function zeitSetzen(v,b,schnell,klemmen,wahl){
+
+/* ── Rollbalken unten: wie im Browser, nur waagrecht ──
+   Selbst gezeichnet (kein echter Überlauf-Balken: am Mac blendet Firefox ihn
+   aus, bis man scrollt). Windows: graue Bahn mit Pfeilen. Mac: schmaler
+   Daumen ohne Pfeile. Die Bahn liegt genau unter der Zeichenfläche. */
+const rollbalkenHtml=()=>`<div class="rollleiste"><div class="rbBahn" tabindex="0" role="scrollbar" aria-orientation="horizontal" aria-label="Sichtbarer Zeitraum" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <button class="rbPfeil l" tabindex="-1" aria-hidden="true" data-r="-1"><svg viewBox="0 0 8 8" width="8" height="8"><path d="M5.5 1L2 4L5.5 7Z"/></svg></button><div class="rbSpur"><div class="rbDaumen"></div></div><button class="rbPfeil r" tabindex="-1" aria-hidden="true" data-r="1"><svg viewBox="0 0 8 8" width="8" height="8"><path d="M2.5 1L6 4L2.5 7Z"/></svg></button></div><div class="rbEtikett mono"></div></div>`;
+function rollbalkenMasse(box){
+  const spur=box.querySelector('.rbSpur');if(!spur||!ZEIT)return null;
+  const B=spur.clientWidth||0,ganz=ZEIT.g1-ZEIT.g0,L=ZEIT.x1-ZEIT.x0;
+  const minD=document.documentElement.classList.contains('rbTouch')?32:24;
+  const d=Math.min(B,Math.max(minD,B*L/(ganz||1))),rest=ganz-L;
+  return {spur,B,d,rest,links:rest>0?(ZEIT.x0-ZEIT.g0)/rest*(B-d):0};
+}
+function rollbalkenStellen(box){
+  const leiste=box.querySelector('.rollleiste');if(!leiste||!ZEIT)return;
+  const bahn=leiste.querySelector('.rbBahn');
+  bahn.style.marginLeft=ZEIT.ml+'px';bahn.style.marginRight=ZEIT.mr+'px';
+  const m=rollbalkenMasse(box);if(!m)return;
+  const voll=koVon==null,dm=leiste.querySelector('.rbDaumen');
+  leiste.classList.toggle('voll',voll);
+  dm.style.width=(voll?m.B:m.d)+'px';dm.style.left=(voll?0:m.links)+'px';
+  bahn.setAttribute('aria-valuenow',String(Math.round(m.rest>0?(ZEIT.x0-ZEIT.g0)/m.rest*100:0)));
+  bahn.setAttribute('aria-valuetext',bereichText(ZEIT.x0,ZEIT.x1));
+  bahn.title=voll?'Alles sichtbar – mit + oder '+(MAC?'⌘':'Strg')+' + Mausrad hineinzoomen':'';
+}
+
+/* ── Den Ausschnitt setzen ──
+   Bleibt im Gesamtbereich, nie enger als erlaubt. «klemmen» schneidet an den
+   Rändern ab, sonst wird das ganze Fenster verschoben. */
+function zeitSetzen(v,b,schnell,klemmen){
   if(!ZEIT)return;
   const {g0,g1,min}=ZEIT,ganz=g1-g0;
   if(klemmen){v=Math.max(v,g0);b=Math.min(b,g1)}
@@ -1113,113 +1381,354 @@ function zeitSetzen(v,b,schnell,klemmen,wahl){
   if(d>=ganz*0.999){koVon=koBis=null}
   else{if(v<g0)v=g0;if(v+d>g1)v=g1-d;koVon=v;koBis=v+d}
   ZEIT.x0=koVon!=null?koVon:g0;ZEIT.x1=koBis!=null?koBis:g1;
-  zeitWahl=koVon==null?'alles':(wahl!==undefined?wahl:null);
   zeitZeichnen(schnell);
 }
 let zeitOffen=false;
 function zeitZeichnen(schnell){
+  if(kmZug){kmZug.nachholen=true;return}
   if(!DIAG||!DIAG.zeichnen)return;
   if(schnell&&typeof requestAnimationFrame==='function'){
     if(zeitOffen)return;zeitOffen=true;
     requestAnimationFrame(()=>{zeitOffen=false;if(DIAG&&DIAG.zeichnen)DIAG.zeichnen()});
   }else DIAG.zeichnen();
 }
+/* Während einer Bewegung bleiben die y-Achsen stehen; 150 ms nach der
+   letzten Bewegung werden sie einmal neu bestimmt. */
+function ruhig(ms){
+  RUHIG=true;clearTimeout(ruhigUhr);
+  if(ms!=null)ruhigUhr=setTimeout(()=>{RUHIG=false;zeitZeichnen()},ms);
+}
+/* − und +: über eine Stufenleiter (Tank 3 Monate, 6 Wochen, 3 Wochen, 2
+   Wochen, 1 Woche, 3 Tage, 1 Tag, 12 und 6 Stunden), damit man auf runden
+   Zeiträumen landet. Liegt der rechte Rand am Ende der Daten, bleibt er
+   stehen – das Neueste bleibt im Bild. */
+function zoomStufe(richtung){
+  if(!ZEIT)return;
+  const L=ZEIT.x1-ZEIT.x0,st=ZEIT.stufen.map(t=>t*864e5).filter(t=>t>=ZEIT.min*0.999);
+  let neu;
+  if(richtung>0){const k=st.filter(t=>t<0.97*L);if(!k.length){neu=Math.max(ZEIT.min,L*0.6);if(neu>=L*0.99)return}else neu=Math.max(...k)}
+  else{if(koVon==null)return;const k=st.filter(t=>t>1.03*L);neu=k.length?Math.min(...k):Infinity;if(neu>=ZEIT.g1-ZEIT.g0)neu=Infinity}
+  tippWeg();
+  if(neu===Infinity){koVon=koBis=null;ZEIT.x0=ZEIT.g0;ZEIT.x1=ZEIT.g1;return zeitZeichnen()}
+  const rechts=ZEIT.g1-ZEIT.x1<=0.02*L;
+  if(rechts)zeitSetzen(ZEIT.x1-neu,ZEIT.x1);
+  else{const m=(ZEIT.x0+ZEIT.x1)/2;zeitSetzen(m-neu/2,m+neu/2)}
+}
+AKTION.zoomEin=(d,ev,t)=>{if(t&&t.getAttribute&&t.getAttribute('aria-disabled'))return;zoomStufe(1)};
+AKTION.zoomAus=(d,ev,t)=>{if(t&&t.getAttribute&&t.getAttribute('aria-disabled'))return;zoomStufe(-1)};
 const zoomUm=f=>{if(!ZEIT)return;const m=(ZEIT.x0+ZEIT.x1)/2,d=(ZEIT.x1-ZEIT.x0)*f;tippWeg();zeitSetzen(m-d/2,m+d/2)};
-AKTION.zoomEin=()=>zoomUm(0.6);
-AKTION.zoomAus=()=>zoomUm(1/0.6);
 AKTION.zeitVorgabe=d=>{
   if(!ZEIT)return;tippWeg();
-  if(d.v==='alles'){koVon=koBis=null;zeitWahl='alles';return zeitZeichnen()}
+  if(d.v==='alles'){koVon=koBis=null;return zeitZeichnen()}
   const bis=ZEIT.letzte+(+d.v<=7?0.5:2)*864e5;
-  zeitSetzen(bis-(+d.v)*864e5,bis,false,false,d.v);
+  zeitSetzen(bis-(+d.v)*864e5,bis);
 };
-/* Ein zusammengefasster Tag: hineinzoomen, bis jede Messung zu sehen ist. */
-AKTION.zoomTag=d=>{const t=+d.x;if(!isFinite(t))return;tippWeg();zeitSetzen(t-0.5*864e5,t+1.5*864e5)};
-AKTION.linienUm=(d,ev)=>{const an=!!ev.target.checked;if(tab==='tank')tkLinien=an?'reihe':'keine';else kbLinien=an?'reihe':'keine';zeitZeichnen();ansichtMerken()};
-/* Der Zeiger: eine feine Linie am selben Zeitpunkt in allen Grafiken. */
-function zeigerSetzen(box,px){
+/* Ein verdichteter Punkt: eine Woche um ihn herum – dort steht jede Messung. */
+AKTION.zoomTag=d=>{const t=+d.x;if(!isFinite(t))return;tippWeg();zeitSetzen(t-3.5*864e5,t+3.5*864e5)};
+/* «nächste Probe ›»: bei gleicher Länge dorthin, die Probe in der Mitte. */
+AKTION.zeitZu=d=>{const t=+d.x;if(!isFinite(t)||!ZEIT)return;const L=ZEIT.x1-ZEIT.x0;tippWeg();zeitSetzen(t-L/2,t+L/2)};
+AKTION.diagPunkt=d=>{if(DIAG&&DIAG.klick)DIAG.klick(d.id)};
+/* Welche Grafiken ihre Punkte verbinden – je Grafik, persönlich. */
+let linienAn=new Set();
+AKTION.linienUm=(d,ev)=>{if(ev.target.checked)linienAn.add(d.ziel);else linienAn.delete(d.ziel);zeitZeichnen();ansichtMerken()};
+
+/* ── Zeigen: Zeiger, Datumsschild, nächster Punkt ── */
+function datumsText(t){
+  const d=new Date(t),tag=WOCHENTAG[d.getUTCDay()]+' '+fmtK(d.toISOString().slice(0,10));
+  if(!ZEIT||ZEIT.x1-ZEIT.x0>4*864e5)return tag;
+  const q=new Date(Math.round(t/9e5)*9e5);
+  return tag+' '+String(q.getUTCHours()).padStart(2,'0')+':'+String(q.getUTCMinutes()).padStart(2,'0');
+}
+function zeigerSetzen(box,px,datumSvg){
   const an=px!=null&&ZEIT&&px>=ZEIT.ml&&px<=ZEIT.W-ZEIT.mr;
   for(const z of box.querySelectorAll('.zeiger')){z.setAttribute('x1',an?px:-99);z.setAttribute('x2',an?px:-99)}
+  for(const g of box.querySelectorAll('.zeigerDatum')){
+    if(!an||g.ownerSVGElement!==datumSvg){g.setAttribute('visibility','hidden');continue}
+    const t=ZEIT.x0+(px-ZEIT.ml)/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(ZEIT.x1-ZEIT.x0),text=datumsText(t),w=text.length*6.6+12;
+    const x=Math.max(ZEIT.ml+w/2,Math.min(ZEIT.W-ZEIT.mr-w/2,px));
+    g.setAttribute('transform',`translate(${x},${g.dataset.y})`);
+    const r=g.querySelector('rect');r.setAttribute('x',-w/2);r.setAttribute('width',w);
+    g.querySelector('text').textContent=text;g.setAttribute('visibility','visible');
+  }
 }
-/* Ziehen, Strg + Rad, Schiebebalken. Einmal je Kasten gebunden – die
-   Grafiken darin werden bei jeder Bewegung neu gezeichnet, die Leiste
-   bleibt stehen, damit sie den Zeiger nicht verliert. */
+/* Der nächste gezeichnete Punkt in derselben Grafik – höchstens 20 px weg,
+   mit dem Finger 28 px. Bei Gleichstand gewinnt der kleinere Abstand in x. */
+function naechsterPunkt(nr,px,py,weit){
+  const l=ZEIT&&ZEIT.treffer[nr];if(!l||!l.length)return null;
+  let lo=0,hi=l.length;while(lo<hi){const m=(lo+hi)>>1;if(l[m].cx<px-weit)lo=m+1;else hi=m}
+  let best=null,bd=Infinity,bx=Infinity;
+  for(let i=lo;i<l.length&&l[i].cx<=px+weit;i++){
+    const dx=Math.abs(l[i].cx-px),d=Math.hypot(dx,l[i].cy-py);
+    if(d<=weit&&(d<bd-0.01||(Math.abs(d-bd)<=0.01&&dx<bx))){best=l[i];bd=d;bx=dx}
+  }
+  return best;
+}
+let TIPP_FEST=null,nachZug=false,letzterZeiger='mouse';
+function punktZeigen(box,svg,t){
+  for(const c of box.querySelectorAll('.ring')){if(c.ownerSVGElement!==svg||!t){c.setAttribute('cx',-99);c.setAttribute('cy',-99)}}
+  if(!t){svg&&(svg.style.cursor='');return}
+  const c=svg.querySelector('.ring');c.setAttribute('cx',t.cx);c.setAttribute('cy',t.cy);
+  const r=svg.getBoundingClientRect(),k=r.width/(ZEIT.W||1);
+  const fuss=letzterZeiger==='touch'?t.tipp.replace(/Anklicken/g,'Nochmals tippen'):t.tipp;
+  tippZeigen(fuss,r.left+t.cx*k-2,r.top+t.cy*k-16);
+  svg.style.cursor=t.block!=null?'zoom-in':(ZEIT.aufKlick&&t.kennung)?'pointer':'';
+}
+/* Ziehen, Rad, Fingergesten, Tastatur, Rollbalken. Einmal je Kasten
+   gebunden – die Grafiken darin werden bei jeder Bewegung neu gezeichnet,
+   Zeitzeile und Rollbalken bleiben stehen. */
 function zeitBedienung(box){
-  const tf=box.querySelector('.tafeln'),bahn=box.querySelector('.zlBahn');
-  if(!tf||!bahn)return;
-  const pxVon=ev=>{const s=tf.querySelector('.bild svg');if(!s||!ZEIT)return null;const r=s.getBoundingClientRect();return r.width?(ev.clientX-r.left)*(ZEIT.W/r.width):null};
-  const zeitVon=px=>ZEIT.x0+(px-ZEIT.ml)/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(ZEIT.x1-ZEIT.x0);
-  let zug=null;
+  const tf=box.querySelector('.tafeln');if(!tf)return;
+  const P=()=>(ZEIT.W-ZEIT.ml-ZEIT.mr)||1;
+  const svgPos=(svg,ev)=>{const r=svg.getBoundingClientRect();const k=(ZEIT.W||1)/(r.width||1);return {px:(ev.clientX-r.left)*k,py:(ev.clientY-r.top)*k}};
+  const zeitVon=px=>ZEIT.x0+(px-ZEIT.ml)/P()*(ZEIT.x1-ZEIT.x0);
+  const datumSvg=svg=>{if(!svg)return null;if(svg.classList.contains('spur'))return svg;
+    return tf.querySelector(`svg.spur[data-spur="${ZEIT.kmOben}"]`)};
+  let zug=null;const finger=new Map();let zange=null;
+  const ende=()=>{if(zug&&zug.bewegt){nachZug=true;setTimeout(()=>{nachZug=false},60);ruhig(0)}zug=null;box.classList.remove('zieht')};
   tf.addEventListener('pointerdown',ev=>{
-    if(ev.button!==0||!ZEIT||!ev.target.closest||!ev.target.closest('.bild svg')||ev.target.closest('[data-tun="kmEreignisse"]'))return;
-    const px=pxVon(ev);if(px==null||px<ZEIT.ml)return;
-    zug={id:ev.pointerId,px,x0:ZEIT.x0,x1:ZEIT.x1,bewegt:false};
+    letzterZeiger=ev.pointerType||'mouse';
+    if(!ZEIT||kmZug||(ev.pointerType==='mouse'&&ev.button!==0))return;
+    const svg=ev.target.closest&&ev.target.closest('svg.zb');
+    if(!svg||ev.target.closest('.kmZName')||ev.target.closest('[data-tun="kmEreignisse"]'))return;
+    const {px,py}=svgPos(svg,ev);if(px<ZEIT.ml)return;
+    if(ev.pointerType==='touch'){
+      finger.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+      if(finger.size===2){
+        /* Zwei Finger: zoomen um ihre Mitte */
+        const [a,b]=[...finger.values()],r=svg.getBoundingClientRect(),k=(ZEIT.W||1)/(r.width||1);
+        const mx=((a.x+b.x)/2-r.left)*k;
+        zange={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,t:zeitVon(mx),anteil:(mx-ZEIT.ml)/P(),L:ZEIT.x1-ZEIT.x0,svg};
+        zug=null;ruhig();try{tf.setPointerCapture(ev.pointerId)}catch(e){}
+        return;
+      }
+    }
+    zug={id:ev.pointerId,svg,px,py,cx:ev.clientX,cy:ev.clientY,x0:ZEIT.x0,x1:ZEIT.x1,bewegt:false,achse:null,typ:ev.pointerType};
   });
   tf.addEventListener('pointermove',ev=>{
-    const px=pxVon(ev);
-    if(ev.pointerType==='mouse')zeigerSetzen(box,px);
-    if(!zug||ev.pointerId!==zug.id||px==null)return;
-    if(!zug.bewegt&&Math.abs(px-zug.px)<4)return;
-    if(!zug.bewegt){zug.bewegt=true;try{tf.setPointerCapture(ev.pointerId)}catch(e){}box.classList.add('zieht');tippWeg()}
-    const d=(zug.px-px)/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(zug.x1-zug.x0);
-    zeitSetzen(zug.x0+d,zug.x1+d,true);
+    if(!ZEIT||kmZug)return;
+    if(ev.pointerType==='touch'&&finger.has(ev.pointerId)){finger.set(ev.pointerId,{x:ev.clientX,y:ev.clientY})}
+    if(zange&&finger.size>=2){
+      const [a,b]=[...finger.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,L=Math.min(ZEIT.g1-ZEIT.g0,Math.max(ZEIT.min,zange.L*zange.d0/d));
+      zeitSetzen(zange.t-zange.anteil*L,zange.t+(1-zange.anteil)*L,true);
+      return;
+    }
+    const svg=ev.target.closest&&ev.target.closest('svg.zb');
+    if(zug&&ev.pointerId===zug.id){
+      const dx=ev.clientX-zug.cx,dy=ev.clientY-zug.cy;
+      if(!zug.bewegt){
+        if(zug.typ==='touch'){
+          if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
+          zug.achse=Math.abs(dx)>1.2*Math.abs(dy)?'x':'y';
+          if(zug.achse==='y'){zug=null;return}
+        }else if(Math.abs(dx)<4)return;
+        if(koVon==null){if(zug.typ!=='touch')zug=null;return}   /* ungezoomt gibt es nichts zu verschieben */
+        zug.bewegt=true;ruhig();
+        try{tf.setPointerCapture(ev.pointerId)}catch(e){}
+        box.classList.add('zieht');tippWeg();TIPP_FEST=null;punktZeigen(box,null,null);
+      }
+      const k=(ZEIT.W||1)/(zug.svg.getBoundingClientRect().width||1);
+      const d=-dx*k/P()*(zug.x1-zug.x0);
+      zeitSetzen(zug.x0+d,zug.x1+d,true);
+      return;
+    }
+    if(ev.pointerType!=='mouse')return;
+    if(!svg){punktZeigen(box,null,null);zeigerSetzen(box,null,null);return}
+    const {px,py}=svgPos(svg,ev);
+    zeigerSetzen(box,px,datumSvg(svg));
+    if(svg.classList.contains('spur')&&!TIPP_FEST){
+      const t=naechsterPunkt(+svg.dataset.spur,px,py,20);
+      if(t)punktZeigen(box,svg,t);
+      else{punktZeigen(box,null,null);if(!ev.target.closest('[data-tipp]'))tippWeg()}
+    }
   });
-  const los=ev=>{if(zug&&ev.pointerId===zug.id){zug=null;box.classList.remove('zieht')}};
+  const los=ev=>{
+    if(ev.pointerType==='touch'){finger.delete(ev.pointerId);if(finger.size<2&&zange){zange=null;ruhig(150)}}
+    if(zug&&ev.pointerId===zug.id)ende();
+  };
   tf.addEventListener('pointerup',los);tf.addEventListener('pointercancel',los);
-  tf.addEventListener('pointerleave',()=>{if(!zug)zeigerSetzen(box,null)});
+  tf.addEventListener('pointerleave',ev=>{if(!zug&&ev.pointerType==='mouse'){zeigerSetzen(box,null,null);punktZeigen(box,null,null);kmBandWeg(box)}});
+  /* Klick: nach einem Ziehen verschluckt. Mit dem Finger zeigt das erste
+     Tippen das Kästchen, das zweite öffnet. Sonst: der nächste Punkt. */
+  tf.addEventListener('click',ev=>{
+    if(nachZug){ev.stopPropagation();ev.preventDefault();return}
+    if(ev.target.closest&&ev.target.closest('.kmZName')&&!ev.target.closest('button')){ev.stopPropagation();return}
+    const tun=ev.target.closest&&ev.target.closest('[data-tun]');
+    const svg=ev.target.closest&&ev.target.closest('svg.spur');
+    let t=null,ziel=null;
+    if(svg){const {px,py}=svgPos(svg,ev);t=naechsterPunkt(+svg.dataset.spur,px,py,letzterZeiger==='touch'?28:20);if(t)ziel='p'+svg.dataset.spur+':'+t.cx+':'+t.cy}
+    if(letzterZeiger==='touch'){
+      const balken=tun&&tun.dataset.tun==='spanne'?tun:null;
+      if(balken)ziel='b'+balken.dataset.id;
+      if(ziel&&ziel!==TIPP_FEST){
+        TIPP_FEST=ziel;
+        if(balken){const r=balken.getBoundingClientRect();tippZeigen(String(balken.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top);kmBandZeigen(box,balken)}
+        else punktZeigen(box,svg,t);
+        ev.stopPropagation();ev.preventDefault();return;
+      }
+      if(!ziel){TIPP_FEST=null;tippWeg();if(svg)punktZeigen(box,null,null)}
+      else TIPP_FEST=null;
+    }
+    if(tun||!t)return;
+    ev.stopPropagation();
+    if(t.block!=null)return AKTION.zoomTag({x:t.block});
+    if(ZEIT.aufKlick&&t.kennung)AKTION.diagPunkt({id:t.kennung});
+  });
+  /* Rad: allein scrollt es die Seite. Strg/⌘ + Rad zoomt um den Zeiger,
+     seitwärts wischen oder Umschalt + Rad verschiebt. */
+  const raddelta=ev=>{const f=ev.deltaMode===1?16:ev.deltaMode===2?400:1;return {dx:ev.deltaX*f,dy:ev.deltaY*f}};
   tf.addEventListener('wheel',ev=>{
-    if(!ZEIT||!ev.target.closest||!ev.target.closest('.bild svg'))return;
-    const px=pxVon(ev);if(px==null||px<ZEIT.ml)return;
+    if(!ZEIT||kmZug)return;
+    const svg=ev.target.closest&&ev.target.closest('svg.zb');if(!svg)return;
+    const {px}=svgPos(svg,ev);if(px<ZEIT.ml)return;
+    const {dx,dy}=raddelta(ev);
     if(ev.ctrlKey||ev.metaKey){
       ev.preventDefault();tippWeg();
-      const f=Math.exp(Math.max(-0.3,Math.min(0.3,ev.deltaY*0.003))),m=zeitVon(px);
-      zeitSetzen(m-(m-ZEIT.x0)*f,m+(ZEIT.x1-m)*f,true);
-    }else if(koVon!=null&&(Math.abs(ev.deltaX)>Math.abs(ev.deltaY)*1.5||(ev.shiftKey&&ev.deltaY))){
-      /* seitwärts wischen oder Umschalt + Rad: verschieben, solange gezoomt ist */
+      if(koVon==null&&dy>0)return;
+      const f=Math.max(0.75,Math.min(1.33,Math.exp(dy*0.003))),m=zeitVon(px);
+      ruhig(150);zeitSetzen(m-(m-ZEIT.x0)*f,m+(ZEIT.x1-m)*f,true);
+    }else if(Math.abs(dx)>Math.abs(dy)*1.5||(ev.shiftKey&&dy)){
       ev.preventDefault();
-      const dpx=Math.abs(ev.deltaX)>Math.abs(ev.deltaY)?ev.deltaX:ev.deltaY;
-      const d=dpx/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(ZEIT.x1-ZEIT.x0);
-      zeitSetzen(ZEIT.x0+d,ZEIT.x1+d,true);
+      if(koVon==null)return;
+      const d=(Math.abs(dx)>Math.abs(dy)?dx:dy)/P()*(ZEIT.x1-ZEIT.x0);
+      ruhig(150);zeitSetzen(ZEIT.x0+d,ZEIT.x1+d,true);
     }
   },{passive:false});
-  /* Der Schiebebalken: das helle Fenster ist der sichtbare Ausschnitt. */
-  let sz=null;
-  bahn.addEventListener('pointerdown',ev=>{
-    if(ev.button!==0||!ZEIT)return;
-    const r=bahn.getBoundingClientRect();if(!r.width)return;
-    const griff=ev.target.closest('.zlGriff'),fenster=ev.target.closest('.zlFenster');
-    if(!griff&&!fenster){
-      const m=ZEIT.g0+(ev.clientX-r.left)/r.width*(ZEIT.g1-ZEIT.g0),d=ZEIT.x1-ZEIT.x0;
-      zeitSetzen(m-d/2,m+d/2);
+  /* Safari am Mac meldet das Zusammenziehen nicht als Rad. */
+  let geste=null;
+  tf.addEventListener('gesturestart',ev=>{if(!ZEIT)return;ev.preventDefault();const svg=ev.target.closest&&ev.target.closest('svg.zb');
+    const px=svg?svgPos(svg,ev).px:(ZEIT.ml+ZEIT.W-ZEIT.mr)/2;geste={t:zeitVon(px),anteil:(px-ZEIT.ml)/P(),L:ZEIT.x1-ZEIT.x0};ruhig()});
+  tf.addEventListener('gesturechange',ev=>{if(!geste)return;ev.preventDefault();const L=Math.min(ZEIT.g1-ZEIT.g0,Math.max(ZEIT.min,geste.L/(ev.scale||1)));
+    zeitSetzen(geste.t-geste.anteil*L,geste.t+(1-geste.anteil)*L,true)});
+  tf.addEventListener('gestureend',ev=>{if(geste){ev.preventDefault();geste=null;ruhig(150)}});
+  /* Tastatur – nur, wenn die Grafiken selbst den Fokus haben. */
+  tf.addEventListener('keydown',ev=>{
+    if(ev.target!==tf||!ZEIT)return;
+    const L=ZEIT.x1-ZEIT.x0,schieb=f=>{ev.preventDefault();ruhig(150);zeitSetzen(ZEIT.x0+f*L,ZEIT.x1+f*L)};
+    if(ev.key==='ArrowLeft')schieb(ev.shiftKey?-0.5:-0.1);
+    else if(ev.key==='ArrowRight')schieb(ev.shiftKey?0.5:0.1);
+    else if(ev.key==='PageUp')schieb(-1);
+    else if(ev.key==='PageDown')schieb(1);
+    else if(ev.key==='Home'){ev.preventDefault();zeitSetzen(ZEIT.g0,ZEIT.g0+L)}
+    else if(ev.key==='End'){ev.preventDefault();zeitSetzen(ZEIT.g1-L,ZEIT.g1)}
+    else if(ev.key==='+'||ev.key==='='||ev.key==='Add'){ev.preventDefault();zoomStufe(1)}
+    else if(ev.key==='-'||ev.key==='Subtract'){ev.preventDefault();zoomStufe(-1)}
+    else if(ev.key==='0'){ev.preventDefault();AKTION.zeitVorgabe({v:'alles'})}
+    else if(ev.key==='Escape'){TIPP_FEST=null;tippWeg();punktZeigen(box,null,null)}
+  });
+  /* Zeigen auf einen Balken: sein Zeitraum als blasses Band in allen Grafiken. */
+  tf.addEventListener('pointerover',ev=>{
+    const g=ev.target.closest&&ev.target.closest('g.spb');if(g&&!zug&&!kmZug)kmBandZeigen(box,g);
+    const chip=ev.target.closest&&ev.target.closest('.chip.on[data-k],[data-tun="tkStelle"]');
+    if(chip)reiheHeben(box,chip);
+  });
+  tf.addEventListener('pointerout',ev=>{
+    const g=ev.target.closest&&ev.target.closest('g.spb');if(g&&!(ev.relatedTarget&&g.contains(ev.relatedTarget)))kmBandWeg(box);
+    const chip=ev.target.closest&&ev.target.closest('.chip.on[data-k],[data-tun="tkStelle"]');
+    if(chip&&!(ev.relatedTarget&&chip.contains(ev.relatedTarget)))reiheHeben(box,null);
+  });
+  rollbalkenBedienung(box);
+  const zz=box.querySelector('.zeitzeile');
+  if(zz)zz.addEventListener('pointerover',ev=>{const s=ev.target.closest&&ev.target.closest('[data-tun="tkStelle"]');reiheHeben(box,s||null)});
+}
+function kmBandZeigen(box,g){
+  if(!ZEIT)return;
+  const a=Math.max(ZEIT.x0,+g.dataset.x0),b=Math.min(ZEIT.x1,+g.dataset.x1);
+  const X=v=>ZEIT.ml+(v-ZEIT.x0)/((ZEIT.x1-ZEIT.x0)||1)*(ZEIT.W-ZEIT.ml-ZEIT.mr);
+  const xa=X(a),w=Math.max(2,X(b)-xa),farbe=g.dataset.farbe||'#4F5E53';
+  for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',xa);r.setAttribute('width',w);r.setAttribute('fill',farbe);
+    r.setAttribute('fill-opacity',w<=2?'.45':'.09');r.setAttribute('stroke',farbe);r.setAttribute('stroke-opacity','.4');r.setAttribute('stroke-dasharray','3 3')}
+}
+function kmBandWeg(box){for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',-99);r.setAttribute('width',0)}}
+/* Zeigen auf einen Stoff (oder eine Stelle): seine Reihen bleiben voll, die
+   übrigen treten zurück – nur, wenn mehrere Reihen zu sehen sind. */
+let hebUhr=null;
+function reiheHeben(box,el){
+  clearTimeout(hebUhr);
+  const tf=box.querySelector('.tafeln');if(!tf)return;
+  if(!el){tf.classList.remove('hebt');return}
+  const k=String(el.dataset.k||el.dataset.v||'').replace(/^gw_/,'');
+  if(!k||k==='alle')return tf.classList.remove('hebt');
+  hebUhr=setTimeout(()=>{
+    const gs=[...tf.querySelectorAll('g.reihe')];
+    if(new Set(gs.map(g=>g.dataset.reihe)).size<2)return;
+    gs.forEach(g=>g.classList.toggle('an',g.dataset.reihe===k));tf.classList.add('hebt');
+  },150);
+}
+/* Der Rollbalken: Daumen ziehen, in die Bahn klicken (eine Seite, gedrückt
+   halten wiederholt), Pfeile (Windows), Tastatur, seitliches Rad. */
+function rollbalkenBedienung(box){
+  const leiste=box.querySelector('.rollleiste');if(!leiste)return;
+  const bahn=leiste.querySelector('.rbBahn'),dm=leiste.querySelector('.rbDaumen'),etikett=leiste.querySelector('.rbEtikett');
+  let zieh=null,wdh=null;
+  const stop=()=>{clearTimeout(wdh);wdh=null};
+  const seite=richtung=>{const L=ZEIT.x1-ZEIT.x0;zeitSetzen(ZEIT.x0+richtung*0.9*L,ZEIT.x1+richtung*0.9*L)};
+  const zeigeEtikett=()=>{etikett.textContent=bereichText(ZEIT.x0,ZEIT.x1);const m=rollbalkenMasse(box);if(!m)return;
+    const r=m.spur.getBoundingClientRect(),lr=leiste.getBoundingClientRect();etikett.style.left=(r.left-lr.left+m.links+m.d/2)+'px';leiste.classList.add('etikett')};
+  dm.addEventListener('pointerdown',ev=>{
+    if(!ZEIT||koVon==null||ev.button>0)return;ev.preventDefault();ev.stopPropagation();
+    const m=rollbalkenMasse(box);zieh={id:ev.pointerId,cx:ev.clientX,x0:ZEIT.x0,x1:ZEIT.x1,m};
+    try{dm.setPointerCapture(ev.pointerId)}catch(e){}
+    leiste.classList.add('zieht');ruhig();tippWeg();zeigeEtikett();
+  });
+  dm.addEventListener('pointermove',ev=>{
+    if(!zieh||ev.pointerId!==zieh.id)return;
+    const r=zieh.m.spur.getBoundingClientRect(),k=zieh.m.B/(r.width||1);
+    const dt=(ev.clientX-zieh.cx)*k/((zieh.m.B-zieh.m.d)||1)*zieh.m.rest;
+    zeitSetzen(zieh.x0+dt,zieh.x1+dt,true);zeigeEtikett();
+  });
+  const dmLos=ev=>{if(zieh&&ev.pointerId===zieh.id){zieh=null;leiste.classList.remove('zieht','etikett');ruhig(0)}};
+  dm.addEventListener('pointerup',dmLos);dm.addEventListener('pointercancel',dmLos);
+  const spur=leiste.querySelector('.rbSpur');
+  spur.addEventListener('pointerdown',ev=>{
+    if(!ZEIT||koVon==null||ev.target===dm||ev.button>0)return;ev.preventDefault();
+    const m=rollbalkenMasse(box),r=spur.getBoundingClientRect(),k=m.B/(r.width||1),klick=(ev.clientX-r.left)*k;
+    if(ev.shiftKey||ev.altKey){
+      const links=Math.max(0,Math.min(m.B-m.d,klick-m.d/2)),v=ZEIT.g0+(m.B-m.d>0?links/(m.B-m.d)*m.rest:0);
+      return zeitSetzen(v,v+(ZEIT.x1-ZEIT.x0));
     }
-    sz={id:ev.pointerId,art:griff?(griff.classList.contains('l')?'l':'r'):'f',cx:ev.clientX,x0:ZEIT.x0,x1:ZEIT.x1,breite:r.width};
-    try{bahn.setPointerCapture(ev.pointerId)}catch(e){}
-    bahn.classList.add('zieht');tippWeg();ev.preventDefault();
+    try{spur.setPointerCapture(ev.pointerId)}catch(e){}
+    const schritt=()=>{const mm=rollbalkenMasse(box);if(!mm)return false;
+      if(klick<mm.links){seite(-1);return true}if(klick>mm.links+mm.d){seite(1);return true}return false};
+    ruhig();
+    if(schritt()){const weiter=()=>{if(schritt())wdh=setTimeout(weiter,60);else{stop();ruhig(0)}};wdh=setTimeout(weiter,350)}
   });
-  bahn.addEventListener('pointermove',ev=>{
-    if(!sz||ev.pointerId!==sz.id||!ZEIT)return;
-    const d=(ev.clientX-sz.cx)/(sz.breite||1)*(ZEIT.g1-ZEIT.g0);
-    if(sz.art==='f')zeitSetzen(sz.x0+d,sz.x1+d,true);
-    else if(sz.art==='l')zeitSetzen(Math.min(sz.x0+d,sz.x1-ZEIT.min),sz.x1,true,true);
-    else zeitSetzen(sz.x0,Math.max(sz.x1+d,sz.x0+ZEIT.min),true,true);
-  });
-  const slos=ev=>{if(sz&&ev.pointerId===sz.id){sz=null;bahn.classList.remove('zieht')}};
-  bahn.addEventListener('pointerup',slos);bahn.addEventListener('pointercancel',slos);
+  const spurLos=()=>{if(wdh!=null){stop();ruhig(0)}else if(RUHIG&&!zieh)ruhig(0)};
+  spur.addEventListener('pointerup',spurLos);spur.addEventListener('pointercancel',spurLos);
+  for(const p of leiste.querySelectorAll('.rbPfeil')){
+    p.addEventListener('pointerdown',ev=>{
+      if(!ZEIT||koVon==null||ev.button>0)return;ev.preventDefault();
+      const r=+p.dataset.r,schritt=()=>{const L=ZEIT.x1-ZEIT.x0;zeitSetzen(ZEIT.x0+r*0.1*L,ZEIT.x1+r*0.1*L)};
+      ruhig();schritt();const weiter=()=>{schritt();wdh=setTimeout(weiter,60)};wdh=setTimeout(weiter,350);
+      try{p.setPointerCapture(ev.pointerId)}catch(e){}
+    });
+    p.addEventListener('pointerup',()=>{stop();ruhig(0)});p.addEventListener('pointercancel',()=>{stop();ruhig(0)});
+  }
+  leiste.addEventListener('wheel',ev=>{
+    if(!ZEIT)return;
+    const f=ev.deltaMode===1?16:ev.deltaMode===2?400:1,dx=ev.deltaX*f,dy=ev.deltaY*f;
+    if(ev.ctrlKey||ev.metaKey){ev.preventDefault();if(koVon==null&&dy>0)return;ruhig(150);zoomUm(Math.max(0.75,Math.min(1.33,Math.exp(dy*0.003))));return}
+    if(Math.abs(dx)>Math.abs(dy)||(ev.shiftKey&&dy)){
+      ev.preventDefault();if(koVon==null)return;
+      const m=rollbalkenMasse(box);if(!m)return;
+      const d=(Math.abs(dx)>Math.abs(dy)?dx:dy)/((m.B-m.d)||1)*m.rest;
+      ruhig(150);zeitSetzen(ZEIT.x0+d,ZEIT.x1+d,true);
+    }
+  },{passive:false});
   bahn.addEventListener('keydown',ev=>{
-    if(!ZEIT)return;const d=ZEIT.x1-ZEIT.x0;
-    if(ev.key==='ArrowLeft'){ev.preventDefault();zeitSetzen(ZEIT.x0-d*0.15,ZEIT.x1-d*0.15)}
-    else if(ev.key==='ArrowRight'){ev.preventDefault();zeitSetzen(ZEIT.x0+d*0.15,ZEIT.x1+d*0.15)}
-    else if(ev.key==='+'||ev.key==='='){ev.preventDefault();zoomUm(0.6)}
-    else if(ev.key==='-'){ev.preventDefault();zoomUm(1/0.6)}
+    if(!ZEIT)return;const L=ZEIT.x1-ZEIT.x0,s=f=>{ev.preventDefault();zeitSetzen(ZEIT.x0+f*L,ZEIT.x1+f*L)};
+    if(ev.key==='ArrowLeft')s(-0.1);else if(ev.key==='ArrowRight')s(0.1);
+    else if(ev.key==='PageUp')s(-0.9);else if(ev.key==='PageDown')s(0.9);
+    else if(ev.key==='Home'){ev.preventDefault();zeitSetzen(ZEIT.g0,ZEIT.g0+L)}
+    else if(ev.key==='End'){ev.preventDefault();zeitSetzen(ZEIT.g1-L,ZEIT.g1)}
   });
 }
-AKTION.diagPunkt=d=>{if(DIAG&&DIAG.klick)DIAG.klick(d.id)};
-/* Sinnvolle Marken auf der Zeitachse, je nach Spannweite */
+/* Sinnvolle Marken auf der Zeitachse, je nach Spannweite. Bis vier Tage
+   Stunden, bis zehn Tage dazu feine Striche um 6, 12 und 18 Uhr. */
 function zeitMarken(x0,x1){
   const t=(x1-x0)/864e5,out=[];
   const d0=new Date(x0);
-  if(t<=3){                                         /* Stunden – seit es Uhrzeiten gibt */
-    const schritt=t<=1.2?3:t<=2.2?6:12;
+  if(t<=4){                                         /* Stunden – seit es Uhrzeiten gibt */
+    const schritt=t<=1.2?3:t<=2.5?6:12;
     const d=new Date(Math.ceil(x0/36e5)*36e5);
     while(d.getUTCHours()%schritt)d.setUTCHours(d.getUTCHours()+1);
     for(;+d<=x1;d.setUTCHours(d.getUTCHours()+schritt)){
@@ -1229,8 +1738,10 @@ function zeitMarken(x0,x1){
   }else if(t<=16){                                  /* Tage */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
     const schritt=t<=9?1:2;
-    for(;+d<=x1;d.setUTCDate(d.getUTCDate()+schritt))
-      if(+d>=x0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+    for(let i=0;+d<=x1;d.setUTCDate(d.getUTCDate()+1),i++){
+      if(+d>=x0&&i%schritt===0)out.push({x:+d,text:fmtK(d.toISOString().slice(0,10))});
+      if(t<=10)for(const h of [6,12,18]){const x=+d+h*36e5;if(x>=x0&&x<=x1)out.push({x,klein:true})}
+    }
   }else if(t<=70){                                  /* Wochen */
     const d=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth(),d0.getUTCDate()));
     while(d.getUTCDay()!==1)d.setUTCDate(d.getUTCDate()+1);
@@ -1242,82 +1753,14 @@ function zeitMarken(x0,x1){
     for(;+d<=x1;d.setUTCMonth(d.getUTCMonth()+1))
       if(+d>=x0)out.push({x:+d,text:N[d.getUTCMonth()]+' '+String(d.getUTCFullYear()).slice(2)});
   }
-  return out.length?out:[{x:x0,text:fmtK(new Date(x0).toISOString().slice(0,10))}];
-}
-/* Der sichtbare Ausschnitt, gemeinsam für alle Grafiken eines Reiters –
-   null heisst: alles. */
-let koVon=null,koBis=null;
-
-/* ── Balken und Marken unter der Zeitachse ─────────────────────────────
-   Balken: 18 Bildpunkte hoch, satt in der Farbe des Mittels, die
-   Beschriftung weiss im Balken – passt sie nicht hinein, steht sie dunkel
-   gleich rechts daneben (am rechten Rand links davor). Ein Balken, der noch
-   läuft, endet in einer Spitze: es geht weiter. Zeiträume desselben Mittels
-   teilen sich eine Zeile, solange Balken und Beschriftung nicht
-   aneinanderstossen.
-   Marken: ein einzelnes Ereignis ohne Mittel (Tank neu angesetzt,
-   Umpumpen …). Eine Zeile je Art, links benannt; mehrere am selben Tag
-   werden eine Marke mit Zahl. */
-const BALKEN_ZEILE=23,BALKEN_H=18,BALKEN_ZEICHEN=6.4;
-function spannenZeilen(spannen,X,x0,x1,rechts){
-  const zeilen=[],liste=[];
-  const grenze=rechts!=null?rechts:X(x1)+20;
-  for(const sp of spannen){
-    const a=Math.max(x0,sp.x0),b=Math.min(x1,sp.x1);if(b<a)continue;
-    const key=sp.zeile||sp.kennung;
-    if(sp.marke){
-      let z=zeilen.findIndex(r=>r.key===key);
-      if(z<0){zeilen.push({key,ende:Infinity,text:sp.zeileText||''});z=zeilen.length-1}
-      const xm=X(a);
-      liste.push({sp,z,xa:xm-6,xb:xm+6,lage:'marke',innen:false,spitze:0,links:xm-6,ende:xm+6});
-      continue;
-    }
-    const xa=X(a),xb=Math.max(X(b),xa+6),textW=String(sp.text||'').length*BALKEN_ZEICHEN;
-    const spitze=sp.laeuft?8:0;
-    let lage,links,ende;
-    if(xb-xa>=textW+18){lage='innen';links=xa;ende=xb+spitze}
-    else if(xb+spitze+6+textW<=grenze){lage='rechts';links=xa;ende=xb+spitze+6+textW}
-    else{lage='links';links=xa-6-textW;ende=xb+spitze}
-    links-=6;ende+=12;
-    let z=zeilen.findIndex(r=>r.key===key&&r.ende<=links);
-    if(z<0){zeilen.push({key,ende,text:''});z=zeilen.length-1}else zeilen[z].ende=ende;
-    liste.push({sp,z,xa,xb,lage,innen:lage==='innen',spitze,links,ende});
-  }
-  return {liste,n:zeilen.length,zeilen};
+  out.sort((a,b)=>a.x-b.x);
+  return out.some(m=>!m.klein)?out:[{x:x0,text:fmtK(new Date(x0).toISOString().slice(0,10))}].concat(out);
 }
 /* Eine Farbe um f dunkler – damit weisse Schrift auch auf Orange lesbar ist. */
 function dunkler(hex,f){
   const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
   const n=parseInt(m[1],16),k=c=>Math.round(c*(1-f)).toString(16).padStart(2,'0');
   return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255);
-}
-function spannenSvg(SZ,oben,ml){
-  let s='';
-  if(ml!=null)(SZ.zeilen||[]).forEach((r,z)=>{if(r.text)s+=`<text x="${ml-8}" y="${oben+z*BALKEN_ZEILE+12.6}" text-anchor="end" font-size="10.5" textLength="${Math.min(ml-12,r.text.length*6)}" lengthAdjust="spacingAndGlyphs" fill="#4F5E53">${esc(r.text)}</text>`});
-  for(const {sp,z,xa,xb,lage,spitze} of SZ.liste){
-    const y=oben+z*BALKEN_ZEILE,h=BALKEN_H,f=dunkler(sp.farbe,.12);
-    s+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(sp.kennung)}" data-tipp="${esc(sp.tipp||'')}">`;
-    if(lage==='marke'){
-      const cx=(xa+xb)/2,cy=y+h/2;
-      s+=(sp.n||1)>1
-        ? `<rect x="${cx-10}" y="${cy-8}" width="20" height="16" rx="8" fill="${f}"/><text x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">${sp.n}</text>`
-        : `<circle cx="${cx}" cy="${cy}" r="6.5" fill="${f}" stroke="#fff" stroke-width="1.5"/>`;
-      /* Die unsichtbare Trefferfläche liegt zuoberst: sie fängt den Zeiger
-         für die ganze Marke, samt Zahl. */
-      s+=`<rect x="${cx-11}" y="${y}" width="22" height="${h}" fill="transparent"/></g>`;
-      continue;
-    }
-    s+=`<rect x="${xa}" y="${y}" width="${xb-xa}" height="${h}" rx="5" fill="${f}"/>`;
-    if(spitze)s+=`<path d="M${xb-5} ${y}L${xb+spitze} ${y+h/2}L${xb-5} ${y+h}Z" fill="${f}"/>`;
-    const dunkel=dunkler(sp.farbe,.35);
-    s+=lage==='innen'
-      ?`<text x="${xa+8}" y="${y+12.6}" font-size="11" font-weight="600" fill="#fff">${esc(sp.text)}</text>`
-      :lage==='links'
-      ?`<text x="${xa-6}" y="${y+12.6}" text-anchor="end" font-size="11" font-weight="600" fill="${dunkel}">${esc(sp.text)}</text>`
-      :`<text x="${xb+spitze+6}" y="${y+12.6}" font-size="11" font-weight="600" fill="${dunkel}">${esc(sp.text)}</text>`;
-    s+=`</g>`;
-  }
-  return s;
 }
 /* Baustein für den Inhalt des Infokästchens. Alles wird hier maskiert,
    damit ein Name mit spitzer Klammer kein Markup einschleusen kann. */
@@ -1348,16 +1791,22 @@ document.addEventListener('change',ev=>{
 
 /* Fünf Reiter. Die App zeigt die Daten so, dass man sie gern ansieht –
    sie bewertet nicht und sie empfiehlt nichts. */
-const TABS=[['kombi','Blattsaft & Giesswasser'],['analysen','Analysen'],['tank','pH & EC am Tank'],['maske','Einträge Maske'],['einst','Einstellungen']];
+const TABS=[['kombi','Blattsaft & Giesswasser'],['tank','pH, EC & O₂'],['maske','Einträge Mobile App'],['analysen','Analysen'],['einst','Einstellungen']];
 const ANSICHT={analysen:()=>vAnalysen(),kombi:()=>vKombi(),tank:()=>vTank(),maske:()=>vMaske(),einst:()=>vEinst()};
 function render(){
+  if(kmZug){kmZug.nachholen=true;return}
   const yVor=window.scrollY||window.pageYOffset||0;
   tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
   el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
   kopfStand();
   if(!ANSICHT[tab])tab='kombi';
   DIAG=null;
-  if(letzterTab!==tab){koVon=koBis=null;zeitWahl='alles'}
+  /* Jeder Reiter behält in dieser Sitzung seinen Ausschnitt; beim Neuladen
+     steht wieder alles da. */
+  if(letzterTab!==tab){
+    if(letzterTab)ZEIT_JE_TAB[letzterTab]={koVon,koBis};
+    const z=ZEIT_JE_TAB[tab];koVon=z?z.koVon:null;koBis=z?z.koBis:null;STUFE_ALT=null;
+  }
   try{el('view').innerHTML=paketHinweis()+ANSICHT[tab]()}
   catch(err){el('view').innerHTML=`<div class="card"><h2>Diese Ansicht liess sich nicht aufbauen</h2>
     <p class="muted">Die übrigen Reiter funktionieren weiter, und die Daten sind unverändert. Schick mir die Meldung unten.</p>
@@ -1376,6 +1825,7 @@ let letzterTab=null;
    ersetzt, der Rest der Seite und die Scrollposition bleiben unberührt.
    Fällt etwas aus, wird auf den vollständigen Aufbau zurückgefallen. */
 function diagFrisch(){
+  if(kmZug){kmZug.nachholen=true;return}
   tippWeg();
   if(!DIAG)return render();
   const yVor=window.scrollY||window.pageYOffset||0;
@@ -1393,7 +1843,7 @@ function toast(t){const d=document.createElement('div');d.className='toast';d.te
   const n=document.querySelectorAll('.toast').length;if(n)d.style.bottom=(20+n*58)+'px';
   document.body.appendChild(d);setTimeout(()=>d.remove(),4200)}
 function aend(){dirty=true;if(ONLINE.an)onlinePlanen()}
-function dialog(t,h,f){tippWeg();el('dlgTitel').textContent=t;el('dlgBody').innerHTML=h;
+function dialog(t,h,f){tippWeg();delete el('dlg').dataset.gesehen;el('dlgTitel').textContent=t;el('dlgBody').innerHTML=h;
   const ft=el('dlgFoot');if(f){ft.innerHTML=f;ft.hidden=false}else{ft.innerHTML='';ft.hidden=true}
   if(!el('dlg').open)el('dlg').showModal()}
 AKTION.dlgZu=()=>el('dlg').close();
@@ -1769,7 +2219,7 @@ const kurzListe=(namen,n)=>namen.length<=n?namen.join(', '):namen.slice(0,n).joi
 const hoeheFuer=n=>n>=3?130:n===2?160:200;
 
 const KB_MAX_BLATT=8,KB_MAX_WASSER=6;
-let kbBlatt=null,kbWasser=null,kbEtage='beide',kbLinien='keine',kbSkala='wert';
+let kbBlatt=null,kbWasser=null,kbEtage='beide',kbSkala='wert';
 function vKombi(){
   const blatt=db.analysen.filter(a=>a.typ==='blattsaft'&&a.datum);
   const wasser=gwProben().filter(gwSichtbar);
@@ -1789,7 +2239,7 @@ function vKombi(){
   const etagen=BLATT_REIHE.filter(al=>blatt.some(a=>(a.blattalter||'misch')===al));
   if(kbEtage!=='beide'&&!etagen.includes(kbEtage))kbEtage='beide';
   /* Die Stellen in der Reihenfolge der Einstellungen (vorne, hinten), was
-     noch nicht zugeordnet ist, danach – dieselbe Form wie im Reiter pH & EC. */
+     noch nicht zugeordnet ist, danach – dieselbe Form wie im Reiter pH, EC & O₂. */
   const rang=st=>{const i=stellenDb().gruppen.findIndex(g=>g.id===st);return i<0?99:i};
   const stellen=[...new Set(wasser.map(stelleSchluessel))].sort((a,b)=>rang(a)-rang(b)||stelleTitel(a).localeCompare(stelleTitel(b)));
   const gwForm={};stellen.forEach((st,i)=>gwForm[st]=FORMEN[i%FORMEN.length]);
@@ -1818,7 +2268,7 @@ function vKombi(){
             o?['Optimum (Labor)',optText(o)+(e?' '+e:'')]:null,
             a.zustand?['Kulturbild',a.zustand]:null],'Anklicken öffnet den Bericht.')});
       }
-      if(punkte.length)out.push({id:'b|'+k+'|'+al,param:k,einh:einheit(k),farbe:F[k],form:BLATTFORM[al],punkte});
+      if(punkte.length)out.push({id:'b|'+k+'|'+al,param:k,reihe:k,einh:einheit(k),farbe:F[k],form:BLATTFORM[al],punkte});
     }
     return out;
   }
@@ -1837,7 +2287,7 @@ function vKombi(){
             ['Messwert',nz(w.wert)+(einheit(k)?' '+einheit(k):'')],
             mg!=null?['entspricht',nz(mg,2)+' mg/l']:null],'Anklicken öffnet den Bericht.')});
       }
-      if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,einh:einheit(k),farbe:F[k.slice(3)],form:gwForm[st]||'kreis',punkte});
+      if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,reihe:k.slice(3),einh:einheit(k),farbe:F[k.slice(3)],form:gwForm[st]||'kreis',punkte});
     }
     return out;
   }
@@ -1879,14 +2329,21 @@ function vKombi(){
         <span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([v,l])=>`<button class="${kbSkala===v?'on':''}" data-tun="kbSkala" data-v="${v}" title="${
           v==='wert'?'Die Werte des Labors, je Einheit und Grössenordnung eine Achse.':'Wo der Wert zum Optimum des Labors steht: darunter, im Optimum, darüber – so passen alle gewählten Nährstoffe auf eine Achse.'}">${l}</button>`).join('')}</span>`;
   }
+  /* «RV Basilikum» und «Reservoir Vorne» sind dieselbe Stelle – zugeordnet
+     wird von Hand, gleich hier bei der Grafik, die es betrifft. */
+  const stellenKnopf=()=>{
+    if(!wasser.length)return '';
+    const offen=stellenListe().filter(x=>x.zustand.offen).length;
+    return `<button class="klein${offen?' offen':''}" data-tun="stellen" title="Bezeichnungen wie «RV» und «Reservoir vorne» derselben Stelle zuordnen">Stellen zuordnen${offen?` · ${offen} offen`:''}</button>`;
+  };
   function zeichnen(){
     const F=farben();
-    zeitBild(el('cKb'),{aufKlick:true,linien:kbLinien==='reihe',minTage:3,
-      vorgaben:[['alles','alles'],['180','6 Monate'],['90','3 Monate']],vorgabe:zeitWahl,
-      tafeln:[{kopf:'Blattsaft',rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff')).join(''),spuren:blattSpuren(F)},
-              {kopf:'Giesswasser',rechts:stellen.length>1?`<span class="zeichen">${stellen.map(st=>zeichen(gwForm[st],NEUTRAL)+esc(stelleTitel(st).replace(/^Reservoir /,''))).join(' ')}</span>`:'',
+    zeitBild(el('cKb'),{aufKlick:true,minTage:14,stufen:STUFEN_TAGE.kombi,
+      vorgaben:[['alles','alles'],['180','6 Monate'],['90','3 Monate']],
+      tafeln:[{kopf:'Blattsaft',linien:'blatt',rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff')).join(''),spuren:blattSpuren(F)},
+              {kopf:'Giesswasser',linien:'wasser',rechts:(stellen.length>1?`<span class="zeichen">${stellen.map(st=>zeichen(gwForm[st],NEUTRAL)+esc(stelleTitel(st).replace(/^Reservoir /,''))).join(' ')}</span>`:'')+stellenKnopf(),
                wahl:wasserParams.map(k=>chip(F,k,wahlW().includes(k),gwName(k),'kbWass')).join(''),spuren:wasserSpuren(F)}],
-      km:kmDaten('kombi')});
+      km:kmDaten('kombi'),kmNach:0});
   }
   DIAG={teile:[],zeichnen,klick:id=>detail(id)};
   nachRender=zeichnen;
@@ -1907,7 +2364,6 @@ AKTION.kbWass=d=>{
   diagFrisch();
 };
 AKTION.kbEtage=d=>{kbEtage=d.v;diagFrisch()};
-AKTION.kbLinien=d=>{kbLinien=d.v;diagFrisch()};
 AKTION.kbSkala=d=>{kbSkala=d.v;diagFrisch()};
 
 /* ── Giesswasser: Proben und Entnahmestellen ── */
@@ -2161,13 +2617,13 @@ function eigeneFarbe(name){let h=0;for(const c of String(name))h=(h*31+c.charCod
 const TYPKURZ={'Tank neu angesetzt':'Neuansatz','Gerätekalibrierung':'Kalibrierung','Wasserzugabe':'Wasserzugabe',
   'Neues Substrat / Grunddüngung':'Substrat','Pflanzenschutz / Nützlinge':'Pflanzenschutz','Dosierung geändert':'Dosierung'};
 const typKurz=t=>TYPKURZ[t]||(String(t).length>16?String(t).slice(0,15)+'…':String(t));
-const HERKUNFT={erfassen:'Maske',excel:'Excel',paket:'Paket',hand:'von Hand'};
+const HERKUNFT={erfassen:'Mobile App',excel:'Excel',paket:'Paket',hand:'von Hand'};
 
 /* Alle Zeilen: erst die Balken (Mittel nach den Stammdaten, dann eigene
    Massnahmen), dann die Ereignisse. Wer die Reihenfolge geändert hat, sieht
    seine – was neu dazukommt, steht am Ende seiner Gruppe. Im Reiter
    Blattsaft & Giesswasser steht Biovin nicht: dort zählt, was der Tank an
-   Zusätzen bekam. Die Gaben selbst bleiben, im Reiter pH & EC stehen sie. */
+   Zusätzen bekam. Die Gaben selbst bleiben, im Reiter pH, EC & O₂ stehen sie. */
 const KM_NICHT_IM_KOMBI=['m|biovin'];
 function kmListe(ansicht){
   const mittel=[...new Set(db.ereignisse.filter(x=>x.mittel&&x.datum).map(x=>x.mittel).concat(beigabeHand(h=>h.mittel).map(h=>h.mittel)))];
@@ -2187,21 +2643,22 @@ function kmListe(ansicht){
    was AUS ist – Neues erscheint also von selbst), die Reihenfolge und ob
    die Ereignisse aufgeklappt sind. Von Haus aus sind sie eingeklappt. */
 let kmAus=new Set(),kmReihe=[],kmEreignisseOffen=false;
-const spanneText=(name,sp)=>sp.laeuft?`${name} seit ${fmtK(sp.von)}`:sp.von===sp.bis?`${name} ${fmtK(sp.von)}`:`${name} ${fmtK(sp.von)}–${fmtK(sp.bis)}`;
+const spanneDatum=sp=>sp.laeuft?`seit ${fmtK(sp.von)}`:sp.von===sp.bis?fmtK(sp.von):`${fmtK(sp.von)}–${fmtK(sp.bis)}`;
+const spanneText=(name,sp)=>name+' '+spanneDatum(sp);
 function kmBalken(ansicht){
   const out=[];
   for(const z of kmListe(ansicht)){
     if(kmAus.has(z.key))continue;
     if(z.art==='mittel'){
       for(const sp of beigabeSpannenMittel(z.id))out.push({zeile:z.key,laeuft:!!sp.laeuft,x0:+new Date(sp.von),x1:+new Date(sp.laeuft?heute():sp.bis),
-        farbe:z.farbe,text:spanneText(z.name,sp),kennung:'m|'+z.id+'|'+sp.von,
+        farbe:z.farbe,text:spanneText(z.name,sp),datum:spanneDatum(sp),gaben:sp.gaben.map(g=>+new Date(g.datum)),kennung:'m|'+z.id+'|'+sp.von,
         tipp:tippBau(z.name,z.farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft – bis heute':fmt(sp.bis)],['Gaben',String(sp.n)],
           sp.n?['Menge gesamt',beigabeSumme(sp.gaben)]:null,sp.hand?['Zeitraum','von Hand gesetzt'+(sp.hand.notiz?': '+sp.hand.notiz:'')]:null],
           'Anklicken: Gaben ansehen, Beginn und Ende setzen.')});
     }else if(z.art==='eigen'){
       for(const h of beigabeHand(x=>!x.mittel&&x.name===z.id).sort((a,b)=>a.von.localeCompare(b.von))){
         const sp={von:h.von,bis:h.bis||heute(),laeuft:!h.bis};
-        out.push({zeile:z.key,laeuft:sp.laeuft,x0:+new Date(sp.von),x1:+new Date(sp.bis),farbe:z.farbe,text:spanneText(z.name,sp),
+        out.push({zeile:z.key,laeuft:sp.laeuft,x0:+new Date(sp.von),x1:+new Date(sp.bis),farbe:z.farbe,text:spanneText(z.name,sp),datum:spanneDatum(sp),
           kennung:'n|'+h.id,tipp:tippBau(z.name,z.farbe,[['von',fmt(sp.von)],['bis',sp.laeuft?'läuft – bis heute':fmt(sp.bis)]],
             (h.notiz?h.notiz+' · ':'')+'Anklicken zum Ändern.')});
       }
@@ -2412,14 +2869,14 @@ AKTION.massnahmeSpeichern=()=>{
   toast(`«${name}» eingetragen.`);
 };
 
-/* Was die Tafel Kulturmanagement braucht: die Balken, die Namen der
-   Ereignis-Zeilen für die Klappzeile, und was dort steht, wenn nichts läuft. */
+/* Was die Tafel Kulturmanagement braucht: je sichtbare Zeile ihre Balken
+   bzw. Marken – auch Zeilen, die im Ausschnitt nichts haben, damit beim
+   Verschieben nichts springt. */
 function kmDaten(ansicht){
-  const l=kmListe(ansicht),sicht=l.filter(z=>!kmAus.has(z.key));
-  const balken=l.filter(z=>z.art!=='typ');
-  return {spannen:kmBalken(ansicht).filter(s=>kmEreignisseOffen||!s.marke),
-    typen:sicht.filter(z=>z.art==='typ').map(z=>z.id),offen:kmEreignisseOffen,
-    leerText:!balken.length?'Noch keine Massnahme eingetragen.':!sicht.some(z=>z.art!=='typ')?'Alle Balken sind ausgeblendet.':'In diesem Zeitraum läuft nichts.'};
+  const l=kmListe(ansicht),sicht=l.filter(z=>!kmAus.has(z.key)),sp=kmBalken(ansicht);
+  const zeile=z=>({key:z.key,name:z.name,farbe:z.farbe,art:z.art,spannen:sp.filter(s=>s.zeile===z.key)});
+  return {zeilen:sicht.filter(z=>z.art!=='typ').map(zeile),typen:sicht.filter(z=>z.art==='typ').map(zeile),
+    offen:kmEreignisseOffen,ausgeblendet:l.length-sicht.length,leer:!l.length?'nichts':!sicht.length?'aus':null};
 }
 const kmAnsicht=()=>tab==='tank'?'tank':'kombi';
 AKTION.kmEreignisse=()=>{kmEreignisseOffen=!kmEreignisseOffen;tippWeg();zeitZeichnen();ansichtMerken()};
@@ -2436,24 +2893,32 @@ function kmZahl(z){
 function kmBearbeitenHtml(){
   const l=kmListe(kmAnsicht());
   if(!l.length)return '<p class="muted small">Noch nichts eingetragen. «＋ Massnahme eintragen» legt den ersten Balken an.</p>';
+  /* Wie eine Warteschlange: am Griff links ziehen, die übrigen Zeilen
+     weichen aus. Mit der Tastatur: Griff anwählen, Pfeil hoch oder runter. */
   const zeile=(z,i,gr)=>{const an=!kmAus.has(z.key);
-    return `<div class="kmZeile${an?'':' aus'}">
-      <span class="kmPfeile"><button class="ghost" data-tun="kmSchieben" data-k="${esc(z.key)}" data-r="-1" title="nach oben" aria-label="${esc(z.name)} nach oben"${i?'':' disabled'}>↑</button><button class="ghost" data-tun="kmSchieben" data-k="${esc(z.key)}" data-r="1" title="nach unten" aria-label="${esc(z.name)} nach unten"${i<gr.length-1?'':' disabled'}>↓</button></span>
+    return `<div class="kmZeile${an?'':' aus'}" data-k="${esc(z.key)}">
+      <button class="kmGriff" data-k="${esc(z.key)}" title="Ziehen, um die Reihenfolge zu ändern" aria-label="${esc(z.name)} verschieben – Pfeiltasten hoch und runter"><svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true">${
+        [3,8,13].map(y=>`<circle cx="3.5" cy="${y}" r="1.5"/><circle cx="8.5" cy="${y}" r="1.5"/>`).join('')}</svg></button>
       <span class="dot" style="background:${an?z.farbe:'#C3CDBF'}"></span>
       <span class="kmName"><strong>${esc(z.name)}</strong><span class="tiny muted">${esc(kmZahl(z))}</span></span>
       <label class="small kmZeigen"><input type="checkbox" data-aend="kmAn" data-k="${esc(z.key)}"${an?' checked':''}> zeigen</label>
       <button class="ghost kmWeg" data-tun="kmLoeschen" data-k="${esc(z.key)}" title="Alle Einträge dieser Zeile löschen – für alle">löschen</button></div>`};
   const balken=l.filter(z=>z.art!=='typ'),typen=l.filter(z=>z.art==='typ');
   const ohneBiovin=kmAnsicht()==='kombi'&&kmListe('tank').some(z=>z.key==='m|biovin');
-  return `<p class="small muted" style="margin-top:0">Reihenfolge und «zeigen» gelten nur auf diesem Gerät. «löschen» nimmt die Einträge selbst weg – für alle, die das Dashboard öffnen.</p>
-    ${balken.length?`<h4>Balken</h4><div class="kmZeilen">${balken.map((z,i)=>zeile(z,i,balken)).join('')}</div>`:''}
+  return `<p class="small muted" style="margin-top:0">Am Griff <b>⋮⋮</b> ziehen ändert die Reihenfolge. Reihenfolge und «zeigen» gelten nur auf diesem Gerät. «löschen» nimmt die Einträge selbst weg – für alle, die das Dashboard öffnen.</p>
+    ${balken.length?`<h4>Balken</h4><div class="kmZeilen" data-gruppe="balken">${balken.map((z,i)=>zeile(z,i,balken)).join('')}</div>`:''}
     ${typen.length?`<h4 style="margin-top:14px">Ereignisse <span style="text-transform:none;letter-spacing:0;font-weight:400">– unter den Balken ${kmEreignisseOffen?'aufgeklappt':'eingeklappt'}</span></h4>
-      <div class="kmZeilen">${typen.map((z,i)=>zeile(z,i,typen)).join('')}</div>`:''}
-    ${ohneBiovin?'<p class="tiny muted" style="margin-top:12px">Biovin steht in diesem Reiter nicht – im Reiter pH & EC am Tank schon.</p>':''}`;
+      <div class="kmZeilen" data-gruppe="typen">${typen.map((z,i)=>zeile(z,i,typen)).join('')}</div>`:''}
+    ${ohneBiovin?'<p class="tiny muted" style="margin-top:12px">Biovin steht in diesem Reiter nicht – im Reiter pH, EC &amp; O₂ schon.</p>':''}`;
 }
 const kmDialogNeu=()=>{if(el('dlg').open&&el('dlgTitel').textContent==='Kulturmanagement · Zeilen')el('dlgBody').innerHTML=kmBearbeitenHtml()};
-AKTION.kmBearbeiten=()=>dialog('Kulturmanagement · Zeilen',kmBearbeitenHtml(),
-  `<button class="klein" data-tun="kmAlle" data-v="an">alle zeigen</button><button class="klein" data-tun="kmAlle" data-v="aus">alle ausblenden</button><div style="flex:1"></div><button class="primary" data-tun="dlgZu">Fertig</button>`);
+AKTION.kmBearbeiten=d=>{
+  dialog('Kulturmanagement · Zeilen',kmBearbeitenHtml(),
+    `<button class="klein" data-tun="kmAlle" data-v="an">alle zeigen</button><button class="klein" data-tun="kmAlle" data-v="aus">alle ausblenden</button><div style="flex:1"></div><button class="primary" data-tun="dlgZu">Fertig</button>`);
+  /* Vom Namen in der Tafel her: diese Zeile kurz hervorheben. */
+  const b=el('dlgBody'),z=d&&d.k&&b.querySelector?b.querySelector(`.kmZeile[data-k="${CSS.escape(d.k)}"]`):null;
+  if(z){z.classList.add('blink');if(z.scrollIntoView)z.scrollIntoView({block:'nearest'});setTimeout(()=>z.classList.remove('blink'),1200)}
+};
 AKTION.kmWahl=AKTION.kmBearbeiten;
 AKTION.kmAn=(d,ev)=>{
   const an=ev&&ev.target&&ev.target.type==='checkbox'?ev.target.checked:kmAus.has(d.k);
@@ -2461,16 +2926,100 @@ AKTION.kmAn=(d,ev)=>{
   kmDialogNeu();zeitZeichnen();ansichtMerken();
 };
 AKTION.kmAlle=d=>{kmAus=d.v==='an'?new Set():new Set(kmListe().map(x=>x.key));kmDialogNeu();zeitZeichnen();ansichtMerken()};
-/* Eine Zeile nach oben oder unten – innerhalb ihrer Gruppe. Gemerkt wird die
-   ganze Reihenfolge, damit sie auch im anderen Reiter gilt. */
+/* Eine Zeile an eine neue Stelle ihrer Gruppe (Balken oder Ereignisse).
+   Gemerkt wird die ganze Reihenfolge, damit sie auch im anderen Reiter gilt
+   – Biovin, das im einen Reiter fehlt, behält dabei seinen Platz. */
+function kmVerschieben(k,ziel){
+  const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===k);if(!z)return false;
+  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ')).map(x=>x.key);
+  ziel=Math.max(0,Math.min(gr.length-1,ziel));
+  if(gr.indexOf(k)===ziel)return false;
+  const neu=gr.filter(x=>x!==k);neu.splice(ziel,0,k);
+  const voll=kmListe().map(x=>x.key),plaetze=voll.map((x,i)=>gr.includes(x)?i:-1).filter(i=>i>=0);
+  plaetze.forEach((p,j)=>{voll[p]=neu[j]});
+  kmReihe=voll;
+  kmDialogNeu();zeitZeichnen();ansichtMerken();
+  return true;
+}
 AKTION.kmSchieben=d=>{
   const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===d.k);if(!z)return;
-  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ')),j=gr.indexOf(z)+(+d.r);
-  if(j<0||j>=gr.length)return;
-  const voll=kmListe().map(x=>x.key),a=voll.indexOf(z.key),b=voll.indexOf(gr[j].key);
-  voll[a]=gr[j].key;voll[b]=z.key;kmReihe=voll;
-  kmDialogNeu();zeitZeichnen();ansichtMerken();
+  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ'));
+  kmVerschieben(d.k,gr.indexOf(z)+(+d.r));
 };
+/* Ordnen per Ziehen, wie eine Warteschlange – in der Tafel und im Dialog
+   derselbe Code. Maus: am Griff sofort, am Namen ab 4 px; Finger: nur am
+   Griff. Die Zeile folgt dem Zeiger, die anderen rücken auf; Esc bricht ab.
+   Ein Klick auf den Namen ohne Bewegung öffnet «Zeilen verwalten».
+   Solange gezogen wird, zeichnet nichts anderes neu (kmZug.nachholen). */
+let kmZug=null;
+function kmZugEnde(abbrechen){
+  const z=kmZug;if(!z)return;
+  kmZug=null;
+  z.zeilen.forEach(r=>{r.style.transform=''});z.zeile.classList.remove('zieht');z.gruppe.classList.remove('ordnet');
+  document.documentElement.classList.remove('ordnetGerade');
+  if(!abbrechen&&z.aktiv&&z.ziel!==z.von){kmVerschieben(z.zeile.dataset.k,z.ziel);kmAnsage(z.zeile.dataset.k)}
+  else if(!abbrechen&&!z.aktiv&&z.name)AKTION.kmBearbeiten({k:z.zeile.dataset.k});
+  if(z.nachholen)render();
+}
+document.addEventListener('pointerdown',ev=>{
+  if(ev.button>0||kmZug)return;
+  const t=ev.target&&ev.target.closest?ev.target:null;if(!t)return;
+  const griff=t.closest('.kmGriff');
+  const name=!griff&&ev.pointerType==='mouse'&&!t.closest('button')?t.closest('.kmZ .kmZName'):null;
+  if(!griff&&!name)return;
+  const zeile=(griff||name).closest('.kmZeile,.kmZ');
+  if(!zeile||!zeile.dataset.k||zeile.dataset.k==='klapp')return;
+  const gruppe=zeile.parentElement;
+  const zeilen=[...gruppe.children].filter(r=>r.matches('.kmZeile,.kmZ')&&r.dataset.k&&r.dataset.k!=='klapp');
+  const sc=gruppe.closest('.dlg-b'),oben=()=>sc?sc.scrollTop:(window.scrollY||window.pageYOffset||0);
+  const fang=griff||name;
+  kmZug={zeile,gruppe,zeilen,fang,sc,oben,name:!!name,aktiv:false,nachholen:false,id:ev.pointerId,
+    von:zeilen.indexOf(zeile),ziel:zeilen.indexOf(zeile),start:ev.clientY+oben(),
+    mitten:zeilen.map(r=>{const b=r.getBoundingClientRect();return b.top+b.height/2+oben()}),hoehe:zeile.getBoundingClientRect().height||22};
+  try{fang.setPointerCapture(ev.pointerId)}catch(e){}
+  ev.preventDefault();
+});
+document.addEventListener('pointermove',ev=>{
+  const z=kmZug;if(!z||ev.pointerId!==z.id)return;
+  /* Am Rand des Fensters (bzw. des Dialogs) rollt es mit. */
+  const rand=z.sc?z.sc.getBoundingClientRect():{top:0,bottom:window.innerHeight};
+  const unten=z.sc?rand.bottom:rand.bottom-34;
+  if(z.aktiv&&ev.clientY<rand.top+40)(z.sc||window).scrollBy(0,-Math.min(12,rand.top+40-ev.clientY));
+  else if(z.aktiv&&ev.clientY>unten-40)(z.sc||window).scrollBy(0,Math.min(12,ev.clientY-(unten-40)));
+  const dy=ev.clientY+z.oben()-z.start;
+  if(!z.aktiv){
+    if(Math.abs(dy)<4||z.zeilen.length<2)return;
+    z.aktiv=true;z.zeile.classList.add('zieht');z.gruppe.classList.add('ordnet');
+    document.documentElement.classList.add('ordnetGerade');tippWeg();
+  }
+  z.zeile.style.transform=`translateY(${dy}px)`;
+  const m=z.mitten[z.von]+dy;let ziel=z.von;
+  for(let i=0;i<z.zeilen.length;i++){if(i<z.von&&m<z.mitten[i]){ziel=i;break}if(i>z.von&&m>z.mitten[i])ziel=i}
+  z.ziel=ziel;
+  z.zeilen.forEach((r,i)=>{if(i===z.von)return;
+    const s=(z.von<ziel&&i>z.von&&i<=ziel)?-z.hoehe:(z.von>ziel&&i>=ziel&&i<z.von)?z.hoehe:0;
+    r.style.transform=s?`translateY(${s}px)`:''});
+});
+document.addEventListener('pointerup',ev=>{if(kmZug&&ev.pointerId===kmZug.id)kmZugEnde(false)});
+document.addEventListener('pointercancel',ev=>{if(kmZug&&ev.pointerId===kmZug.id)kmZugEnde(true)});
+document.addEventListener('keydown',ev=>{
+  if(kmZug&&ev.key==='Escape'){ev.preventDefault();ev.stopPropagation();return kmZugEnde(true)}
+  const g=ev.target&&ev.target.closest?ev.target.closest('.kmGriff'):null;
+  if(!g||(ev.key!=='ArrowUp'&&ev.key!=='ArrowDown'))return;
+  ev.preventDefault();
+  const k=g.dataset.k,imDialog=!!g.closest('#dlgBody');
+  AKTION.kmSchieben({k,r:ev.key==='ArrowUp'?'-1':'1'});
+  const wo=imDialog?el('dlgBody'):document.querySelector('.tafeln');
+  const neu=wo&&wo.querySelector(`.kmGriff[data-k="${CSS.escape(k)}"]`);if(neu)neu.focus();
+  kmAnsage(k);
+},true);
+/* Für Bildschirmleser: wo die Zeile jetzt steht. */
+function kmAnsage(k){
+  const a=el('ansage');if(!a)return;
+  const l=kmListe(kmAnsicht()),z=l.find(x=>x.key===k);if(!z)return;
+  const gr=l.filter(x=>(x.art==='typ')===(z.art==='typ'));
+  a.textContent=`${z.name}: Platz ${gr.indexOf(z)+1} von ${gr.length}`;
+}
 /* Eine ganze Zeile löschen: alle Gaben eines Mittels, alle Zeiträume einer
    Massnahme, alle Einträge eines Ereignisses. Nachgefragt wird mit Zahl. */
 AKTION.kmLoeschen=d=>{
@@ -2500,8 +3049,8 @@ AKTION.kmLoeschen=d=>{
    eigener Datumsachse, gemeinsam ist der Zeitraum; darunter dasselbe
    Kulturmanagement wie im Reiter Blattsaft & Giesswasser, darunter die
    Liste, eingeklappt. Seit September wird teils stündlich gemessen: weit
-   herausgezoomt wird ein Tag zu einem Punkt mit Strich (siehe DICHT_PX). */
-let tkStelle='alle',tkLinien='keine',tkListeOffen=false;
+   herausgezoomt wird ein halber oder ganzer Tag zu einem Punkt mit Strich (siehe VERDICHT). */
+let tkStelle='alle',tkListeOffen=false;
 /* Aus dem, was bei einer Messung als Stelle steht – vom Handy der Name der
    Stelle, aus Excel «vorne»/«hinten», von früher gar nichts –, die Stelle,
    wie sie im Bestand heisst. */
@@ -2528,7 +3077,7 @@ function tankStellen(){
 function vTank(){
   const alle=db.messungen.filter(m=>m.datum);
   if(!alle.length)return leerHinweis('Noch keine Messung am Tank',
-    'pH, EC und Sauerstoff kommen aus der Excel-Tabelle oder von der Eingabemaske am Handy.',
+    'pH, EC und Sauerstoff kommen aus der Excel-Tabelle oder von der Mobile App am Handy.',
     '<button class="primary" data-tun="tabWaehlen">Excel oder CSV einlesen</button>');
   const stellen=tankStellen();
   if(tkStelle!=='alle'&&!stellen.includes(tkStelle))tkStelle='alle';
@@ -2539,7 +3088,7 @@ function vTank(){
     const ms=sicht(),lg=messLage(ms,messStelle),mx=m=>lg.x.get(m);
     const reihe=(k,name,einh,dez)=>stellen.filter(st=>tkStelle==='alle'||st===tkStelle).map(st=>{
       const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>mx(a)-mx(b));
-      return {id:'t|'+k+'|'+st,farbe:farbe[st],form:k==='ecFrisch'?'ring':form[st],name,einh,dez,stelle:st,punkte:pk.map(m=>({x:mx(m),y:m[k],
+      return {id:'t|'+k+'|'+st,farbe:farbe[st],form:k==='ecFrisch'?'ring':form[st],name,einh,dez,stelle:st,reihe:st,punkte:pk.map(m=>({x:mx(m),y:m[k],ohneZeit:!m.zeit,
         tipp:tippBau(name+' · '+st,farbe[st],[['Datum',fmt(m.datum)],zeitZeile(m,lg.folge),[name,nz(m[k],dez)+(einh?' '+einh:'')],
           k==='o2'&&m.o2sat!=null?['Sättigung laut Gerät',nz(m.o2sat,0)+' %']:null,
           m.temp!=null?['Temperatur',nz(m.temp,1)+' °C']:null,m.wer?['gemessen von',m.wer]:null,
@@ -2547,16 +3096,17 @@ function vTank(){
     }).filter(x=>x.punkte.length);
     const ec=reihe('ec','EC','mS/cm',2).concat(reihe('ecFrisch','EC frisch angesetzt','mS/cm',2));
     const tafeln=[
-      {kopf:'pH',spuren:[{serien:reihe('ph','pH','',2),hoehe:170,aria:'pH',leerText:'kein pH in diesem Zeitraum'}]},
-      {kopf:'EC',neben:esc('mS/cm'+(alle.some(m=>m.ecFrisch!=null)?' · Ring: frisch angesetzt':'')),spuren:[{serien:ec,hoehe:170,aria:'EC',leerText:'kein EC in diesem Zeitraum'}]}];
-    if(alle.some(m=>m.o2!=null))tafeln.push({kopf:'Sauerstoff',neben:'mg/l',spuren:[{serien:reihe('o2','Sauerstoff','mg/l',1),hoehe:140,aria:'Sauerstoff',leerText:'kein Sauerstoff in diesem Zeitraum'}]});
-    zeitBild(el('cTank'),{linien:tkLinien==='reihe',dicht:true,punktR:4,minTage:0.25,
-      vorgaben:[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']],vorgabe:zeitWahl,tafeln,km:kmDaten('tank')});
+      {kopf:'pH',linien:'ph',rechts:'%%DICHTE%%',spuren:[{serien:reihe('ph','pH','',2),hoehe:170,aria:'pH',leerWort:'Messung',leerText:'kein pH in diesem Zeitraum'}]},
+      {kopf:'EC',linien:'ec',neben:esc('mS/cm'+(alle.some(m=>m.ecFrisch!=null)?' · Ring: frisch angesetzt':'')),spuren:[{serien:ec,hoehe:170,aria:'EC',leerWort:'Messung',leerText:'kein EC in diesem Zeitraum'}]}];
+    if(alle.some(m=>m.o2!=null))tafeln.push({kopf:'Sauerstoff',linien:'o2',neben:'mg/l',spuren:[{serien:reihe('o2','Sauerstoff','mg/l',1),hoehe:140,aria:'Sauerstoff',leerWort:'Messung',leerText:'kein Sauerstoff in diesem Zeitraum'}]});
+    zeitBild(el('cTank'),{dicht:true,punktR:4,minTage:0.25,stufen:STUFEN_TAGE.tank,zeitLinks:stelleWahl(),
+      vorgaben:[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']],tafeln,km:kmDaten('tank'),kmNach:0});
   }
-  function kopf(){
+  /* Die Stelle steht links in der Zeitzeile – das spart eine eigene Leiste. */
+  function stelleWahl(){
     if(stellen.length<2)return '';
-    return `<div class="werkzeug"><div class="wz"><span class="lab">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace(/^Reservoir /,'')]))
-        .map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${v==='alle'?'':zeichen(form[v],farbe[v])}${esc(l)}</button>`).join('')}</span></div></div>`;
+    return `<span class="lab2">Stelle</span><span class="seg">${[['alle','alle']].concat(stellen.map(x=>[x,x.replace(/^Reservoir /,'')]))
+        .map(([v,l])=>`<button class="${tkStelle===v?'on':''}" data-tun="tkStelle" data-v="${esc(v)}">${v==='alle'?'':zeichen(form[v],farbe[v])}${esc(l)}</button>`).join('')}</span>`;
   }
   /* Die Liste aller Messungen – eingeklappt, sie ist zum Nachschlagen und
      Entfernen da, nicht zum Ansehen. */
@@ -2575,9 +3125,9 @@ function vTank(){
         <td><button class="ghost" data-tun="messungWeg" data-id="${esc(m.id)}">entfernen</button></td></tr>`).join('')}
       </tbody></table></div></details>`;
   }
-  DIAG={teile:[['tkKopf',kopf],['tkListe',liste]],zeichnen,klick:null};
+  DIAG={teile:[['tkListe',liste]],zeichnen,klick:null};
   nachRender=zeichnen;
-  return `<div class="card"><div id="tkKopf">${kopf()}</div><div id="cTank" class="zeitbild"></div></div>
+  return `<div class="card"><div id="cTank" class="zeitbild"></div></div>
     <div class="card" id="tkListe">${liste()}</div>`;
 }
 AKTION.tkStelle=d=>{tkStelle=d.v;diagFrisch()};
@@ -3123,19 +3673,19 @@ AKTION.tabUeber=()=>{
 };
 AKTION.tabWaehlen=()=>el('fileTab').click();
 
-/* ══════════ 11 · Einträge der Maske ══════════
-   Alles, was hinten am Tank über die Handy-Seite eingetragen wurde – als
-   Liste, neueste zuerst. Die Messungen stehen ausserdem im Reiter pH & EC,
-   die Gaben in den Balken. */
+/* ══════════ 11 · Einträge der Mobile App ══════════
+   Alles, was hinten am Tank über die Handy-Seite (die «Mobile App» unter
+   /maske) eingetragen wurde – als Liste, neueste zuerst. Die Messungen
+   stehen ausserdem im Reiter pH, EC & O₂, die Gaben in den Balken. */
 let meFilter='alle';
 function vMaske(){
   const alle=db.messungen.filter(m=>m.quelle==='erfassen'&&m.datum).map(x=>({art:'messung',x}))
     .concat(db.ereignisse.filter(e=>e.quelle==='erfassen'&&e.datum).map(x=>({art:'beigabe',x})))
     .sort((a,b)=>chrono(b.x,a.x)||String(b.x.erfasst||'').localeCompare(String(a.x.erfasst||'')));
-  if(!alle.length)return leerHinweis('Noch nichts aus der Maske',
-    ONLINE.an?`Was hinten am Tank über die Handy-Seite eingetragen wird, steht hier als Liste. Die Maske: <span class="mono">${esc(maskeAdresse())}</span>`
-             :'Die Eingabemaske fürs Handy gibt es, sobald das Dashboard online läuft. Was dort eingetragen wird, steht dann hier.',
-    ONLINE.an?'<button class="primary" data-tun="qr">QR-Code zur Maske</button>':'');
+  if(!alle.length)return leerHinweis('Noch nichts aus der Mobile App',
+    ONLINE.an?`Was hinten am Tank über die Mobile App eingetragen wird, steht hier als Liste. Die Adresse: <span class="mono">${esc(maskeAdresse())}</span>`
+             :'Die Mobile App fürs Handy gibt es, sobald das Dashboard online läuft. Was dort eingetragen wird, steht dann hier.',
+    ONLINE.an?'<button class="primary" data-tun="qr">QR-Code zur Mobile App</button>':'');
   const n=a=>alle.filter(z=>z.art===a).length;
   const sicht=meFilter==='alle'?alle:alle.filter(z=>z.art===meFilter);
   const angaben=z=>{
@@ -3144,8 +3694,8 @@ function vMaske(){
     return [x.ph!=null?'pH '+nz(x.ph,2):null,x.ec!=null?'EC '+nz(x.ec,2)+' mS/cm':null,x.ecFrisch!=null?'EC frisch '+nz(x.ecFrisch,2):null,
       x.o2!=null?'O₂ '+nz(x.o2,1)+' mg/l':null,x.temp!=null?nz(x.temp,1)+' °C':null].filter(Boolean).join(' · ')||'–';
   };
-  return `<div class="card"><div class="hd"><div><h2>Einträge der Maske</h2>
-    <p class="sub">Alles, was über die Handy-Seite am Tank eingetragen wurde, neueste zuerst.</p></div>
+  return `<div class="card"><div class="hd"><div><h2>Einträge der Mobile App</h2>
+    <p class="sub">Alles, was über die Mobile App am Tank eingetragen wurde, neueste zuerst.</p></div>
     <span class="seg">${[['alle','alle',alle.length],['messung','Messungen',n('messung')],['beigabe','Beigaben',n('beigabe')]]
       .map(([v,l,z])=>`<button class="${meFilter===v?'on':''}" data-tun="meFilter" data-v="${v}">${l} <span style="opacity:.65">${z}</span></button>`).join('')}</span></div>
     <div class="liste"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Name</th><th>Was</th><th>Stelle</th><th>Angaben</th><th>Notiz</th><th></th></tr></thead><tbody>
@@ -3166,10 +3716,10 @@ AKTION.meFilter=d=>{meFilter=d.v;render()};
 function vEinst(){
   const liste=stellenListe(),offen=liste.filter(x=>x.zustand.offen).length;
   let s='';
-  if(ONLINE.an)s+=`<div class="card"><h2>Eingabemaske fürs Handy</h2>
-    <p class="small" style="max-width:70ch;margin-top:6px">Hinten am Tank: <span class="mono">${esc(maskeAdresse())}</span> – ohne Passwort, nur mit Namen. Die Maske hat keinen Link hierher ins Dashboard.
+  if(ONLINE.an)s+=`<div class="card"><h2>Mobile App fürs Handy</h2>
+    <p class="small" style="max-width:70ch;margin-top:6px">Hinten am Tank: <span class="mono">${esc(maskeAdresse())}</span> – ohne Passwort, nur mit Namen. Die Mobile App hat keinen Link hierher ins Dashboard.
     Am einfachsten per QR-Code, ausgedruckt am Tank.</p>
-    <div class="row"><button class="primary" data-tun="qr">QR-Code zeigen und drucken</button><a href="/maske" target="_blank" rel="noopener" style="align-self:center">Maske öffnen ↗</a></div></div>`;
+    <div class="row"><button class="primary" data-tun="qr">QR-Code zeigen und drucken</button><a href="/maske" target="_blank" rel="noopener" style="align-self:center">Mobile App öffnen ↗</a></div></div>`;
   s+=`<div class="card"><div class="hd"><div><h2>Entnahmestellen</h2>
     <p class="sub">Das Labor schreibt die Stelle auf jeden Wasserbericht anders – «Reservoir Vorne», «RV Basilikum». Hier wird einmal zugeordnet, was dieselbe Stelle ist; das Diagramm folgt dieser Zuordnung.</p></div>
     <button data-tun="stellen"${liste.length?'':' disabled'}>Stellen zuordnen</button></div>
@@ -3702,27 +4252,39 @@ async function laden(file){
 
 /* ══════════ 14 · Persönliche Ansicht ══════════
    Was alle angeht, liegt im Bestand (Daten, Zuordnungen, Zeiträume). Was
-   nur mich angeht – welcher Reiter offen war, welche Werte ich sehe, welche
-   Balken ausgeblendet sind –, bleibt auf diesem Gerät. Der Bestand liegt
-   nie im Browserspeicher. */
+   nur mich angeht – welche Werte ich sehe, welche Balken ausgeblendet sind
+   und in welcher Reihenfolge –, bleibt auf diesem Gerät. Der Reiter nicht:
+   die Seite öffnet immer mit Blattsaft & Giesswasser. Der Bestand liegt nie
+   im Browserspeicher. */
 const ANSICHT_SCHLUESSEL='basilikum.ansicht';
+/* Hinweise, die jemand mit «Verstanden» weggeklickt hat, kommen auf diesem
+   Gerät nicht wieder – erkannt am Wortlaut. */
+const GESEHEN_SCHLUESSEL='basilikum.gesehen';
+function hinweisSchluessel(notizen){let h=5381;for(const c of notizen.join('|'))h=((h*33)^c.charCodeAt(0))>>>0;return 'u'+leer().schema+'-'+h.toString(36)}
+function hinweisGesehen(k){try{return (JSON.parse(localStorage.getItem(GESEHEN_SCHLUESSEL)||'[]')||[]).includes(k)}catch(e){return false}}
+function hinweisMerken(k){
+  try{const l=JSON.parse(localStorage.getItem(GESEHEN_SCHLUESSEL)||'[]');if(!l.includes(k)){l.push(k);localStorage.setItem(GESEHEN_SCHLUESSEL,JSON.stringify(l.slice(-50)))}}catch(e){}
+}
+AKTION.hinweisVerstanden=d=>{if(d.k)hinweisMerken(d.k);el('dlg').close()};
+/* Jedes Schliessen zählt – «Verstanden», × oder Esc. */
+el('dlg').addEventListener('close',()=>{const d=el('dlg');if(d.dataset.gesehen){hinweisMerken(d.dataset.gesehen);delete d.dataset.gesehen}});
 function ansichtMerken(){
-  try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({tab,kbBlatt,kbWasser,kbEtage,kbLinien,kbSkala,
-    tkStelle,tkLinien,anFilter,meFilter,kmAus:[...kmAus],kmReihe,kmEreignisseOffen,tkListeOffen}))}catch(e){}
+  try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({kbBlatt,kbWasser,kbEtage,kbSkala,linien:[...linienAn],
+    tkStelle,anFilter,meFilter,kmAus:[...kmAus],kmReihe,kmEreignisseOffen,tkListeOffen}))}catch(e){}
 }
 function ansichtLaden(){
   let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
   if(!a||typeof a!=='object')return;
   const liste=v=>Array.isArray(v)?v.filter(x=>typeof x==='string'):null;
   const wort=(v,erlaubt)=>erlaubt.includes(v)?v:undefined;
-  if(TABS.some(([k])=>k===a.tab))tab=a.tab;
   if(liste(a.kbBlatt))kbBlatt=liste(a.kbBlatt);
   if(liste(a.kbWasser))kbWasser=liste(a.kbWasser);
   kbEtage=wort(a.kbEtage,['beide','jung','alt','misch'])||kbEtage;
-  kbLinien=wort(a.kbLinien,['keine','reihe'])||kbLinien;
+  /* Früher galt «Linien je Reihe» für einen ganzen Reiter. */
+  if(liste(a.linien))linienAn=new Set(liste(a.linien));
+  else{if(a.kbLinien==='reihe'){linienAn.add('blatt');linienAn.add('wasser')}if(a.tkLinien==='reihe')['ph','ec','o2'].forEach(k=>linienAn.add(k))}
   kbSkala=wort(a.kbSkala,['wert','lage'])||kbSkala;
   if(typeof a.tkStelle==='string')tkStelle=a.tkStelle;
-  tkLinien=wort(a.tkLinien,['keine','reihe'])||tkLinien;
   anFilter=wort(a.anFilter,['alle','blattsaft','giesswasser','substrat'])||anFilter;
   meFilter=wort(a.meFilter,['alle','messung','beigabe'])||meFilter;
   if(liste(a.kmAus))kmAus=new Set(liste(a.kmAus));
@@ -3760,14 +4322,14 @@ function qrSvg(text,modul){
 AKTION.qr=async()=>{
   const url=maskeAdresse();
   try{await qrLaden()}catch(e){
-    return dialog('QR-Code zur Maske',`<p class="small">Die QR-Bibliothek liess sich nicht laden (${esc(e.message)}). Die Adresse zum Abtippen:</p>
+    return dialog('QR-Code zur Mobile App',`<p class="small">Die QR-Bibliothek liess sich nicht laden (${esc(e.message)}). Die Adresse zum Abtippen:</p>
       <p class="mono" style="font-size:20px">${esc(url)}</p>`,'<button data-tun="dlgZu">Schliessen</button>');
   }
-  dialog('QR-Code zur Maske',
+  dialog('QR-Code zur Mobile App',
     `<div style="text-align:center"><div id="qrBild" style="display:inline-block;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">${qrSvg(url,8)}</div>
       <p class="mono" style="font-size:17px;margin:10px 0 2px">${esc(url)}</p>
-      <p class="small muted" style="max-width:52ch;margin:6px auto 0">Ausdrucken und an den Tank hängen. Wer ihn mit dem Handy scannt, kommt direkt in die Eingabemaske – dort nur den Namen eintippen, kein Passwort.
-      Die Maske hat keinen Link hierher ins Dashboard.</p></div>`,
+      <p class="small muted" style="max-width:52ch;margin:6px auto 0">Ausdrucken und an den Tank hängen. Wer ihn mit dem Handy scannt, kommt direkt in die Mobile App – dort nur den Namen eintippen, kein Passwort.
+      Die Mobile App hat keinen Link hierher ins Dashboard.</p></div>`,
     `<button class="primary" data-tun="qrDruck">Drucken</button><button data-tun="qrBildSpeichern">Als Bild speichern</button><button data-tun="dlgZu">Schliessen</button>`);
 };
 /* Drucken: nur das Blatt mit dem Code, gross, mit Titel und Adresse. */
@@ -3982,14 +4544,19 @@ async function pdfVorbereiten(){
       '<p class="muted">Bitte die Seite neu laden. Bleibt es dabei, hilft die Meldung unten weiter.</p>'+
       '<pre class="tiny mono" style="white-space:pre-wrap">'+esc(e&&e.stack||e)+'</pre></div>';
   }
+  /* Online: der umgebaute Bestand geht gleich zurück auf den Server – sonst
+     käme der Umbau (und sein Hinweis) bei jedem Öffnen wieder. */
+  if(online&&(online.notizen||[]).length)aend();
   if(start){
-    if(start.warn||(start.notizen||[]).length)
+    const k=start.notizen&&start.notizen.length?hinweisSchluessel(start.notizen):null;
+    if(start.warn||(k&&!hinweisGesehen(k))){
       dialog(start.warn?'Daten in dieser Datei':'Ältere Daten übernommen',
         `<p>${esc(start.text)}</p>`+
         ((start.notizen||[]).length?`<p>Dabei angepasst:</p><ul style="margin:0 0 12px;padding-left:20px">${
           start.notizen.map(n=>`<li style="margin-bottom:6px">${esc(n)}</li>`).join('')}</ul>`:''),
-        `<button class="primary" data-tun="dlgZu">Verstanden</button>`);
-    else toast(start.text);
+        `<button class="primary" data-tun="hinweisVerstanden"${k?` data-k="${esc(k)}"`:''}>Verstanden</button>`);
+      if(k)el('dlg').dataset.gesehen=k;
+    }else if(!k)toast(start.text);
   }
 })();
 </script>

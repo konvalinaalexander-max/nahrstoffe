@@ -66,15 +66,19 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
   const legende=await p.$eval('#cKb .tafelKopf .zeichen',e=>e.innerText.replace(/\s+/g,' ').trim());
   console.log('  Stellen:',legende);
   ok(/Vorne/.test(legende)&&/Hinter, Ohne H2O2/.test(legende)&&/Vorne, mitt H2O2/.test(legende),'Alle drei Stellen mit ihrem Zeichen über dem Diagramm');
-  const tipps=await p.$$eval('#cKb circle.hit',es=>es.map(e=>e.getAttribute('data-tipp').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()));
+  const tipps=await p.evaluate(()=>ZEIT.treffer.flat().map(t=>t.tipp.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()));
   ok(tipps.length>=8,'Kalium und Hydrogencarbonat: '+tipps.length+' Punkte');
   ok(tipps.some(t=>/Stelle: Hinter, Ohne H2O2/.test(t)),'Das Kästchen nennt die Stelle');
   await p.$eval('#cKb',e=>e.scrollIntoView({block:'center'}));await p.waitForTimeout(150);
-  const gh=await p.$$('#cKb .hit');
-  await gh[gh.length-1].hover({force:true});await p.waitForTimeout(150);
+  /* Neben den letzten Punkt der Giesswasser-Grafik zeigen */
+  const pt=await p.evaluate(()=>{const nr=ZEIT.treffer.length-1,l=ZEIT.treffer[nr],t=l[l.length-1];
+    const s=document.querySelector(`#cKb svg.spur[data-spur="${nr}"]`),r=s.getBoundingClientRect(),k=r.width/ZEIT.W;
+    return {x:r.left+t.cx*k,y:r.top+t.cy*k}});
+  await p.mouse.move(pt.x-6,pt.y+5);await p.waitForTimeout(200);
   const kasten=await p.$eval('.tipp',e=>({an:e.classList.contains('an'),t:e.innerText}));
   ok(kasten.an&&/Stelle/.test(kasten.t),'Das Kästchen erscheint sofort beim Zeigen');
   await p.screenshot({path:shots+'/3-diagramm.png',fullPage:true});
+  ok(/Stellen zuordnen · 3 offen/.test(await p.$eval('#cKb [data-tun="stellen"]',e=>e.textContent)),'Beim Giesswasser: «Stellen zuordnen · 3 offen»');
   await p.click('#nav button:text-is("Einstellungen")');await p.waitForTimeout(300);
   ok(/3 Bezeichnungen auf den Berichten – 3 noch nicht zugeordnet/.test(await p.$eval('#view',e=>e.innerText)),'Unter Einstellungen: drei Bezeichnungen, noch offen');
 

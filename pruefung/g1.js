@@ -94,8 +94,10 @@ console.log('\n════ Giesswasser im Reiter Blattsaft & Giesswasser ══
   ok(/>Giesswasser</.test(svg)&&/>Blattsaft</.test(svg),'Zwei Fenster: Blattsaft und Giesswasser');
   ok(/Noch keine Blattsaftanalyse/.test(svg),'Ohne Blattsaft sagt das obere Fenster, was fehlt');
   const entziffern=t=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
-  const tipps=[...svg.matchAll(/class="hit"[^>]*data-tipp="([^"]*)"/g)]
-    .map(m=>entziffern(entziffern(m[1])).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
+  /* Die Kästchen hängen nicht mehr an unsichtbaren Kreisen, sondern an der
+     Trefferliste, in der Zeigen den nächsten Punkt sucht. */
+  const tipps=A.getZeit().ZEIT.treffer.flat()
+    .map(t=>entziffern(t.tipp).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
   tipps.slice(0,3).forEach(t=>console.log('   ',t));
   const messbar=alle.reduce((n,a)=>n+['gw_HCO3','gw_NO3','gw_Fe'].filter(k=>a.werte[k]&&!a.werte[k].unter).length,0);
   ok(tipps.length===messbar,'Jeder gemessene Wert ist ein Punkt ('+tipps.length+' von '+messbar+'; unter der Nachweisgrenze keiner)');

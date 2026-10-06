@@ -1,6 +1,6 @@
 # Konzept: die Anwendung geht online
 
-Stand 26. September 2026, Entscheide bis 5. Oktober (§11). Die Abschnitte 1–9
+Stand 26. September 2026, Entscheide bis 6. Oktober (§13). Die Abschnitte 1–9
 beschreiben die damals volle Fassung; was am 5. Oktober weggefallen ist
 (Planer, Satzpaare, Logbuch, Reiter Giesswasser und Nährstoffe, «Wesentlich»),
 steht in §11.
@@ -375,3 +375,44 @@ Die genaue Anleitung steht in `ONLINE.md`, sobald der Server fertig ist.
     Messung einzeln; ein Klick auf den Tagespunkt zoomt dorthin.
 23. **Kleinigkeiten:** jede Grafik wählt ihre Werte in der eigenen
     Kopfzeile; die Liste der Messungen am Tank ist eingeklappt.
+
+## 13 · Entschieden (6. Oktober): die Grafiken angenehm bedienen
+
+Was sich am 5. Oktober abends (§12) geändert hat, gilt weiter – mit diesen
+Änderungen:
+
+24. **Reiter:** Blattsaft & Giesswasser · pH, EC & O₂ · Einträge Mobile App ·
+    Analysen · Einstellungen. Die Seite beginnt **immer** bei Blattsaft &
+    Giesswasser; der zuletzt offene Reiter wird nicht mehr gemerkt. Der Link
+    oben rechts heisst «Mobile App ↗» (die Adresse bleibt `/maske`).
+25. **«Ältere Daten übernommen» nur einmal.** Wer «Verstanden» klickt (oder
+    den Hinweis schliesst), sieht ihn auf diesem Gerät nicht wieder. Online
+    geht der umgebaute Bestand gleich auf den Server zurück – vorher wurde
+    er nur im Browser umgebaut, und der Hinweis kam bei jedem Öffnen.
+26. **− und + oben rechts**, über der ersten Grafik, zusammen mit dem
+    Zeitraum und festen Zeiträumen. Sie springen auf runde Zeiträume
+    (3 Monate, 6 Wochen, 3 Wochen, 2 Wochen, 1 Woche, am Tank weiter bis
+    3 Tage, 1 Tag, 12 und 6 Stunden).
+27. **Rollbalken unten wie im Browser**, nur waagrecht: im Windows- oder
+    Mac-Aussehen, je nach Gerät. Der Daumen ist der sichtbare Ausschnitt.
+    In der Grafik ziehen verschiebt nur, wenn gezoomt ist.
+28. **Zeigen ohne Zielen:** Der nächste Punkt (in 20 Bildpunkten) bekommt
+    einen Ring und das Kästchen; unten an der Achse steht das Datum unter
+    dem Zeiger. Am Handy zeigt das erste Tippen, das zweite öffnet.
+29. **«Punkte verbinden»** steht bei den Nährstoffen jeder Grafik – im
+    Blattsaft, im Giesswasser, am Tank je Grafik – und gilt nur für sie.
+30. **«Stellen zuordnen»** steht wieder sichtbar im Kopf des Giesswassers,
+    mit der Zahl der offenen Bezeichnungen (wie «RV» und «Reservoir
+    vorne», die dieselbe Stelle meinen). In den Einstellungen bleibt es auch.
+31. **Kulturmanagement zwischen den Grafiken:** im Reiter Blattsaft &
+    Giesswasser zwischen Blattsaft und Giesswasser, am Tank gleich unter dem
+    pH. **Eine Zeile je Mittel** – Magnesium im Mai und im Juli in derselben
+    Zeile –, links der Name, im Balken nur das Datum. Die Reihenfolge wird
+    **gezogen wie eine Warteschlange** (am Namen oder am Griff, in der Tafel
+    und im Dialog «Zeilen verwalten»); die Pfeile ↑ ↓ sind weg.
+32. **Am Tank etwas früher mehr Punkte:** statt «ein Punkt je Tag» ab
+    36 Bildpunkten je Tag gibt es jetzt drei Stufen – jede Messung ab
+    30 Bildpunkten je Tag, dazwischen ein Punkt je halben Tag (00–12,
+    12–24 Uhr), erst unter 14 Bildpunkten je Tag einer je Tag. Bei üblicher
+    Breite: bis gut 5 Wochen jede Messung (vorher 4), bis gut 2½ Monate
+    halbe Tage. Bei 3 Tagen und weniger zeigt die Achse Stunden.

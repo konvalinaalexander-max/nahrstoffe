@@ -29,7 +29,7 @@ Optimum, das im Laborbericht steht.
 
 Zwei Betriebsarten, dieselbe Datei: vom Ordner geöffnet (Datei-Modus, mit
 «Sichern» als eine HTML-Datei samt Daten) oder vom Server (`server.js`,
-laufend gesichert, mit Handy-Maske). Externe Abhängigkeiten: pdf.js und
+laufend gesichert, mit der Mobile App fürs Handy unter `/maske`). Externe Abhängigkeiten: pdf.js und
 SheetJS vom CDN – fallen sie aus, geht alles ausser dem Einlesen von PDF
 bzw. Excel (CSV liest die App ohne Bibliothek).
 
@@ -44,11 +44,18 @@ Agronom und sein Chef am PC; hinten am Tank die Mitarbeitenden mit dem Handy
 
 | Reiter | Was er zeigt |
 |---|---|
-| **Blattsaft & Giesswasser** (öffnet zuerst) | **Zwei Grafiken mit je eigener Datumsachse**, gemeinsam gezoomt: Blattsaft (Kopfzeile: Nährstoffe anklicken, Blatt beide/jung/alt, Anzeige Messwert / Lage im Optimum), Giesswasser (Kopfzeile: Stoffe, Zeichen der Stellen), darunter das **Kulturmanagement** – gleich unter der Überschrift «＋ Massnahme eintragen» und «Zeilen ordnen und ausblenden». **Biovin steht hier nicht** (nur Darstellung; die Gaben bleiben, im Tank-Reiter stehen sie). Ganz unten die **Zoomleiste**. Zeigen → Kästchen, Klick → Bericht. |
+| **Blattsaft & Giesswasser** (öffnet **immer** zuerst) | **Zwei Grafiken mit je eigener Datumsachse**, gemeinsam gezoomt: Blattsaft (Kopfzeile: Blatt beide/jung/alt, Anzeige Messwert / Lage im Optimum; darunter die Nährstoffe und «Punkte verbinden»), **dazwischen das Kulturmanagement**, dann Giesswasser (Kopfzeile: Zeichen der Stellen, «Stellen zuordnen · n offen»; darunter die Stoffe und «Punkte verbinden»). **Biovin steht hier nicht** (nur Darstellung; die Gaben bleiben, im Tank-Reiter stehen sie). Oben die **Zeitzeile** mit − / + rechts, unten der **Rollbalken**. Zeigen → Kästchen, Klick → Bericht. |
+| **pH, EC & O₂** | Die Messungen am Tank (Excel, Handy, Datenpaket) – nicht die Laborwerte: pH, **gleich darunter das Kulturmanagement** (mit Biovin), dann EC (Ring: frisch angesetzt) und Sauerstoff, je mit eigener Datumsachse, gemeinsam gezoomt; die Stelle links in der Zeitzeile; liegen die Messungen zu eng, wird **verdichtet** (Mittel je halben oder ganzen Tag mit Strich, siehe unten); darunter die Liste aller Messungen, **eingeklappt**, mit «Excel oder CSV einlesen». |
+| **Einträge Mobile App** | Alles, was über die Handy-Seite (`/maske`) kam (Messungen und Beigaben), als Liste mit Name, Uhrzeit, Werten. Visualisierung folgt später. |
 | **Analysen** | Oben PDFs hochladen (Ablegen oder «Dateien wählen»), darunter alle Berichte, neueste zuerst, filterbar nach Art. Jung- und Altblatt eines Berichts sind **eine** Zeile. Klick → der Bericht im Pop-up: jeder Wert mit dem Optimum des Labors als Band, gruppiert wie das Laborblatt, Wasser mit Einheit des Labors und daneben mg/l, der Wortlaut des PDFs aufklappbar. «Werte bearbeiten», «Entfernen». **Keine Befunde, keine Bewertungsfarben.** |
-| **pH & EC am Tank** | Die Messungen am Tank (Excel, Handy, Datenpaket) – nicht die Laborwerte: **drei Grafiken** pH, EC (Ring: frisch angesetzt), Sauerstoff, je mit eigener Datumsachse, gemeinsam gezoomt; oben die Stelle; dasselbe Kulturmanagement (mit Biovin); weit herausgezoomt werden mehrere Messungen eines Tages zu **Tagesmittel mit Strich** (tiefster bis höchster Wert); darunter die Liste aller Messungen, **eingeklappt**, mit «Excel oder CSV einlesen». |
-| **Einträge Maske** | Alles, was über die Handy-Seite kam (Messungen und Beigaben), als Liste mit Name, Uhrzeit, Werten. Visualisierung folgt später. |
-| **Einstellungen** | Maske/QR-Code (online), Entnahmestellen zuordnen, vorbereitete Daten (Datenpaket), Daten (sichern, öffnen, Kopie, JSON). |
+| **Einstellungen** | Mobile App/QR-Code (online), Entnahmestellen zuordnen, vorbereitete Daten (Datenpaket), Daten (sichern, öffnen, Kopie, JSON). |
+
+Oben rechts der Link **«Mobile App ↗»** (online, führt auf `/maske`) und der
+QR-Code. Der Hinweis **«Ältere Daten übernommen»** erscheint nur einmal: wer
+«Verstanden» klickt (oder ihn schliesst), sieht ihn auf diesem Gerät nicht
+wieder (`basilikum.gesehen` im localStorage, Schlüssel aus Schema und
+Wortlaut); online geht der umgebaute Bestand ausserdem gleich zurück auf
+den Server, sodass der Umbau beim nächsten Öffnen gar nicht mehr nötig ist.
 
 Weggefallen gegenüber der vollen Fassung: Überblick, Verlauf mit den fünf
 Fragen, Nährstoffe, Substrat, Giesswasser-Karten mit Richtwerten,
@@ -59,25 +66,48 @@ Schwellen, Kernnährstoffe, «Wesentlich». **Ihre Daten bleiben im Bestand**
 ### Grafiken und Zoom (Abschnitt 5, `zeitBild`)
 
 - **Getrennt, aber zusammen:** jede Grafik ein eigenes SVG mit eigener
-  y-Achse und **eigener Datumsachse**; gemeinsam ist der Ausschnitt
-  (`koVon`/`koBis`, `ZEIT`), und ein feiner **Zeiger** steht in allen am
-  selben Tag.
-- **Das Mausrad zoomt nicht** (am Laptop passierte das beim Scrollen aus
-  Versehen) – es scrollt die Seite. Gezoomt wird mit **− / +**, mit
-  **Strg + Rad** oder zwei Fingern auf dem Trackpad; seitwärts wischen oder
-  Umschalt + Rad verschiebt, wenn gezoomt ist; in der Grafik ziehen
-  verschiebt. Kein Doppelklick mehr.
-- **Zoomleiste** unten, klebt am Bildrand, solange man in den Grafiken ist:
-  − und +, ein **Schiebebalken** (das helle Fenster ist der Ausschnitt –
-  ziehen verschiebt, die Ränder ziehen ändert die Länge, Pfeiltasten gehen
-  auch), der Zeitraum als Text, feste Zeiträume (Tank: alles, 3 Monate,
-  6 Wochen, 1 Woche; Blattsaft: alles, 6 und 3 Monate), «Punkte verbinden».
-  Der Ausschnitt bleibt immer im Bereich der Daten.
-- **Dichte Messungen** (`DICHT_PX` = 36 Bildpunkte je Tag): liegen die Tage
-  enger, wird ein Tag mit mehreren Messungen ein Punkt (Mittelwert) mit
-  Strich (tiefster bis höchster Wert); ein Satz über der Grafik erklärt es,
-  ein Klick zoomt auf den Tag. Tage mit einer Messung bleiben gewöhnliche
-  Punkte. Nur im Tank-Reiter.
+  y-Achse (runde Teilung 1 / 2 / 2,5 / 5 × 10ⁿ) und **eigener
+  Datumsachse**; gemeinsam ist der Ausschnitt (`koVon`/`koBis`, `ZEIT`),
+  und ein feiner **Zeiger** steht in allen Grafiken und Kulturmanagement-
+  Zeilen am selben Tag, unten an der Achse das Datum (bei kurzen
+  Ausschnitten mit Uhrzeit). Jeder Reiter merkt sich seinen Ausschnitt,
+  solange die Seite offen ist (`ZEIT_JE_TAB`).
+- **Zeitzeile oben:** links (Tank) die Stelle, dann der Zeitraum als Text,
+  feste Zeiträume (Tank: alles, 3 Monate, 6 Wochen, 1 Woche; Blattsaft:
+  alles, 6 und 3 Monate – nur die, die kürzer als die Daten sind), **ganz
+  rechts − und +**. Sie springen über eine Stufenleiter auf runde Zeiträume
+  (`STUFEN_TAGE`; Tank bis 6 Stunden, Blattsaft bis 2 Wochen); liegt der
+  rechte Rand am Ende der Daten, bleibt er dort.
+- **Rollbalken unten**, wie der graue Balken im Browser, nur waagrecht – je
+  nach System im Windows-Aussehen (graue Bahn, Pfeile) oder Mac-Aussehen
+  (schmaler Daumen); am Handy ein breiter Daumen. Selbst gezeichnet, weil
+  Firefox am Mac echte Rollbalken ausblendet. Daumen ziehen (ein Schild
+  zeigt den Zeitraum), in die Bahn klicken = eine Seite weiter, Pfeile = ein
+  Stück, Pfeiltasten auf der Bahn. Nicht gezoomt ist er blass und voll. Er
+  klebt am unteren Bildrand, solange man in den Grafiken ist.
+- **Das Mausrad zoomt nicht** – es scrollt die Seite. Gezoomt wird mit
+  − / +, **Strg + Rad** (Mac: ⌘ + Rad oder zwei Finger), am Handy mit zwei
+  Fingern. Seitwärts wischen oder Umschalt + Rad verschiebt. **In der
+  Grafik ziehen verschiebt nur, wenn gezoomt ist** (sonst passiert nichts,
+  und ein Klick bleibt ein Klick). Tastatur in den Grafiken: Pfeile
+  verschieben, + / − zoomen, 0 zeigt alles, Esc schliesst das Kästchen.
+- **Zeigen:** Es gibt keine unsichtbaren Trefferkreise mehr. Jede Grafik
+  führt eine nach x sortierte Trefferliste (`ZEIT.treffer`); der nächste
+  Punkt in 20 px (Finger 28 px) bekommt einen Ring und das Kästchen. Klick
+  öffnet den Bericht bzw. die Messung. Am Handy zeigt das erste Tippen,
+  das zweite öffnet.
+- **«Punkte verbinden»** steht bei den Nährstoffen jeder Grafik und gilt je
+  Grafik (`linienAn`: blatt, wasser, ph, ec, o2) – persönlich gemerkt.
+- **Dichte Messungen** (nur Tank, `VERDICHT` = 30 bzw. 14 Bildpunkte je
+  Tag, mit etwas Spiel, damit es an der Grenze nicht flackert): ab weniger
+  als 30 px je Tag wird je **halben Tag** (00–12, 12–24 Uhr) ein Punkt
+  (Mittelwert) mit Strich (tiefster bis höchster Wert), ab weniger als
+  14 px je Tag je **ganzen Tag**. Messungen ohne Uhrzeit werden nie einem
+  halben Tag zugeschlagen. Ein Fenster mit einer Messung bleibt ein
+  gewöhnlicher Punkt. Was ein Punkt gerade ist, steht fest im Kopf der
+  pH-Grafik; ein Klick auf einen verdichteten Punkt zeigt die Woche drum
+  herum, mit jeder Messung. Bei 1060 px Breite heisst das: bis gut 5 Wochen
+  jede Messung, bis gut 2½ Monate halbe Tage.
 
 ## 4 · Daten und Parser
 
@@ -156,10 +186,18 @@ Was im Parser teuer gelernt ist und bleiben muss:
 
 ## 6 · Kulturmanagement (Abschnitt 9)
 
-Eine eigene Tafel unter den Grafiken beider Diagramm-Reiter: Überschrift,
-gleich darunter «＋ Massnahme eintragen» und «Zeilen ordnen und ausblenden»,
-dann die Balken mit eigener Datumsachse. Drei Arten von Zeilen
-(`kmListe(ansicht)`, `kmBalken(ansicht)`, `kmDaten(ansicht)`):
+Ein Band **zwischen den Grafiken** (Blattsaft & Giesswasser: zwischen
+Blattsaft und Giesswasser; Tank: gleich unter dem pH), auf derselben
+Zeitachse: Überschrift, gleich darunter «＋ Massnahme eintragen» und
+«Zeilen verwalten», dann **eine Zeile je Mittel bzw. Massnahme** – links
+der Name, rechts die Balken. Magnesium im Mai und im Juli stehen in
+derselben Zeile. Im Balken steht nur das Datum (passt es nicht hinein,
+rechts daneben, sonst gar nicht; nie überlappend); feine Kerben zeigen die
+einzelnen Gaben. Die Zeilen bleiben stehen, auch wenn im Ausschnitt nichts
+läuft (Name dann blass) – beim Verschieben springt nichts. Zeigen auf einen
+Balken hellt seinen Zeitraum in den Grafiken auf. Drei Arten von Zeilen
+(`kmListe(ansicht)`, `kmBalken(ansicht)`, `kmDaten(ansicht)`, gezeichnet von
+`kmTafel`):
 
 1. **Je Mittel** (Biovin, Magnesium, Kalisulfat, Zink, Säuren, Halades, EM …):
    aus den Gaben, von der ersten bis zur letzten, eine Lücke über 28 Tage
@@ -171,22 +209,30 @@ dann die Balken mit eigener Datumsachse. Drei Arten von Zeilen
 2. **Eigene Massnahmen** (`beigabeZeiten` mit `name`): Schattierung, neues
    Substrat, Klima … – nur von Hand, über «＋ Massnahme eintragen».
 3. **Ereignisse ohne Mittel** (Tank neu angesetzt, Umpumpen, Kalibrierung,
-   Wasserzugabe, Notiz …): **eingeklappt** – eine Zeile «▸ Ereignisse zeigen
-   (5): Wasserzugabe · Neuansatz …» öffnet sie. Dann Marken, eine Zeile je
-   Art, links benannt; mehrere am selben Tag eine Marke mit Zahl. Klick → die
-   Einträge, einzeln entfernbar. Wer ein Ereignis einträgt, bekommt sie
-   aufgeklappt.
+   Wasserzugabe, Notiz …): **eingeklappt** – eine Zeile «▸ Ereignisse (n)»
+   mit einem grauen Punkt je Tag, an dem etwas war. Aufgeklappt eine Zeile
+   je Art; mehrere am selben Tag eine Marke mit Zahl. Klick → die Einträge,
+   einzeln entfernbar. Wer ein Ereignis einträgt, bekommt sie aufgeklappt.
+
+**Reihenfolge wie in einer Warteschlange:** eine Zeile am Namen (Maus) oder
+am Griff ⋮⋮ (Maus und Finger) packen und ziehen; die übrigen weichen aus,
+am Rand wird gerollt, Esc bricht ab. Dasselbe im Dialog «Zeilen verwalten»,
+dort ausserdem mit der Tastatur (Griff anwählen, Pfeil hoch/runter), «zeigen»
+und «löschen». Ein Klick auf einen Namen ohne zu ziehen öffnet den Dialog
+mit dieser Zeile hervorgehoben. Geordnet wird innerhalb der Balken bzw. der
+Ereignisse (`kmVerschieben`); Biovin, das im Reiter Blattsaft & Giesswasser
+fehlt, behält dabei seinen Platz. Während gezogen wird, wartet jedes
+Neuzeichnen (`kmZug.nachholen`).
 
 «＋ Massnahme eintragen»: Was (neue Massnahme · eigene · Mittel · Ereignis an
 einem Tag), Beginn, Dauer (läuft noch · bis · nur dieser Tag), Notiz. Ein
 Mittel, dessen Zeitraum schon in einem Balken liegt, bleibt unverändert
 (mit Hinweis); sonst entsteht ein Zeitraum von Hand, vereinigt mit den
 Balken desselben Mittels, die er berührt (`mittelZeitraumDazu`).
-«Zeilen ordnen und ausblenden»: je Zeile ↑ ↓ (innerhalb der Balken bzw.
-der Ereignisse), «zeigen» und «löschen». Reihenfolge (`kmReihe`), Ausblenden
-(`kmAus`) und Klappzustand (`kmEreignisseOffen`) sind persönlich
-(localStorage); **löschen** nimmt die Einträge selbst weg – alle Gaben eines
-Mittels samt Zeiträumen, alle Zeiträume einer Massnahme, alle Einträge eines
+Reihenfolge (`kmReihe`), Ausblenden (`kmAus`, oben «n ausgeblendet») und
+Klappzustand (`kmEreignisseOffen`) sind persönlich (localStorage);
+**löschen** nimmt die Einträge selbst weg – alle Gaben eines Mittels samt
+Zeiträumen, alle Zeiträume einer Massnahme, alle Einträge eines
 Ereignisses –, für alle, mit Rückfrage und Zahl. Biovin fehlt im Reiter
 Blattsaft & Giesswasser fest (`KM_NICHT_IM_KOMBI`).
 
@@ -203,13 +249,13 @@ Eine Datei: `<style>`, Gerüst, ein `<script>`, durchnummeriert:
 | 2 | Fachwissen | `NAME`, `EINH`, `einheit`, `inMgL`, `EVTYPEN` |
 | 3 | Parser | `parseNCC`, `parseIns`, `parseGiess`, `parseAuto`, `pdfSeiten`, `pdfPunkte` |
 | 4 | Datenmodell | `PRODUKTE_VORGABE`, `leer`, `migriere`, `optimum`, `optText`, `lage` |
-| 5 | Diagramme | Kästchen, `marke`, `zeitBild` (`spurSvg`, `kmTafel`, Zoomleiste, `zeitSetzen`, `zeitBedienung`), `zeitMarken`, `spannenZeilen`, `spannenSvg`, `tippBau` |
+| 5 | Diagramme | Kästchen, `marke`, `zeitBild` (`spurSvg`, `kmTafel`, Zeitzeile, Rollbalken, `zeitSetzen`, `zoomStufe`, `zeitBedienung`, `naechsterPunkt`), `verdichtStufe`, `achsenSchritt`, `zeitMarken`, `tippBau` |
 | 6 | Gerüst | Verdrahtung `data-tun`/`data-aend`, `TABS`, `render`, `diagFrisch`, `dialog`, `toast` |
 | 7 | Analysen | Liste, `berichte`, `detail`, `wertMitOptimum`, `einlesen`, `pruefdialog` |
 | 8 | Blattsaft & Giesswasser | `vKombi`, `farbenFuer`, `spurGruppen`, Entnahmestellen (`stelleVon`, `stellenDialog` …) |
-| 9 | Kulturmanagement | Balken, Marken, Dialoge, «＋ Massnahme», Zeilen ordnen, ausblenden, löschen |
-| 10 | pH & EC am Tank | `vTank`, `messStelle`; 10b Tabellenimport |
-| 11 | Einträge Maske | `vMaske` |
+| 9 | Kulturmanagement | Balken, Marken, Dialoge, «＋ Massnahme», Zeilen verwalten, Ziehen-und-Ablegen (`kmZug`, `kmVerschieben`), ausblenden, löschen |
+| 10 | pH, EC & O₂ | `vTank`, `messStelle`; 10b Tabellenimport |
+| 11 | Einträge Mobile App | `vMaske` |
 | 12 | Einstellungen | `vEinst`; 12b Vorbereitete Daten (`PAKET_RES26`) |
 | 13 | Sichern und Laden | Selbstabbild, `seiteMitDaten`, `datenAusText`, `laden` |
 | 14 | Persönliche Ansicht | `ansichtMerken`/`ansichtLaden` |
@@ -231,16 +277,18 @@ Muster, die durchgehalten werden müssen:
    ein eigenes SVG mit eigener y- und Datumsachse. Spuren nach Einheit *und*
    Grössenordnung (Faktor 25), derselbe Stoff an zwei Stellen auf derselben
    Achse, höchstens drei Spuren je Tafel. Die Achse folgt den Messwerten; das
-   Band des Optimums wird beschnitten, nicht umgekehrt. Die Zoomleiste wird
-   einmal je Kasten gebaut und danach nur nachgeführt – beim Ziehen darf sie
-   nicht ersetzt werden, sonst verliert sie den Zeiger.
+   Band des Optimums wird beschnitten, nicht umgekehrt. Zeitzeile und
+   Rollbalken werden einmal je Kasten gebaut und danach nur nachgeführt
+   (`zeitzeileStellen`, `rollbalkenStellen`) – beim Ziehen dürfen sie nicht
+   ersetzt werden, sonst verlieren sie den Zeiger und den Fokus. Während
+   einer Bewegung bleiben die y-Achsen stehen (`ruhig`).
 4. **Farbe = Stoff, Form = Blatt (oben) bzw. Stelle (unten).** Nitrat oben und
    Nitrat unten tragen dieselbe Farbe (`farbenFuer` über die entdoppelten
    Schlüssel). Die Zeichen stehen in der Bedienung als Erklärung.
 5. **Punkte sind die Messung, eine Linie ist eine Behauptung** – Linien nur
    zuschaltbar, nur innerhalb einer Reihe.
-6. **Sofortiges Kästchen** (`data-tipp`) statt `<title>`; Text immer über
-   `esc`/`tippBau`.
+6. **Sofortiges Kästchen** (`data-tipp`, in den Grafiken die Trefferliste)
+   statt `<title>`; Text immer über `esc`/`tippBau`.
 
 ## 8 · Leitplanken – daran nicht rütteln
 
@@ -252,9 +300,9 @@ Muster, die durchgehalten werden müssen:
    `server.js` – je eine Datei, ohne Build und ohne Abhängigkeiten. Vom Ordner
    geöffnet läuft das Dashboard wie immer.
 3. **Bestand nie im Browserspeicher.** localStorage nur für die persönliche
-   Ansicht (Dashboard) und Name/Warteschlange (Maske). Im Datei-Modus wird
+   Ansicht (Dashboard) und Name/Warteschlange (Mobile App). Im Datei-Modus wird
    bewusst von Hand gesichert; online laufend.
-4. **Online ohne Passwort** (Entscheid vom 30. September). Die Maske fragt nur
+4. **Online ohne Passwort** (Entscheid vom 30. September). Die Mobile App (`erfassen.html`) fragt nur
    den Namen und hat keinen Link ins Dashboard. Passwörter lassen sich über
    Umgebungsvariablen wieder einschalten (`ONLINE.md`).
 5. **Firefox muss funktionieren.**
@@ -278,7 +326,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# ohne Browser (638 Einzelprüfungen)
+# ohne Browser (664 Einzelprüfungen)
 for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1; do node pruefung/$t.js; done
 
 # im Browser (Chromium + playwright; NODE_PATH mit pdfjs-dist@3.11.174, jsqr, pngjs)

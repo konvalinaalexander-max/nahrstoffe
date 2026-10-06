@@ -76,7 +76,7 @@ const ok=(b,t)=>{if(!b)fehler.push(t);console.log((b?'  ✓ ':'  ✗ FEHLER ')+t
 
   console.log('\n── Im Diagramm ──');
   await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(600);
-  const punkte=await p.$$eval('#cKb circle.hit',e=>e.length);
+  const punkte=await p.evaluate(()=>ZEIT.treffer.flat().length);
   ok(punkte===2,'Kalium jung und alt: zwei Punkte');
   ok(/Noch keine Giesswasseranalyse/.test(await p.$eval('#cKb',e=>e.textContent)),'Das Wasserfenster sagt, dass noch keine Analyse da ist');
 

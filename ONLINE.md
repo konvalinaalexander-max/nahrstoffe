@@ -10,9 +10,9 @@ Was am Ende steht:
 | Adresse | Was dort ist | Wer |
 |---|---|---|
 | `https://…railway.app` (später z. B. `https://basilikum.xy.ch`) | das Dashboard, sofort, ohne Login | Büro, Chef |
-| dieselbe Adresse mit **`/maske`** am Ende | die Eingabemaske fürs Handy: nur den Namen eintippen, dann messen und Beigaben eintragen | hinten am Tank, per QR-Code |
+| dieselbe Adresse mit **`/maske`** am Ende | die **Mobile App** fürs Handy: nur den Namen eintippen, dann messen und Beigaben eintragen | hinten am Tank, per QR-Code |
 
-Die Maske hat **keinen Link** zum Dashboard. Es gibt **kein Passwort**.
+Die Mobile App hat **keinen Link** zum Dashboard. Es gibt **kein Passwort**.
 
 Was es kostet: Railway rechnet nach Verbrauch; für diese kleine Anwendung
 sind das nach dem Probeguthaben rund **fünf Dollar im Monat** (Hobby-Plan).
@@ -139,12 +139,12 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    **Sicherung einspielen** → deine letzte Datei wählen. Ein paar Sekunden
    später steht oben rechts *gesichert hh:mm*.
 3. **Dann die vorbereiteten Daten:** Im Reiter **Blattsaft & Giesswasser**
-   (oder **pH & EC am Tank**) steht ein grüner
+   (oder **pH, EC & O₂**) steht ein grüner
    Hinweis *«Bereit zum Aktivieren: Reservoir April bis September 2026»*
    → **Ansehen und aktivieren**. Der Dialog zeigt, was hineinkommt (149
-   Messungen bis zum 30. September, 76 Gaben und Ereignisse), welche Balken danach unter den Diagrammen
+   Messungen bis zum 30. September, 76 Gaben und Ereignisse), welche Balken danach im Kulturmanagement
    stehen und was dabei entschieden wurde. → **Aktivieren**.
-   Die App springt in den Reiter **pH & EC am Tank**; alles ist eingetragen und
+   Die App springt in den Reiter **pH, EC & O₂**; alles ist eingetragen und
    gesichert.
 
    > Die Reihenfolge zählt: «Sicherung einspielen» **ersetzt** den ganzen
@@ -152,21 +152,23 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    > «Vorbereitete Daten» → Ansehen → **Aktivieren** (oder «Fehlende
    > ergänzen»). Nichts wird doppelt eingetragen.
 
-4. Reiter **Einstellungen** → Karte «Entnahmestellen» → **Stellen zuordnen**,
-   falls dort Bezeichnungen als «noch nicht zugeordnet» stehen (das Labor
-   schreibt die Stellen jedes Mal anders). Die Zuordnung gilt ab jetzt für
-   alle.
+4. **Stellen zuordnen**, falls Bezeichnungen offen sind – der Knopf steht im
+   Reiter **Blattsaft & Giesswasser** im Kopf des Giesswassers
+   («Stellen zuordnen · 3 offen») und unter **Einstellungen** → Karte
+   «Entnahmestellen». Das Labor schreibt die Stellen jedes Mal anders
+   («RV», «Reservoir vorne» …); hier sagst du einmal, welche dieselbe ist.
+   Die Zuordnung gilt ab jetzt für alle.
 
 ---
 
-## Teil H · Die Maske am Tank – per QR-Code
+## Teil H · Die Mobile App am Tank – per QR-Code
 
 1. Im Dashboard oben rechts: **QR-Code** → **Drucken**. Es kommt ein Blatt
    mit grossem Code und der Adresse. Ausdrucken, am Tank aufhängen
    (am besten in einer Klarsichtmappe).
    *Alternativ:* **Als Bild speichern** und das Bild verschicken.
-2. Am Handy: Kamera auf den Code → die Maske öffnet sich.
-3. Die Maske fragt nur: **Wer misst?** → Namen oder Kürzel eintippen →
+2. Am Handy: Kamera auf den Code → die Mobile App öffnet sich.
+3. Die Mobile App fragt nur: **Wer misst?** → Namen oder Kürzel eintippen →
    **Weiter**. Kein Passwort. Der Name gilt eine Stunde, danach fragt sie
    wieder – so trägt jeder Eintrag einen Namen.
 4. **Zum Startbildschirm hinzufügen**, damit es wie eine App aussieht:
@@ -174,10 +176,10 @@ den QR-Code erst, wenn die Adresse steht, die bleiben soll.
    - Android (Chrome): Menü (drei Punkte) → **Zum Startbildschirm hinzufügen**.
 5. Eine Probemessung eintragen. Uhrzeit und Datum setzt das Handy selbst.
    Im Dashboard erscheint sie innerhalb einer halben Minute im Reiter
-   **Einträge Maske** (und im Reiter **pH & EC am Tank**), mit Namen und
+   **Einträge Mobile App** (und im Reiter **pH, EC & O₂**), mit Namen und
    Uhrzeit.
 
-Die Maske hat keinen Link ins Dashboard. Wer am Handy `/maske` aus der
+Die Mobile App hat keinen Link ins Dashboard. Wer am Handy `/maske` aus der
 Adresse löscht, käme hin – das ist so gewollt und macht in der Praxis
 niemand.
 
@@ -191,10 +193,11 @@ für alle. Oben rechts steht immer der Stand. Steht dort *«nicht erreichbar –
 im Browserfenster und gehen raus, sobald er wieder antwortet. Das Fenster
 dann nicht schliessen.
 
-**Persönliche Ansicht bleibt persönlich.** Welche Werte du anzeigst,
-welche Balken in welcher Reihenfolge (über «Zeilen ordnen und ausblenden»),
-ob die Ereignisse aufgeklappt sind, welcher Reiter offen ist –
-das merkt sich nur dein Browser. Einträge, Massnahmen, Stellen und
+**Persönliche Ansicht bleibt persönlich.** Welche Werte du anzeigst, ob
+die Punkte verbunden sind, welche Zeilen des Kulturmanagements in welcher
+Reihenfolge stehen (ziehen oder «Zeilen verwalten»), ob die Ereignisse
+aufgeklappt sind – das merkt sich nur dein Browser. Die Seite beginnt immer
+bei Blattsaft & Giesswasser. Einträge, Massnahmen, Stellen und
 Zeiträume gelten für alle.
 
 **Sicherungskopien** macht der Server selbst, bei jeder Änderung, im Volume
@@ -215,8 +218,8 @@ Dienst → Reiter **Variables** → **+ New Variable**:
 
 | Name | Wirkung |
 |---|---|
-| `ADMIN_PASSWORT` | Das Dashboard fragt nach Benutzer **`admin`** und diesem Passwort. Die Maske bleibt offen. |
-| `MASKE_PASSWORT` | Auch die Maske fragt – Benutzer **`hinten`**. Muss anders sein als das Admin-Passwort. |
+| `ADMIN_PASSWORT` | Das Dashboard fragt nach Benutzer **`admin`** und diesem Passwort. Die Mobile App bleibt offen. |
+| `MASKE_PASSWORT` | Auch die Mobile App fragt – Benutzer **`hinten`**. Muss anders sein als das Admin-Passwort. |
 
 Railway startet neu, das Log sagt, was gilt. Variable löschen = wieder offen.
 
@@ -230,7 +233,7 @@ Railway startet neu, das Log sagt, was gilt. Variable löschen = wieder offen.
    Bestätigung). Beide bei deinem Domain-Anbieter anlegen (dort, wo `xy.ch`
    verwaltet wird: «DNS-Einträge»).
 3. Ein paar Minuten bis eine Stunde warten; Railway holt das Zertifikat
-   selbst. Danach: Dashboard unter `https://basilikum.xy.ch`, Maske unter
+   selbst. Danach: Dashboard unter `https://basilikum.xy.ch`, Mobile App unter
    `https://basilikum.xy.ch/maske`.
 4. **Den QR-Code jetzt neu drucken** – der alte zeigt auf die Railway-Adresse.
    (Die funktioniert zwar weiter, aber eine Adresse ist übersichtlicher.)

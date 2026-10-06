@@ -48,8 +48,8 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   const stand0=await p.$eval('#stand',e=>e.textContent);
   console.log('   Stand:',stand0);
   ok(/online/.test(stand0),'Die Seite merkt, dass sie vom Server kommt');
-  ok(await p.$eval('#erfassenLink',e=>!e.hidden&&e.getAttribute('href')==='/maske'),'Der Link zur Maske erscheint («/maske»)');
-  ok(await p.$eval('#knopfQr',e=>!e.hidden),'Der QR-Code zur Maske steht oben');
+  ok(await p.$eval('#erfassenLink',e=>!e.hidden&&e.getAttribute('href')==='/maske'&&e.textContent.trim()==='Mobile App ↗'),'Der Link «Mobile App ↗» erscheint («/maske»)');
+  ok(await p.$eval('#knopfQr',e=>!e.hidden),'Der QR-Code zur Mobile App steht oben');
   ok(!/Anmeldung/.test(await p.$eval('body',e=>e.textContent))&&/Basilikum/.test(await p.title()),'Direkt das Dashboard – kein Login');
   ok(await p.$eval('#knopfSichern',e=>e.hidden)&&await p.$eval('#knopfOeffnen',e=>e.hidden),
      'Keine Knöpfe zum Sichern oder Öffnen – online ist es eine Webseite');
@@ -77,7 +77,7 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   await p.waitForTimeout(2500);
   srv=await ruf('/api/bestand',{headers:ADMIN});
   ok(srv.json.version===v1+1&&srv.json.db.beigabeZeiten.some(z=>z.name==='Schattierung'&&z.von==='2026-09-20'&&z.bis===null),'«＋ Massnahme»: «Schattierung» ist 2,5 s später auf dem Server – Version '+srv.json.version);
-  ok(await p.$$eval('#cKb g.spb text',ts=>ts.some(t=>t.textContent==='Schattierung seit 20.09.')),'… und steht als Balken unter dem Diagramm');
+  ok(await p.$eval('#cKb .kmZ[data-k="n|Schattierung"]',z=>z.querySelector('.kmTitel').textContent==='Schattierung'&&[...z.querySelectorAll('g.spb text')].some(t=>t.textContent==='seit 20.09.')),'… und steht als eigene Zeile im Kulturmanagement');
 
   console.log('\n════ Gleichzeitig: hinten trägt ein, während hier etwas offen ist ════');
   /* Hier eine Aenderung, die noch nicht hochgegangen ist … */
@@ -98,7 +98,7 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('\n════ Auffrischen ohne eigene Änderung ════');
   await ruf('/api/messung',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',zeit:'07:40',stelle:'Reservoir hinten',ph:6.4,ec:1.8,wer:'AB'}});
   await ruf('/api/ereignis',{method:'POST',headers:HINTEN,body:{datum:'2026-09-26',zeit:'07:50',typ:'Säurezugabe',mittel:'schwefelsaeure25',menge:0.5,einheit:'l',stelle:'hinten',wer:'AB'}});
-  await p.click('#nav button:text-is("pH & EC am Tank")');await p.waitForTimeout(400);
+  await p.click('#nav button:text-is("pH, EC & O₂")');await p.waitForTimeout(400);
   /* die Abfrage laeuft alle 30 s – hier direkt anstossen */
   await p.evaluate(()=>onlineAbfragen());await p.waitForTimeout(800);
   await p.click('#tkListe summary');await p.waitForTimeout(200);
@@ -111,9 +111,9 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   ok(spuren.join('|')==='pH|EC|Sauerstoff','Drei Grafiken: pH, EC, Sauerstoff – jede mit eigener Achse');
   ok(!/Sättigung/.test(tk),'Keine Sättigungsgrenze, keine Deutung');
   await p.screenshot({path:shots+'/online-tank.png',fullPage:false});
-  await p.click('#nav button:text-is("Einträge Maske")');await p.waitForTimeout(400);
+  await p.click('#nav button:text-is("Einträge Mobile App")');await p.waitForTimeout(400);
   const me=await p.$eval('#view',e=>e.innerText);
-  ok(/MK/.test(me)&&/AB/.test(me)&&/Säurezugabe/.test(me)&&/Schwefelsäure 25 % · 0.5 l/.test(me),'Unter «Einträge Maske»: beide Messungen und die Säure, mit Namen');
+  ok(/MK/.test(me)&&/AB/.test(me)&&/Säurezugabe/.test(me)&&/Schwefelsäure 25 % · 0.5 l/.test(me),'Unter «Einträge Mobile App»: beide Messungen und die Säure, mit Namen');
   await p.screenshot({path:shots+'/online-maske.png',fullPage:false});
 
   console.log('\n════ Kopie herunterladen ════');
@@ -128,9 +128,39 @@ const warten=ms=>new Promise(r=>setTimeout(r,ms));
   console.log('\n════ Persönliche Ansicht ════');
   await p.click('#nav button:text-is("Blattsaft & Giesswasser")');await p.waitForTimeout(500);
   await p.click('#cKb .tafel:first-of-type .chip:text-is("Magnesium")');await p.waitForTimeout(400);
+  await p.check('#cKb [data-aend="linienUm"][data-ziel="wasser"]');await p.waitForTimeout(300);
+  await p.click('#nav button:text-is("Einstellungen")');await p.waitForTimeout(300);
   await p.reload();await p.waitForTimeout(1500);
-  ok((await p.$eval('#nav button.active',e=>e.textContent))==='Blattsaft & Giesswasser','Nach dem Neuladen ist der Reiter noch derselbe – persönliche Ansicht auf diesem Gerät');
-  ok(await p.$eval('#cKb .tafel:first-of-type .chip:text-is("Magnesium")',e=>e.classList.contains('on')),'Und die Auswahl auch');
+  ok((await p.$eval('#nav button.active',e=>e.textContent))==='Blattsaft & Giesswasser','Nach dem Neuladen beginnt die Seite immer bei Blattsaft & Giesswasser – auch wenn zuletzt ein anderer Reiter offen war');
+  ok(await p.$eval('#cKb .tafel:first-of-type .chip:text-is("Magnesium")',e=>e.classList.contains('on')),'Die Auswahl bleibt – persönliche Ansicht auf diesem Gerät');
+  ok(await p.$eval('#cKb [data-aend="linienUm"][data-ziel="wasser"]',e=>e.checked)&&!(await p.$eval('#cKb [data-aend="linienUm"][data-ziel="blatt"]',e=>e.checked)),'«Punkte verbinden» bleibt je Grafik gemerkt');
+
+  console.log('\n════ Ältere Daten vom Server: der Hinweis nur einmal ════');
+  /* Ein Stand im alten Format liegt auf dem Server – mit einem Eintrag, den
+     der Umbau entfernt. */
+  srv=await ruf('/api/bestand',{headers:ADMIN});
+  const alt=srv.json.db;alt.schema=11;
+  alt.ereignisse.push({id:'alt-ps',datum:'2026-08-01',zeit:null,typ:'Säurezugabe',mittel:'phosphorsaeure',menge:1,einheit:'l',wer:null});
+  const put=await ruf('/api/bestand',{method:'PUT',headers:ADMIN,body:{basisVersion:srv.json.version,db:alt}});
+  ok(put.status===200,'Der alte Stand liegt auf dem Server (Version '+put.json.version+')');
+  await p.reload();await p.waitForTimeout(1800);
+  ok(await p.$eval('#dlg',d=>d.open)&&await p.$eval('#dlgTitel',e=>e.textContent)==='Ältere Daten übernommen'&&/1 Einträge zu einem Mittel/.test(await p.$eval('#dlgBody',e=>e.innerText)),'Beim ersten Öffnen: «Ältere Daten übernommen» mit dem, was angepasst wurde');
+  await p.waitForTimeout(2500);
+  srv=await ruf('/api/bestand',{headers:ADMIN});
+  ok(srv.json.db.schema===12&&!srv.json.db.ereignisse.some(e=>e.id==='alt-ps'),'Der umgebaute Stand geht gleich zurück auf den Server (Schema '+srv.json.db.schema+')');
+  await p.click('#dlgFoot button:text-is("Verstanden")');await p.waitForTimeout(300);
+  ok(!(await p.$eval('#dlg',d=>d.open)),'«Verstanden» schliesst ihn');
+  await p.reload();await p.waitForTimeout(1800);
+  ok(!(await p.$eval('#dlg',d=>d.open)),'Beim nächsten Öffnen kommt er nicht wieder');
+  /* Derselbe Hinweis auf einem anderen Gerät, das ihn schon bestätigt hat:
+     auch wenn der Server noch einmal den alten Stand hätte. */
+  srv=await ruf('/api/bestand',{headers:ADMIN});
+  const alt2=srv.json.db;alt2.schema=11;
+  alt2.ereignisse.push({id:'alt-ps',datum:'2026-08-01',zeit:null,typ:'Säurezugabe',mittel:'phosphorsaeure',menge:1,einheit:'l',wer:null});
+  await ruf('/api/bestand',{method:'PUT',headers:ADMIN,body:{basisVersion:srv.json.version,db:alt2}});
+  await p.reload();await p.waitForTimeout(1800);
+  ok(!(await p.$eval('#dlg',d=>d.open)),'Ein bereits bestätigter Hinweis erscheint auf diesem Gerät nicht noch einmal');
+  await p.waitForTimeout(2500);
 
   console.log('\n════ Server weg ════');
   await p.route('**/api/**',r=>r.abort('connectionfailed'));
