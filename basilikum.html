@@ -1060,7 +1060,7 @@ function spurSvg(sp,G){
       let lo=Infinity,hi=-Infinity;for(const v of ys){if(v<lo)lo=v;if(v>hi)hi=v}
       /* Nur Werte unter der Nachweisgrenze zu sehen: die Grenze gibt den
          Massstab – gezeichnet wird an ihr nichts. */
-      if(!sp.band&&!lageSkala&&sicht.every(p=>p.ng)){const g=Math.max(0,...sicht.map(p=>p.grenze||0));hi=g>0?g*1.15:1}
+      if(!lageSkala&&sicht.every(p=>p.ng)){const g=Math.max(0,...sicht.map(p=>p.grenze||0));hi=g>0?g*1.15:1}
       y0=lo;y1=hi;
       if(sp.band){
         const spanne=(y1-y0)||Math.abs(y1)||1;
@@ -1126,7 +1126,9 @@ function spurSvg(sp,G){
     }
     const fensterPx=(st==='tag'?1:0.5)*G.proTag,versatz=(si-(serien.length-1)/2)*Math.min(3,fensterPx/4);
     return [...gruppen].map(([k,l])=>{
-      if(l.length===1)return {x:X(l[0].x),y:Y(l[0].y),q:l[0]};
+      /* Allein im Fenster: ein gewöhnlicher Punkt, gehört aber zum selben
+         Fenster wie die verdichteten Punkte der anderen Grafiken. */
+      if(l.length===1)return {x:X(l[0].x),y:Y(l[0].y),q:l[0],fk:k[0]==='n'?null:k};
       G.gefasst=true;
       let lo=Infinity,hi=-Infinity,sum=0;for(const q of l){sum+=q.y;if(q.y<lo)lo=q.y;if(q.y>hi)hi=q.y}
       const mz=l.filter(q=>!q.ohneZeit),tag=Math.floor(l[0].x/864e5)*864e5;
@@ -1160,7 +1162,7 @@ function spurSvg(sp,G){
         treffer.push({cx:p.x,cy:p.y,tipp:p.tipp,block:p.mitte,t:p.mitte,tag:tagVon(p.mitte),k:'f'+p.fenster,fx0:p.fx0,fx1:p.fx1,r});
       }else{
         s+=marke(se.form,p.x,p.y,r,se.farbe,1,!!p.q.ng);
-        treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung,ng:!!p.q.ng,t:p.q.x,tag:tagVon(p.q.x),k:paarSchluessel(se,p.q),r});
+        treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung,ng:!!p.q.ng,t:p.q.x,tag:tagVon(p.q.x),k:p.fk?'f'+p.fk:paarSchluessel(se,p.q),r});
       }
     }
     s+=`</g>`;
@@ -1218,7 +1220,7 @@ function kmZeileHtml(G,raster,z,inhalt,opt){
    sonst rechts daneben, wenn bis zum nächsten Balken derselben Zeile Platz
    ist, sonst keine. Nie links, nie eine zweite Zeile. Die Gaben stehen als
    feine Kerben im Balken, solange sie nicht dichter als 3 px liegen. */
-function kmBalkenSvg(G,spannen){
+function kmBalkenSvg(G,spannen,zeile){
   const {X,x0,x1,W}=G,y=(KM_Z-KM_H)/2;
   const l=spannen.filter(s=>s.x1>=x0&&s.x0<=x1).sort((a,b)=>a.x0-b.x0).map(s=>{
     const xa=X(Math.max(x0,s.x0)),xb=Math.max(X(Math.min(x1,s.x1)),xa+6);
@@ -1241,6 +1243,8 @@ function kmBalkenSvg(G,spannen){
     else if(lage==='rechts')out+=`<text x="${xb+spitze+6}" y="${y+10.5}" font-size="10.5" font-weight="600" fill="${dunkel}">${esc(t)}</text>`;
     out+=`</g>`;
     vorEnde=Math.max(vorEnde,xb+spitze);
+    /* Eine Gabe an einem Tag ist ein Zeitpunkt – sie gehört zu den Proben dieses Tages. */
+    if(s.x0===s.x1&&G.kmTage&&zeile){const tg=tagVon(s.x0),m=G.kmTage.get(tg)||[];m.push({k:zeile,cx:(xa+xb)/2});G.kmTage.set(tg,m)}
   });
   return {svg:out,sichtbar:l.length>0};
 }
@@ -1263,7 +1267,7 @@ function kmTafel(km,G){
   const nameTipp=z=>tippBau(z.name,z.farbe,[],'Ziehen ändert die Reihenfolge · anklicken: Zeilen verwalten');
   let rows='';
   for(const z of km.zeilen){
-    const b=kmBalkenSvg(G,z.spannen);
+    const b=kmBalkenSvg(G,z.spannen,z.key);
     rows+=kmZeileHtml(G,raster,z,b.svg,{griff:ordnen,leer:!b.sichtbar,tipp:nameTipp(z)});
   }
   let typen='';
@@ -1352,7 +1356,7 @@ function zeitBild(box,o){
   /* Neu gezeichnet: das Gezeigte gilt nicht mehr – ausser es ist festgehalten
      (Finger, «Im Verlauf zeigen»), dann steht es am neuen Ort wieder da. */
   PAAR_ALT=null;ZEIT_GEZEIGT=null;box._pz=null;
-  if(ZEIT_FEST&&box.querySelector&&box.querySelector('.tafeln')&&ZEIT_FEST.x>=ZEIT.x0&&ZEIT_FEST.x<=ZEIT.x1)paarZeigen(box,festZ());
+  if(ZEIT_FEST&&box.querySelector&&box.querySelector('.tafeln')){const fz=festZ();if(fz)paarZeigen(box,fz)}
 }
 
 /* ── Zeitzeile oben: Zeitraum, feste Zeiträume, − und + ── */
@@ -1517,6 +1521,7 @@ function datumsText(t){
    der Grafik unter der Maus – eine Ablesehilfe. */
 function zeigerSetzen(box,px,datumSvg){
   if(!ZEIT)return;
+  PAAR_ALT=null;
   const an=px!=null&&px>=ZEIT.ml&&px<=ZEIT.W-ZEIT.mr,T=zeitTeile(box);
   linienStil(box,false);
   for(const z of T.zeiger){z.setAttribute('x1',an?px:-99);z.setAttribute('x2',an?px:-99)}
@@ -1569,7 +1574,21 @@ function schildSetzen(g,px,text,hell){
 let PAAR_ALT=null,ZEIT_GEZEIGT=null,ZEIT_FEST=null;
 const zVon=(t,nr)=>({x:t.t,cx:t.cx,k:t.k,tag:t.tag,fx0:t.fx0,fx1:t.fx1,selbst:{nr,cx:t.cx,cy:t.cy}});
 const zVonZeit=x=>({x,cx:ZEIT.X(x),k:'t'+tagVon(x),tag:tagVon(x)});
-const festZ=()=>Object.assign({},ZEIT_FEST,{cx:ZEIT.X(ZEIT_FEST.x),selbst:null});
+/* Der festgehaltene Tag, umgerechnet auf die jetzige Zeichnung – oder null,
+   wenn er nicht im Ausschnitt liegt. */
+const festZ=()=>{
+  if(!ZEIT_FEST||!ZEIT)return null;
+  const f=ZEIT_FEST,an=f.fx0!=null?(f.fx1>ZEIT.x0&&f.fx0<ZEIT.x1):(f.x>=ZEIT.x0&&f.x<=ZEIT.x1);
+  return an?Object.assign({},f,{cx:ZEIT.X(f.x),selbst:null}):null;
+};
+/* Esc gibt einen festgehaltenen Tag auch frei, wenn die Grafiken nicht den
+   Fokus haben (nach «Im Verlauf zeigen»). */
+document.addEventListener('keydown',ev=>{
+  if(ev.key!=='Escape'||!ZEIT_FEST||kmZug||el('dlg').open)return;
+  const box=document.querySelector('.zeitbild'),tf=box&&box.querySelector('.tafeln');
+  if(!box||ev.target===tf)return;
+  ZEIT_FEST=null;ZEIT_GEZEIGT=null;tippWeg();punktZeigen(box,null,null);paarZeigen(box,null);zeigerSetzen(box,null,null);
+});
 function paarZeigen(box,z){
   if(!ZEIT)return;
   const T=zeitTeile(box);
@@ -1610,12 +1629,16 @@ function paarZeigen(box,z){
       if(g)g.innerHTML=l.map(e=>`<circle cx="${e.cx}" cy="${KM_Z/2}" r="7.5" fill="none" stroke="#141D17" stroke-width="1" opacity=".45"/>`).join('')}
   }
   /* Datumsschilder in jeder Grafik */
-  const text=datumsText(z.x);
+  const text=paarDatum(z);
   for(const [nr,g] of T.datum){
     const st=paarStand(nr,z.tag);
     schildSetzen(g,mitte,st===2?text:text+(st===1?' · kein Wert':' · keine '+(ZEIT.leerWort[nr]||'Probe')),st!==2);
   }
 }
+/* Das Datum des Gezeigten – mit Uhrzeit nur, wenn es eine erfasste Uhrzeit
+   ist (Minutenschlüssel). Messungen ohne Uhrzeit liegen auf der Achse nur
+   verteilt; ihnen eine Uhrzeit anzuschreiben wäre erfunden. */
+const paarDatum=z=>z.k&&z.k[0]==='m'?datumsText(z.x):WOCHENTAG[new Date(z.x).getUTCDay()]+' '+fmtK(new Date(z.x).toISOString().slice(0,10));
 /* 2: an dem Tag ist hier etwas gezeichnet · 1: es gibt eine Probe, aber
    keinen Wert in dieser Auswahl · 0: keine Probe an dem Tag */
 const paarStand=(nr,tag)=>ZEIT.tageSicht[nr]&&ZEIT.tageSicht[nr].has(tag)?2:ZEIT.tageAlle[nr]&&ZEIT.tageAlle[nr].has(tag)?1:0;
@@ -1624,7 +1647,7 @@ function paarAnsage(z){
   const a=el('ansage');if(!a||!ZEIT||!z)return;
   const je=new Map();
   ZEIT.spurTafel.forEach((name,nr)=>{const alt=je.get(name),st=paarStand(nr,z.tag);if(!alt||st>alt.st)je.set(name,{st,w:ZEIT.leerWort[nr]||'Probe'})});
-  a.textContent=datumsText(z.x)+': '+[...je].map(([n,v])=>n+' – '+(v.st===2?v.w:v.st===1?'kein Wert':'keine '+v.w)).join('; ')+'.';
+  a.textContent=paarDatum(z)+': '+[...je].map(([n,v])=>n+' – '+(v.st===2?v.w:v.st===1?'kein Wert':'keine '+v.w)).join('; ')+'.';
 }
 /* Nicht hin und her springen: der gezeigte Punkt bleibt, solange er höchstens
    26 px weg ist und kein anderer um 4 px näher liegt. */
@@ -1657,7 +1680,7 @@ document.addEventListener('pointerdown',()=>{perTab=false},true);
 window.addEventListener('pointerup',ev=>{if(zeitLos)zeitLos(ev)});
 window.addEventListener('pointercancel',ev=>{if(zeitLos)zeitLos(ev)});
 function punktZeigen(box,svg,t){
-  if(t&&box._pz===t)return;
+  if(t&&box._pz===t&&TIPP&&TIPP.classList.contains('an'))return;
   box._pz=t||null;
   for(const c of box.querySelectorAll('.ring')){if(c.ownerSVGElement!==svg||!t){c.setAttribute('cx',-99);c.setAttribute('cy',-99)}}
   if(!t){svg&&(svg.style.cursor='');return}
@@ -1699,7 +1722,7 @@ function zeitBedienung(box){
         const [a,b]=[...finger.values()],r=svg.getBoundingClientRect(),k=(ZEIT.W||1)/(r.width||1);
         const mx=((a.x+b.x)/2-r.left)*k;
         zange={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,t:zeitVon(mx),anteil:(mx-ZEIT.ml)/P(),L:ZEIT.x1-ZEIT.x0,svg};
-        zug=null;ruhig();for(const id of finger.keys())try{tf.setPointerCapture(id)}catch(e){}
+        zug=null;ruhig();tippWeg();punktZeigen(box,null,null);for(const id of finger.keys())try{tf.setPointerCapture(id)}catch(e){}
         return;
       }
     }
@@ -1748,14 +1771,15 @@ function zeitBedienung(box){
     /* Ist ein Tag festgehalten (Finger, «Im Verlauf zeigen»), bleibt er
        stehen, bis man auf etwas anderes zeigt, ins Leere klickt oder Esc
        drückt – sonst nähme ihn die erste Mausbewegung wieder weg. */
+    const ruhe=(px,dsvg)=>{const fz=festZ();if(fz)paarZeigen(box,fz);else{paarZeigen(box,null);zeigerSetzen(box,px,dsvg)}};
     const svg=ev.target.closest&&ev.target.closest('svg.zb');
-    if(!svg||!svg.isConnected){ZEIT_GEZEIGT=null;punktZeigen(box,null,null);if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,null,null)}return}
+    if(!svg||!svg.isConnected){ZEIT_GEZEIGT=null;punktZeigen(box,null,null);ruhe(null,null);return}
     const {px,py}=svgPos(svg,ev);
     if(svg.classList.contains('spur')){
       const nr=+svg.dataset.spur,t=haltePunkt(nr,px,py);
       if(t){ZEIT_FEST=null;punktZeigen(box,svg,t);paarZeigen(box,zVon(t,nr));return}
       punktZeigen(box,null,null);if(!ev.target.closest('[data-tipp]'))tippWeg();
-      if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,px,svg)}
+      ruhe(px,svg);
       return;
     }
     /* Eine Zeile des Kulturmanagements: ein Ereignis ist ein Zeitpunkt
@@ -1764,7 +1788,7 @@ function zeitBedienung(box){
     const m=ev.target.closest('[data-x0]');
     if(m&&m.dataset.x0===m.dataset.x1){ZEIT_FEST=null;paarZeigen(box,zVonZeit(+m.dataset.x0));return}
     if(m){ZEIT_FEST=null;paarZeigen(box,null);zeigerSetzen(box,null,null);return}
-    if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,px,datumSvg(svg))}
+    ruhe(px,datumSvg(svg));
   };
   const los=ev=>{
     if(ev.pointerType==='touch'){finger.delete(ev.pointerId);if(finger.size<2&&zange){zange=null;ruhig(150)}}
@@ -1775,8 +1799,8 @@ function zeitBedienung(box){
      ein Fänger fürs ganze Fenster, immer für die jüngste Grafik. */
   zeitLos=los;
   tf.addEventListener('pointerleave',ev=>{if(!zug&&ev.pointerType==='mouse'){
-    zeigEv=null;ZEIT_GEZEIGT=null;zeigerSetzen(box,null,null);punktZeigen(box,null,null);kmBandWeg(box);
-    paarZeigen(box,ZEIT_FEST?festZ():null)}});
+    zeigEv=null;ZEIT_GEZEIGT=null;punktZeigen(box,null,null);kmBandWeg(box);
+    const fz=festZ();if(fz){PAAR_ALT=null;paarZeigen(box,fz)}else{paarZeigen(box,null);zeigerSetzen(box,null,null)}}});
   /* Klick: nach einem Ziehen verschluckt. Mit dem Finger zeigt das erste
      Tippen das Kästchen, das zweite öffnet. Sonst: der nächste Punkt. */
   tf.addEventListener('click',ev=>{
@@ -1792,7 +1816,9 @@ function zeitBedienung(box){
     const tun=ev.target.closest&&ev.target.closest('[data-tun]');
     const svg=ev.target.closest&&ev.target.closest('svg.spur');
     let t=null,ziel=null;
-    if(svg){const {px,py}=svgPos(svg,ev);t=naechsterPunkt(+svg.dataset.spur,px,py,letzterZeiger==='touch'?28:20);if(t)ziel='p'+svg.dataset.spur+':'+t.cx+':'+t.cy}
+    /* Mit der Maus öffnet der Klick genau den Punkt, den das Kästchen zeigt. */
+    if(svg){const {px,py}=svgPos(svg,ev),nr=+svg.dataset.spur;
+      t=letzterZeiger==='mouse'?haltePunkt(nr,px,py):naechsterPunkt(nr,px,py,letzterZeiger==='touch'?28:20);if(t)ziel='p'+nr+':'+t.cx+':'+t.cy}
     if(letzterZeiger==='touch'){
       /* Ein Ereignis (Marke, eingeklappter Tagespunkt, Gabe an einem Tag)
          ist ein Zeitpunkt, ein Balken ein Zeitraum. */
@@ -1816,10 +1842,11 @@ function zeitBedienung(box){
         }
         ev.stopPropagation();ev.preventDefault();return;
       }
-      if(!ziel){TIPP_FEST=null;tippWeg();if(svg)punktZeigen(box,null,null);ZEIT_FEST=null;paarZeigen(box,null)}
+      if(!ziel){TIPP_FEST=null;tippWeg();if(svg)punktZeigen(box,null,null);
+        if(ev.target.closest&&ev.target.closest('svg.zb')){ZEIT_FEST=null;paarZeigen(box,null)}}
       else TIPP_FEST=null;
     }
-    if(!tun&&!t&&svg&&ZEIT_FEST){ZEIT_FEST=null;paarZeigen(box,null)}
+    if(!tun&&!t&&ZEIT_FEST&&ev.target.closest&&ev.target.closest('svg.zb')){ZEIT_FEST=null;paarZeigen(box,null)}
     if(tun||!t)return;
     ev.stopPropagation();
     if(t.block!=null)return AKTION.zoomTag({x:t.block});
@@ -2622,7 +2649,7 @@ function vKombi(){
      Kopf der Grafik, was die hohlen Punkte bei 0 sind – unabhängig vom
      Ausschnitt, damit er beim Verschieben nicht springt. */
   const ngInfo=serien=>serien.some(se=>se.punkte.some(q=>q.ng))
-    ?`<span class="ngInfo" data-tipp="${esc(tippBau('Unter der Nachweisgrenze','#4F5E53',['Das Labor konnte den Stoff nicht nachweisen. Der Laborwert (z. B. <0,3) steht im Kästchen und im Bericht; in der Grafik steht der Punkt hohl bei 0.']))}">${zeichen('kreis',NEUTRAL,true)}unter der Nachweisgrenze · bei 0</span>`:'';
+    ?`<span class="ngInfo" data-tipp="${esc(tippBau('Unter der Nachweisgrenze','#4F5E53',[],'Das Labor konnte den Stoff nicht nachweisen. Der Laborwert (z. B. <0,3) steht im Kästchen und im Bericht; in der Grafik steht der Punkt hohl bei 0.'))}">${zeichen('kreis',NEUTRAL,true)}unter der Nachweisgrenze · bei 0</span>`:'';
   function blattOptionen(){
     if(!blattParams.length)return '';
     const etagenKnopf=[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]]));

@@ -144,6 +144,13 @@ console.log('\n════ Nitrat unter der Nachweisgrenze: der Dip ═══�
   const s2=(global.document.getElementById('cKb').innerHTML.match(/<svg class="zb spur" data-spur="1"[\s\S]*?<\/svg>/)||[''])[0];
   const marken=[...s2.matchAll(/font-family="JetBrains Mono,monospace">([\d.,’']+)</g)].map(m=>m[1]);
   ok(marken.includes('0')&&!/NaN|Infinity/.test(s2)&&marken.length>=2,'Nur «< 0,3» zu sehen: eine saubere Achse ab 0 ('+marken.join(' ')+')');
+  /* Dasselbe im Blattsaft, wo ein Optimum-Band dazukommt: die Grenze gibt den Massstab */
+  const bl=A.leer(),bp=(id,datum)=>({id,typ:'blattsaft',datum,blattalter:'jung',werte:{Fe:{wert:1,unter:true}},optima:{Fe:[5,20]}});
+  bl.analysen=[bp('f1','2026-07-01'),bp('f2','2026-07-15')];
+  A.setDb(bl);A.setKombi({blatt:['Fe'],wasser:[]});A.vKombi();A.nachRenderRun();
+  const s3=(global.document.getElementById('cKb').innerHTML.match(/<svg class="zb spur" data-spur="0"[\s\S]*?<\/svg>/)||[''])[0];
+  const m3=[...s3.matchAll(/font-family="JetBrains Mono,monospace">([\d.,’']+)</g)].map(m=>parseFloat(m[1]));
+  ok(Math.max(...m3)>=1,'Nur «< 1» mit Optimum 5–20: die Achse reicht mindestens bis zur Grenze, nicht nur bis 0,08 ('+m3.join(' ')+')');
   A.setLinien([]);
 }
 

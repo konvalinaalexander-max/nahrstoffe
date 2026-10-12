@@ -221,8 +221,23 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   const svF=await (await p.$('#cKb svg.spur')).boundingBox();
   await p.mouse.move(svF.x+svF.width*0.4,svF.y+25);await p.waitForTimeout(250);
   ok((await tagLinien('#cKb')).every(l=>l.d==='4 3'),'… und bleibt stehen, wenn die Maus ins Leere fährt');
+  await p.mouse.move(5,5);await p.waitForTimeout(250);
+  ok((await tagLinien('#cKb')).every(l=>l.d==='4 3'&&+l.x>0)&&(await schilder('#cKb')).every(t=>t),'Auch wenn die Maus die Grafiken verlässt, bleibt der Tag samt Schildern stehen');
+  await p.keyboard.press('Escape');await p.waitForTimeout(250);
+  ok((await tagLinien('#cKb')).every(l=>+l.x<0),'Esc gibt ihn frei – auch ohne Fokus in den Grafiken');
+  await p.click('#cKb .tafel .wahl .chip:text-is("Kalium") >> nth=0').catch(()=>{});
+  await p.evaluate(()=>AKTION.imVerlauf({x:String(+new Date('2026-08-18'))}));await p.waitForTimeout(300);
+  await p.mouse.move(svF.x+svF.width*0.4,svF.y+25);await p.waitForTimeout(150);
   await p.mouse.click(svF.x+svF.width*0.4,svF.y+25);await p.waitForTimeout(250);
-  ok((await tagLinien('#cKb')).every(l=>l.d==null),'Ein Klick ins Leere gibt sie frei');
+  ok((await tagLinien('#cKb')).every(l=>l.d==null),'Ein Klick ins Leere gibt ihn ebenfalls frei');
+  /* Nach dem Scrollen erscheint das Kästchen beim nächsten Bewegen wieder */
+  pt=await lageTag('#cKb',0,'2026-08-18');
+  await p.mouse.move(pt.x+6,pt.y-3);await p.waitForTimeout(250);
+  await p.evaluate(()=>window.scrollBy(0,12));await p.waitForTimeout(200);
+  pt=await lageTag('#cKb',0,'2026-08-18');
+  await p.mouse.move(pt.x+5,pt.y-2);await p.waitForTimeout(250);
+  ok(await p.$eval('.tipp',e=>e.classList.contains('an')),'Nach dem Scrollen kommt das Kästchen beim nächsten Bewegen wieder');
+
   await p.mouse.move(5,5);
   }
 
@@ -464,6 +479,32 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     ok(breit<=392,t+': keine seitliche Rollbalken auf der Seite ('+breit+' px)');
   }
   await p.screenshot({path:shots+'/handy.png',fullPage:true});
+
+  console.log('\n── Der Klick öffnet, was das Kästchen zeigt ──');
+  {
+    /* Zwei Punkte am selben Tag, gut 20 px übereinander. Die Maus kommt vom
+       oberen und hält knapp unter der Mitte: gezeigt bleibt der obere (das
+       Zeigen hält ihn), also muss der Klick auch ihn öffnen. */
+    const q=await b.newPage({viewport:{width:1280,height:1000}});
+    q.on('pageerror',e=>stoerung.push('pageerror (Klick): '+e.message));
+    await q.goto('file://'+path);await q.waitForTimeout(900);
+    await q.evaluate(()=>{const a=(id,datum,satz,al,k)=>({id,typ:'blattsaft',datum,satz,blattalter:al,labor:'NCC',werte:{K:{wert:k}},optima:{}});
+      db=leer();db.analysen=[a('o','2026-08-18','A-1','jung',1400),a('u','2026-08-18','B-2','alt',1000),a('v','2026-07-14','C-3','jung',3000),a('w','2026-09-01','D-4','jung',100)];
+      kbBlatt=['K'];tab='kombi';render()});
+    await q.waitForTimeout(400);
+    const zp=await q.evaluate(()=>{const l=ZEIT.treffer[0].filter(t=>Math.abs(t.t-+new Date('2026-08-18'))<1).sort((x,y)=>x.cy-y.cy);
+      const s=document.querySelector('#cKb svg.spur[data-spur="0"]');s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;
+      return {x:r.left+l[0].cx*k,y0:r.top+l[0].cy*k,y1:r.top+l[1].cy*k,d:(l[1].cy-l[0].cy)}});
+    ok(zp.d>10&&zp.d<38,'Zwei Punkte am 18.08. liegen '+zp.d.toFixed(0)+' px übereinander');
+    await q.mouse.move(zp.x,zp.y0);await q.waitForTimeout(200);
+    const yM=zp.y0+(zp.y1-zp.y0)*0.55;
+    await q.mouse.move(zp.x,yM);await q.waitForTimeout(250);
+    const gezeigt=await q.$eval('.tipp',e=>e.innerText);
+    await q.mouse.click(zp.x,yM);await q.waitForTimeout(350);
+    const titel=await q.$eval('#dlgTitel',e=>e.textContent);
+    ok(/Satz: A-1/.test(gezeigt)&&/Satz A-1/.test(titel),'Knapp näher am unteren Punkt, das Kästchen zeigt noch den oberen – und der Klick öffnet ihn ('+titel+')');
+    await q.close();
+  }
 
   console.log('\n── Handy mit Fingern ──');
   {

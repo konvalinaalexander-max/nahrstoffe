@@ -435,6 +435,29 @@ console.log('\n════ Aus der Prüfung: Achse, Rundung, Ziehen, gleiche Na
   A.AKTION.zeitVorgabe({v:'alles'});delete $('cTank').clientWidth;
 }
 
+console.log('\n════ Was zusammengehört: Schlüssel, Fenster, Datum ════');
+{
+  /* Tank, ganzer Zeitraum (je Tag ein Punkt): am 10.07. zwei pH-Werte, aber
+     nur ein EC-Wert – beide gehören zum selben Tagesfenster. */
+  const d=A.leer();
+  for(let i=0;i<120;i++){const t=new Date(Date.UTC(2026,4,1)+i*864e5).toISOString().slice(0,10);d.messungen.push({id:'t'+i,datum:t,zeit:null,stelle:'Reservoir vorne',ph:6.2,ec:1.3,quelle:'excel'})}
+  d.messungen.push({id:'extra',datum:'2026-07-10',zeit:null,stelle:'Reservoir vorne',ph:6.6,ec:null,quelle:'excel'});
+  A.setDb(d);A.setTab('tank');A.setZeit(null,null);A.vTank();A.nachRenderRun();
+  const Z=A.getZeit().ZEIT,tag=Math.floor(+new Date('2026-07-10')/864e5);
+  ok(Z.stufe==='tag','Ganzer Zeitraum: je Tag ein Punkt');
+  const ph=Z.treffer[0].find(t=>t.tag===tag),ec=Z.treffer[1].find(t=>t.tag===tag);
+  ok(ph&&ph.block!=null&&ec&&ec.block==null&&ph.k===ec.k&&Z.index.get(ph.k).length===2,'Verdichteter pH und einzelner EC desselben Tages haben denselben Schlüssel ('+(ph&&ph.k)+') – sie werden zusammen beringt');
+  ok(!/\d\d:\d\d/.test(A.paarDatum({k:'u'+tag,x:+new Date('2026-07-10')+6*36e5}))&&/^\w\w 10\.07\.$/.test(A.paarDatum({k:'t'+tag,x:+new Date('2026-07-10')})),'Ohne erfasste Uhrzeit nennt das Schild nur den Tag – keine erfundene Uhrzeit');
+  /* Eine Gabe an nur einem Tag gehört zu den Proben dieses Tages */
+  const k=A.leer();
+  k.analysen=[{id:'b1',typ:'blattsaft',datum:'2026-08-18',blattalter:'jung',werte:{K:{wert:4000}},optima:{}},{id:'b2',typ:'blattsaft',datum:'2026-07-14',blattalter:'jung',werte:{K:{wert:4200}},optima:{}}];
+  A.setDb(k);A.setKmAus(new Set());
+  plus('neu','2026-08-18','tag','','','Netz geschlossen');
+  A.setTab('kombi');A.setZeit(null,null);A.setKombi({blatt:['K'],wasser:[]});A.vKombi();A.nachRenderRun();
+  const Zk=A.getZeit().ZEIT,tk=Math.floor(+new Date('2026-08-18')/864e5);
+  ok((Zk.kmTage.get(tk)||[]).some(e=>e.k==='n|Netz geschlossen'),'Eine Massnahme an einem Tag steht bei den Proben dieses Tages – sie wird beim Zeigen beringt');
+}
+
 console.log('\n════ Keine Spur der alten Auswertung ════');
 {
   const src=require('fs').readFileSync(__dirname+'/app.js','utf8');
