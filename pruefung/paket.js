@@ -98,12 +98,28 @@ const kmZeilen=(p,box)=>p.$$eval(`${box} .tafel.km .kmZ`,zs=>zs.map(z=>({k:z.dat
   let tt=await tipps();
   ok(tt.some(x=>/Uhrzeit/.test(x)&&/09:00/.test(x)),'Jeder Punkt vom 9.9. nennt seine Uhrzeit');
   ok(tt.some(x=>/Beleg/.test(x)&&/Bericht/.test(x)),'Jeder Punkt nennt seinen Beleg');
+  /* Zeigen auf eine Messung mit Uhrzeit: dieselbe Minute in pH, EC und O₂ */
+  const mp=await p.evaluate(()=>{const l=ZEIT.treffer[0],e=l.find(x=>x.k&&x.k[0]==='m'&&ZEIT.index.get(x.k).length>=3);if(!e)return null;
+    const s=document.querySelector('#cTank svg.spur[data-spur="0"]');s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;
+    return {x:r.left+e.cx*k,y:r.top+e.cy*k,n:ZEIT.index.get(e.k).length}});
+  await p.mouse.move(mp.x+3,mp.y+2);await p.waitForTimeout(300);
+  const ringe=await p.$$eval('#cTank svg.spur .paare',gs=>gs.map(g=>g.children.length));
+  ok(ringe.reduce((a,b)=>a+b,0)===mp.n-1&&ringe.slice(1).some(n=>n>0)&&(await p.$$eval('#cTank .zeiger',zs=>zs.every(z=>z.getAttribute('stroke-dasharray')==='4 3'))),
+     'Zeigen auf eine pH-Messung: die Werte derselben Messung (gleiche Minute) in EC und O₂ sind beringt ('+ringe.join(' / ')+'), die Linie geht durch alle Grafiken');
+  await p.mouse.move(5,5);await p.waitForTimeout(150);
   /* Etwas weiter draussen: halbe Tage – früher als bisher mehr Punkte */
   await p.click('#cTank [data-tun="zoomAus"]');await p.waitForTimeout(250);
   await p.click('#cTank [data-tun="zoomAus"]');await p.waitForTimeout(250);
   const stufe=await p.evaluate(()=>ZEIT.stufe),tageJetzt=await p.evaluate(()=>Math.round((ZEIT.x1-ZEIT.x0)/864e5));
   ok(stufe==='halb'||stufe==='einzeln','Bei '+tageJetzt+' Tagen Ausschnitt: '+(stufe==='halb'?'je halber Tag ein Punkt':'jede Messung')+' – nicht mehr nur ein Punkt je Tag');
   await p.click('#cTank [data-tun="zeitVorgabe"][data-v="alles"]');await p.waitForTimeout(300);
+  /* Ein verdichteter Punkt hat keinen einzelnen Zeitpunkt: ein Band über sein Fenster */
+  const bp=await p.evaluate(()=>{const e=ZEIT.treffer[0].find(x=>x.block!=null);const s=document.querySelector('#cTank svg.spur[data-spur="0"]');s.scrollIntoView({block:'center'});
+    const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;return {x:r.left+e.cx*k,y:r.top+e.cy*k}});
+  await p.mouse.move(bp.x,bp.y);await p.waitForTimeout(300);
+  const fen=await p.$$eval('#cTank .fenster',fs=>fs.filter(f=>+f.getAttribute('width')>0).length),alle=await p.$$eval('#cTank svg.zb',s=>s.length);
+  ok(fen===alle&&(await p.$$eval('#cTank .zeiger',zs=>zs.every(z=>+z.getAttribute('x1')<0))),'Zeigen auf einen Tagespunkt: ein gestricheltes Band über den ganzen Tag, in allen Grafiken und Zeilen ('+fen+')');
+  await p.mouse.move(5,5);await p.waitForTimeout(150);
   ok(await klickBlock('21.07.2026'),'Den 21.07. anklicken');
   tt=await tipps();
   ok(tt.some(x=>/nicht erfasst/.test(x)&&/Zeile 22/.test(x)),'Mehrere Messungen ohne Uhrzeit (21.07.) sagen, dass sie fehlt');

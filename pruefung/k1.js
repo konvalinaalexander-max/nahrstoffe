@@ -107,7 +107,7 @@ console.log('\n════ Blattsaft & Giesswasser: zwei Fenster ════')
   ok(!/undefined|NaN|\[object Object\]/.test(h+svg),'Rendert sauber');
   ok(/data-tun="kbStoff" data-k="K"/.test(svg)&&/data-tun="kbWass" data-k="gw_K"/.test(svg),'Jede Grafik hat ihre Auswahl in der eigenen Kopfzeile – zum Anklicken');
   ok(svg.indexOf('data-tun="kbStoff"')<svg.indexOf('>Giesswasser<')&&svg.indexOf('data-tun="kbWass"')>svg.indexOf('>Giesswasser<'),'Die Nährstoffe des Blattsafts über seiner Grafik, die des Wassers über der seinen');
-  ok(!/data-k="Mo"/.test(svg),'Zur Wahl steht nur, was je gemessen wurde (Molybdän lag immer unter der Nachweisgrenze)');
+  ok(/data-k="Mo" title="bisher immer unter der Nachweisgrenze"><span class="dot hohl"/.test(svg),'Auch Molybdän (immer unter der Nachweisgrenze) steht zur Wahl – mit hohlem Punkt');
   ok(/data-tun="kbEtage"/.test(svg)&&/data-tun="kbSkala"/.test(svg),'Blatt und Anzeige in der Kopfzeile des Blattsafts');
   ok(/data-aend="linienUm" data-ziel="blatt"/.test(svg)&&/data-aend="linienUm" data-ziel="wasser"/.test(svg)&&
      svg.indexOf('data-ziel="blatt"')<svg.indexOf('>Giesswasser<')&&svg.indexOf('data-ziel="wasser"')>svg.indexOf('>Giesswasser<'),'«Punkte verbinden» bei den Nährstoffen – je Grafik ein eigener Schalter');

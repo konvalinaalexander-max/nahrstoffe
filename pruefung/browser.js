@@ -59,6 +59,8 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   const zeilen=await p.$$eval('#view table tbody tr',es=>es.map(e=>e.innerText.replace(/\s+/g,' ')));
   ok(zeilen.length===8,'Darunter alle Analysen – jung und alt eines Berichts in einer Zeile ('+zeilen.length+' Berichte aus 10 Proben)');
   ok(/01\.09\.2026/.test(zeilen[0]),'Neueste zuerst');
+  const zeilenDatum=await p.$$eval('#view table tbody tr',es=>es.map(e=>e.querySelector('td').textContent));
+  ok((await p.$$eval('#view table tbody tr.tagNeu',es=>es.length))===new Set(zeilenDatum).size-1,'Ein Strich trennt die Tage – was am selben Tag kam, steht beisammen');
   await p.click('#view .seg button:has-text("Giesswasser")');await p.waitForTimeout(200);
   ok((await p.$$eval('#view table tbody tr',es=>es.length))===5,'Filter «Giesswasser»: fünf Proben');
   await p.click('#view .seg button:has-text("alle")');await p.waitForTimeout(200);
@@ -160,6 +162,69 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   await p.click('#dlgFoot button:text-is("Schliessen")');
   await p.mouse.move(5,5);await p.waitForTimeout(150);
   ok(!(await p.$eval('.tipp',e=>e.classList.contains('an'))),'Maus weg: das Kästchen verschwindet');
+
+  console.log('\n── Was zusammengehört: die Tageslinie ──');
+  {
+  /* Wo ein Punkt eines bestimmten Tages liegt */
+  const lageTag=(box,nr,datum,bed)=>p.evaluate(([box,nr,t,bed])=>{const l=ZEIT.treffer[nr],f=bed?new Function('e','return '+bed):()=>true;
+    const e=l.find(x=>Math.abs(x.t-t)<1&&f(x));if(!e)return null;
+    const s=document.querySelector(`${box} svg.spur[data-spur="${nr}"]`);s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;
+    return {x:r.left+e.cx*k,y:r.top+e.cy*k}},[box,nr,+new Date(datum),bed||null]);
+  const tagLinien=box=>p.$$eval(box+' .zeiger',zs=>zs.map(z=>({x:z.getAttribute('x1'),d:z.getAttribute('stroke-dasharray'),o:z.getAttribute('opacity')})));
+  const schilder=box=>p.$$eval(box+' svg.spur .zeigerDatum',gs=>gs.map(g=>g.getAttribute('visibility')==='visible'?g.textContent:''));
+  const paare=box=>p.$$eval(box+' svg.spur .paare',gs=>gs.map(g=>g.children.length));
+  await p.mouse.move(5,5);
+  let pt=await lageTag('#cKb',0,'2026-08-18');
+  await p.mouse.move(pt.x+6,pt.y-3);await p.waitForTimeout(250);
+  let li=await tagLinien('#cKb');
+  ok(li.length>=4&&li.every(l=>l.x===li[0].x&&+l.x>0&&l.d==='4 3'),'Zeigen auf Blattsaft 18.08.: eine gestrichelte Linie an diesem Tag – in beiden Grafiken und durch das Kulturmanagement ('+li.length+')');
+  let sch=await schilder('#cKb');
+  ok(sch.length===2&&sch.every(t=>/^Di 18\.08\.$/.test(t)),'In jeder Grafik ein Datumsschild: '+sch.join(' | '));
+  ok((await paare('#cKb'))[1]>=1,'Im Giesswasser ist der Punkt desselben Tages beringt – er gehört dazu');
+  await p.mouse.move(pt.x+23,pt.y-3);await p.waitForTimeout(250);
+  ok((await tagLinien('#cKb')).every(l=>l.d==='4 3'),'Ein paar Pixel weiter (23 px) bleibt die Linie eingerastet – nichts springt');
+  pt=await lageTag('#cKb',0,'2026-07-14');
+  await p.mouse.move(pt.x+5,pt.y+3);await p.waitForTimeout(250);
+  sch=await schilder('#cKb');
+  ok(/^Di 14\.07\.$/.test(sch[0])&&/^Di 14\.07\. · keine Probe$/.test(sch[1])&&(await paare('#cKb'))[1]===0,'Blattsaft 14.07.: im Giesswasser «Di 14.07. · keine Probe», kein Ring');
+  const sv0=await (await p.$('#cKb svg.spur')).boundingBox();
+  await p.mouse.move(sv0.x+sv0.width*0.42,sv0.y+30);await p.waitForTimeout(250);
+  li=await tagLinien('#cKb');
+  ok(li.every(l=>l.d==null&&l.o==='.3')&&(await paare('#cKb')).every(n=>n===0),'Ohne Punkt in der Nähe: die blasse, durchgezogene Linie – keine Ringe');
+  /* Ein Ereignis im Kulturmanagement ist ein Zeitpunkt */
+  const kt=await (await p.$('#cKb circle.kmTag')).boundingBox();
+  await p.mouse.move(kt.x+kt.width/2,kt.y+kt.height/2);await p.waitForTimeout(250);
+  li=await tagLinien('#cKb');sch=await schilder('#cKb');
+  ok(li.every(l=>l.d==='4 3'&&l.x===li[0].x)&&sch.every(t=>t)&&(await p.$$eval('#cKb .kmBand',rs=>rs.every(r=>+r.getAttribute('width')===0))),'Zeigen auf ein Ereignis: dieselbe Tageslinie, Schilder in jeder Grafik ('+sch.join(' | ')+')');
+  await p.mouse.move(5,5);await p.waitForTimeout(150);
+  /* Nitrat unter der Nachweisgrenze */
+  await p.click('#cKb .tafel .wahl .chip:text-is("Nitrat") >> nth=-1');await p.waitForTimeout(350);
+  const ng=await p.evaluate(()=>{for(const [nr,l] of ZEIT.treffer.entries()){const e=l.find(x=>x.ng);if(e){const s=document.querySelector(`#cKb svg.spur[data-spur="${nr}"]`);s.scrollIntoView({block:'center'});const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;
+    const achse=+s.querySelector('line[stroke="#B9C4B4"]').getAttribute('y1');return {x:r.left+e.cx*k,y:r.top+e.cy*k,cy:e.cy,achse}}}return null});
+  ok(!!ng&&Math.abs(ng.cy-ng.achse)<0.01,'Nitrat «< 0,3» steht auf der x-Achse bei 0');
+  await p.mouse.move(ng.x+4,ng.y-4);await p.waitForTimeout(250);
+  const ngT=await p.$eval('.tipp',e=>e.classList.contains('an')?e.innerText:'');
+  ok(/Messwert: < 0[.,]\d/.test(ngT)&&/hohl bei 0/.test(ngT),'Das Kästchen nennt den Laborwert «< …» – und dass der Punkt hohl bei 0 steht');
+  ok(/unter der Nachweisgrenze · bei 0/.test(await p.$eval('#cKb',e=>e.innerText)),'Der Kopf des Giesswassers erklärt die hohlen Punkte');
+  await p.click('#cKb .tafel .wahl .chip:text-is("Nitrat") >> nth=-1');await p.waitForTimeout(350);
+  await p.mouse.move(5,5);
+  /* Der Bericht: was am selben Tag beprobt wurde, und zurück in die Grafik */
+  pt=await lageTag('#cKb',0,'2026-08-18');
+  await p.mouse.click(pt.x+6,pt.y-3);await p.waitForTimeout(350);
+  const amTag=await p.$eval('#dlgBody .amTag',e=>e.innerText.replace(/\s+/g,' '));
+  ok(/Am selben Tag:/.test(amTag)&&/Giesswasser · Reservoir Vorne/.test(amTag)&&/Im Verlauf zeigen/.test(amTag),'Im Bericht: «Am selben Tag: Giesswasser · Reservoir Vorne» und «Im Verlauf zeigen»');
+  await p.click('#dlgBody .amTag button:has-text("Giesswasser")');await p.waitForTimeout(350);
+  ok(/^Giesswasser · Reservoir Vorne · 18\.08\.2026$/.test(await p.$eval('#dlgTitel',e=>e.textContent)),'Ein Klick öffnet die Wasserprobe desselben Tages');
+  await p.click('#dlgBody [data-tun="imVerlauf"]');await p.waitForTimeout(400);
+  li=await tagLinien('#cKb');
+  ok(!(await p.$eval('#dlg',d=>d.open))&&li.every(l=>l.d==='4 3'&&l.x===li[0].x),'«Im Verlauf zeigen»: die Tageslinie steht auf dem 18.08.');
+  const svF=await (await p.$('#cKb svg.spur')).boundingBox();
+  await p.mouse.move(svF.x+svF.width*0.4,svF.y+25);await p.waitForTimeout(250);
+  ok((await tagLinien('#cKb')).every(l=>l.d==='4 3'),'… und bleibt stehen, wenn die Maus ins Leere fährt');
+  await p.mouse.click(svF.x+svF.width*0.4,svF.y+25);await p.waitForTimeout(250);
+  ok((await tagLinien('#cKb')).every(l=>l.d==null),'Ein Klick ins Leere gibt sie frei');
+  await p.mouse.move(5,5);
+  }
 
   console.log('\n── Zoomen ──');
   const zeitraum=()=>p.$eval('#cKb .zzText',e=>e.textContent);
@@ -288,6 +353,18 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   ok(/^Schattierung \| seit 15\.09\./.test(await zeileText('n|Schattierung')),'Eine neue Massnahme steht sofort da: Name links, im Balken nur das Datum');
   await p.$eval('#cKb .kmZ[data-k="n|Schattierung"] g.spb',g=>g.dispatchEvent(new MouseEvent('click',{bubbles:true})));await p.waitForTimeout(300);
   ok(await p.$eval('#dlgTitel',e=>e.textContent)==='Schattierung','Klick auf den Balken öffnet sie zum Ändern');
+  await p.click('#dlgFoot button:text-is("Abbrechen")').catch(()=>p.evaluate(()=>el('dlg').close()));await p.waitForTimeout(200);
+  /* Ein Balken ist ein Zeitraum: Band mit gestrichelten Kanten über alles */
+  const sb=await (await p.$('#cKb .kmZ[data-k="n|Schattierung"] g.spb rect')).boundingBox();
+  await p.mouse.move(sb.x+sb.width/2,sb.y+sb.height/2);await p.waitForTimeout(250);
+  const band=await p.evaluate(()=>({b:[...document.querySelectorAll('#cKb .kmBand')].filter(r=>+r.getAttribute('width')>0).length,
+    km:[...document.querySelectorAll('#cKb .kmZ .kmBand')].filter(r=>+r.getAttribute('width')>0).length,
+    l:[...document.querySelectorAll('#cKb .kmRand.l')].filter(r=>+r.getAttribute('x1')>0).length,
+    r:[...document.querySelectorAll('#cKb .kmRand.r')].filter(r=>+r.getAttribute('x1')>0).length,
+    z:[...document.querySelectorAll('#cKb .zeiger')].filter(z=>+z.getAttribute('x1')>0).length}));
+  ok(band.b>2&&band.km>0&&band.l===band.b&&band.r===0&&band.z===0,'Zeigen auf einen laufenden Balken: sein Zeitraum als Band in allen Grafiken und Zeilen, links gestrichelt begrenzt, rechts offen (läuft noch) – keine Tageslinie');
+  await p.mouse.move(5,5);await p.waitForTimeout(150);
+  await p.$eval('#cKb .kmZ[data-k="n|Schattierung"] g.spb',g=>g.dispatchEvent(new MouseEvent('click',{bubbles:true})));await p.waitForTimeout(300);
   await p.click('#spLaeuft');await p.fill('#spBis','2026-09-30');
   await p.click('#dlgFoot button:text-is("Speichern")');await p.waitForTimeout(400);
   ok(/15\.09\.–30\.09\./.test(await zeileText('n|Schattierung')),'Ende gesetzt ('+await zeileText('n|Schattierung')+')');
@@ -425,6 +502,31 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     const nm=await (await h.$('#cKb .kmZ .kmTitel')).boundingBox();
     await h.touchscreen.tap(nm.x+nm.width/2,nm.y+nm.height/2);await h.waitForTimeout(400);
     ok(await h.$eval('#dlg',d=>d.open)&&await h.$eval('#dlgTitel',e=>e.textContent)==='Kulturmanagement · Zeilen','Ein Tippen auf den Namen einer Zeile öffnet «Zeilen verwalten»');
+    await h.evaluate(()=>el('dlg').close());await h.waitForTimeout(200);
+    /* Erstes Tippen zeigt den Tag in allen Grafiken, das zweite öffnet */
+    await h.evaluate(()=>AKTION.zeitVorgabe({v:'alles'}));await h.waitForTimeout(250);
+    const hp=await h.evaluate(()=>{const e=ZEIT.treffer[0].find(x=>Math.abs(x.t-+new Date('2026-08-18'))<1);const s=document.querySelector('#cKb svg.spur[data-spur="0"]');s.scrollIntoView({block:'center'});
+      const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;return {x:r.left+e.cx*k,y:r.top+e.cy*k}});
+    await h.waitForTimeout(200);
+    await h.touchscreen.tap(hp.x+4,hp.y);await h.waitForTimeout(350);
+    const hl=await h.$$eval('#cKb .zeiger',zs=>zs.map(z=>z.getAttribute('stroke-dasharray')));
+    ok(!(await h.$eval('#dlg',d=>d.open))&&hl.every(d=>d==='4 3')&&await h.$eval('.tipp',e=>e.classList.contains('an')),'Am Handy: das erste Tippen zeigt die Tageslinie in allen Grafiken und das Kästchen – es öffnet nichts');
+    ok(/18\.08\./.test(await h.$eval('#ansage',e=>e.textContent)),'Für Bildschirmleser: was es an dem Tag gibt ('+await h.$eval('#ansage',e=>e.textContent)+')');
+    await h.evaluate(()=>window.scrollBy(0,80));await h.waitForTimeout(250);
+    ok(!(await h.$eval('.tipp',e=>e.classList.contains('an')))&&(await h.$$eval('#cKb .zeiger',zs=>zs.every(z=>z.getAttribute('stroke-dasharray')==='4 3'))),'Beim Scrollen geht das Kästchen weg – die Tageslinie bleibt, man sieht sie auch in der anderen Grafik');
+    const hp2=await h.evaluate(()=>{const e=ZEIT.treffer[0].find(x=>Math.abs(x.t-+new Date('2026-08-18'))<1);const s=document.querySelector('#cKb svg.spur[data-spur="0"]');
+      const r=s.getBoundingClientRect(),k=r.width/ZEIT.W;return {x:r.left+e.cx*k,y:r.top+e.cy*k}});
+    await h.touchscreen.tap(hp2.x+4,hp2.y);await h.waitForTimeout(300);
+    await h.touchscreen.tap(hp2.x+4,hp2.y);await h.waitForTimeout(400);
+    ok(await h.$eval('#dlg',d=>d.open)&&/^Blattsaft/.test(await h.$eval('#dlgTitel',e=>e.textContent)),'Nochmals tippen öffnet den Bericht');
+    await h.evaluate(()=>el('dlg').close());await h.waitForTimeout(200);
+    /* Der eingeklappte Tagespunkt: erst zeigen, dann aufklappen */
+    await h.$eval('#cKb circle.kmTag',e=>e.scrollIntoView({block:'center'}));await h.waitForTimeout(200);
+    const kp=await (await h.$('#cKb circle.kmTag')).boundingBox();
+    await h.touchscreen.tap(kp.x+kp.width/2,kp.y+kp.height/2);await h.waitForTimeout(350);
+    ok(!!(await h.$('#cKb circle.kmTag'))&&(await h.$$eval('#cKb .zeiger',zs=>zs.every(z=>z.getAttribute('stroke-dasharray')==='4 3'))),'Ein Ereignis-Punkt: das erste Tippen zeigt seinen Tag, klappt aber nicht auf');
+    await h.touchscreen.tap(kp.x+kp.width/2,kp.y+kp.height/2);await h.waitForTimeout(350);
+    ok(/▾ Ereignisse/.test(await h.$eval('#cKb .tafel.km',e=>e.innerText)),'Das zweite Tippen klappt die Ereignisse auf');
     await ctx.close();
   }
 

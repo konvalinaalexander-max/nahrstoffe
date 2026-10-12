@@ -1,6 +1,6 @@
 # Konzept: die Anwendung geht online
 
-Stand 26. September 2026, Entscheide bis 6. Oktober (§13). Die Abschnitte 1–9
+Stand 26. September 2026, Entscheide bis 12. Oktober (§14). Die Abschnitte 1–9
 beschreiben die damals volle Fassung; was am 5. Oktober weggefallen ist
 (Planer, Satzpaare, Logbuch, Reiter Giesswasser und Nährstoffe, «Wesentlich»),
 steht in §11.
@@ -416,3 +416,26 @@ Was sich am 5. Oktober abends (§12) geändert hat, gilt weiter – mit diesen
     12–24 Uhr), erst unter 14 Bildpunkten je Tag einer je Tag. Bei üblicher
     Breite: bis gut 5 Wochen jede Messung (vorher 4), bis gut 2½ Monate
     halbe Tage. Bei 3 Tagen und weniger zeigt die Achse Stunden.
+
+## 14 · Entschieden (12. Oktober): Nachweisgrenze und was zusammengehört
+
+33. **Unter der Nachweisgrenze steht in den Grafiken bei 0.** Ein Wert wie
+    «Nitrat < 0,3» ist ein hohler Punkt auf der x-Achse; «Punkte verbinden»
+    läuft durch ihn hindurch – aus 2 → < 0,3 → 3 wird 2 → 0 → 3, der
+    Einbruch ist zu sehen. Im Bestand, im Bericht und im Kästchen bleibt der
+    Laborwert «< 0,3» (gespeichert wird nie eine 0). Stoffe, die bisher immer
+    unter der Grenze lagen, stehen zur Wahl, mit hohlem Punkt im Knopf.
+    Damit ist der Grundsatz «keine Zahl aus einer Nachweisgrenze» für die
+    Grafiken auf Wunsch des Nutzers gelockert – sonst nirgends.
+34. **Die Tageslinie.** Zeigt man auf einen Punkt (oder ein Ereignis im
+    Kulturmanagement), steht an seinem Tag eine gestrichelte Linie über die
+    ganze Höhe jeder Grafik und durch das Kulturmanagement. Punkte desselben
+    Zeitpunkts sind fein beringt; jede Grafik hat ein Datumsschild, und wo es
+    an dem Tag keine Probe gibt, steht «keine Probe». Keine Toleranz: was an
+    einem anderen Tag beprobt wurde, gehört nicht dazu – das zu paaren wäre
+    eine Deutung.
+35. **Am Handy** zeigt das erste Tippen den Tag (Linie, Ringe, Kästchen), das
+    zweite öffnet; die Linie bleibt beim Scrollen stehen, damit man sie in
+    der anderen Grafik sieht.
+36. **Im Bericht** stehen die anderen Berichte desselben Tages und «Im Verlauf
+    zeigen»; in den Listen trennt ein Strich die Tage.

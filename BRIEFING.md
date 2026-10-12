@@ -100,6 +100,24 @@ Schwellen, Kernnährstoffe, «Wesentlich». **Ihre Daten bleiben im Bestand**
   Punkt in 20 px (Finger 28 px) bekommt einen Ring und das Kästchen. Klick
   öffnet den Bericht bzw. die Messung. Am Handy zeigt das erste Tippen,
   das zweite öffnet (`TIPP_FEST`, verschwindet mit dem Kästchen).
+- **Was zusammengehört – die Tageslinie** (`paarZeigen`): Rastet das Zeigen
+  auf einem Punkt oder Ereignis ein, steht eine **gestrichelte Linie** an
+  dessen Zeitpunkt in jeder Grafik von oben bis unten und durch alle Zeilen
+  des Kulturmanagements; ohne Punkt in der Nähe bleibt die blasse,
+  durchgezogene Ablesehilfe. Was zum selben Zeitpunkt gehört, bekommt einen
+  feinen Ring (`paarSchluessel`: Laborproben am selben Kalendertag, am Tank
+  dieselbe Minute, ohne Uhrzeit nur Tageswerte ohne Uhrzeit, verdichtet
+  dasselbe Fenster – keine Toleranz). Jede Grafik zeigt ein Datumsschild;
+  gibt es dort an dem Tag nichts, steht es hell mit «· keine Probe» (bzw.
+  «· keine Messung», «· kein Wert»). Ein verdichteter Tankpunkt zeigt statt
+  der Linie ein Band über sein Fenster. Ereignisse im Kulturmanagement sind
+  Zeitpunkte (dieselbe Linie), Balken Zeiträume (ruhiges Band mit
+  gestrichelten Kanten, rechts offen, solange er läuft). Hysterese 20/26 px,
+  ein Zeichnen je Bild. Festgehalten (`ZEIT_FEST`) wird am Finger beim
+  ersten Tippen und über «Im Verlauf zeigen» im Bericht; mit der Maus bleibt
+  das, bis man auf etwas anderes zeigt, ins Leere klickt oder Esc drückt.
+- **Im Bericht** steht «Am selben Tag: …» (die anderen Berichte desselben
+  Datums) und «Im Verlauf zeigen»; in den Listen trennt ein Strich die Tage.
 - **Datumsachse ruhig:** ausgedünnt wird nach der Zeit selbst (`m.o`), nicht
   nach dem Platz in der Liste – beim Verschieben wechseln die Beschriftungen
   nicht, und bei Stunden bleibt Mitternacht mit dem Datum immer stehen.
@@ -132,8 +150,10 @@ Was im Parser teuer gelernt ist und bleiben muss:
 - **Der Wasserbericht ist eine gedrehte Tabelle** – `parseGiess` arbeitet mit
   Koordinaten (`pdfPunkte`): y = Parameter, x = Spalte. Sammelberichte werden
   in einzelne Proben zerlegt, über die Probennummer entdoppelt.
-- **Nachweisgrenzen** (`<0,05`) sind `{wert, unter:true}` – angezeigt mit «<»,
-  nie als Punkt gezeichnet. **`<0,50 - <0,50`** ist eine Nachweisgrenze, keine
+- **Nachweisgrenzen** (`<0,05`) sind `{wert, unter:true}` – im Bestand und im
+  Bericht mit «<». In den Grafiken stehen sie seit dem 12. Oktober (Entscheid
+  des Nutzers) als **hohle Marke bei 0** auf der x-Achse, damit «Punkte
+  verbinden» einen Einbruch zeigt; gespeichert wird nie eine 0. **`<0,50 - <0,50`** ist eine Nachweisgrenze, keine
   Spanne.
 - **Spaltenmarker ¹ ²** stehen im NCC-PDF auf eigenen Zeilen; `putz()` leert
   nur Zeilen, die ausschliesslich aus einem Marker bestehen.
@@ -322,7 +342,9 @@ Muster, die durchgehalten werden müssen:
 6. **Deutsch, Schweizer Rechtschreibung (ss).** Einzige Ausnahme im Code
    kommentiert: der Laborbericht schreibt «Gießwasser».
 7. **Nichts erfinden.** Keine geratene Uhrzeit, keine geschätzte Menge, keine
-   Zahl aus einer Nachweisgrenze. Annahmen tragen das Wort «Annahme».
+   Zahl aus einer Nachweisgrenze – einzige Ausnahme auf Entscheid des
+   Nutzers: in den Grafiken steht «<x» hohl bei 0. Annahmen tragen das Wort
+   «Annahme».
 8. **Frag, bevor du das Datenmodell umbaust.** Neue Felder freiwillig, alte
    bleiben erhalten; ein Schemawechsel braucht einen Migrationspfad.
 

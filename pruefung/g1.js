@@ -96,11 +96,14 @@ console.log('\n════ Giesswasser im Reiter Blattsaft & Giesswasser ══
   const entziffern=t=>t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
   /* Die Kästchen hängen nicht mehr an unsichtbaren Kreisen, sondern an der
      Trefferliste, in der Zeigen den nächsten Punkt sucht. */
-  const tipps=A.getZeit().ZEIT.treffer.flat()
-    .map(t=>entziffern(t.tipp).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim());
+  const treffer=A.getZeit().ZEIT.treffer.flat();
+  const tipps=treffer.map(t=>t.tipp.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()).map(entziffern);
   tipps.slice(0,3).forEach(t=>console.log('   ',t));
-  const messbar=alle.reduce((n,a)=>n+['gw_HCO3','gw_NO3','gw_Fe'].filter(k=>a.werte[k]&&!a.werte[k].unter).length,0);
-  ok(tipps.length===messbar,'Jeder gemessene Wert ist ein Punkt ('+tipps.length+' von '+messbar+'; unter der Nachweisgrenze keiner)');
+  const eintraege=alle.reduce((n,a)=>n+['gw_HCO3','gw_NO3','gw_Fe'].filter(k=>a.werte[k]&&(a.werte[k].wert!=null||a.werte[k].unter)).length,0);
+  const ngZahl=alle.reduce((n,a)=>n+['gw_HCO3','gw_NO3','gw_Fe'].filter(k=>a.werte[k]&&a.werte[k].unter).length,0);
+  ok(tipps.length===eintraege&&treffer.filter(t=>t.ng).length===ngZahl&&ngZahl>0,'Jeder Eintrag ist ein Punkt – auch «unter der Nachweisgrenze» ('+tipps.length+' Punkte, davon '+ngZahl+' unter der Grenze)');
+  const ngTipp=tipps.find((t,i)=>treffer[i].ng)||'';
+  ok(/Messwert: < 0[.,]\d/.test(ngTipp)&&/Unter der Nachweisgrenze des Labors – in der Grafik hohl bei 0/.test(ngTipp)&&!/entspricht/.test(ngTipp),'Das Kästchen nennt den Laborwert «< …» und dass er hohl bei 0 steht – ohne mg/l ('+ngTipp.slice(0,70)+' …)');
   ok(tipps.some(t=>/Stelle: Vorne, mitt H2O2/.test(t)),'Das Kästchen nennt die Entnahmestelle');
   ok(tipps.some(t=>/entspricht: [\d.]+ mg\/l/.test(t)),'und den Wert in mg/l');
   const amTag=tipps.filter(t=>/06\.08\.2026/.test(t)&&/Hydrogencarbonat/.test(t));
@@ -111,6 +114,37 @@ console.log('\n════ Giesswasser im Reiter Blattsaft & Giesswasser ══
   console.log('  Spuren:',titel.join(' | '));
   ok(titel.includes('Eisen')&&titel.some(t=>/Hydrogencarbonat/.test(t)),'Eisen in µmol/l bekommt eine eigene Spur neben den mmol/l-Werten');
   ok(!/Richtwert|Annahme|über dem/.test(h+svg),'Keine Richtwerte, keine Bewertung');
+  ok(/unter der Nachweisgrenze · bei 0/.test(svg),'Der Kopf des Giesswassers sagt, was die hohlen Punkte bei 0 sind');
+}
+
+console.log('\n════ Nitrat unter der Nachweisgrenze: der Dip ════');
+{
+  /* Tag 1: 2 · Tag 2: < 0,3 · Tag 3: 3 – verbunden muss die Linie durch 0 gehen. */
+  const d=A.leer(),probe=(id,datum,w)=>({id,typ:'giesswasser',datum,stelle:'Reservoir Vorne',labor:'NCC',werte:{gw_NO3:w},optima:{}});
+  d.analysen=[probe('n1','2026-07-01',{wert:2}),probe('n2','2026-07-15',{wert:0.3,unter:true}),probe('n3','2026-07-29',{wert:3})];
+  A.setDb(d);A.setZeit(null,null);
+  A.setKombi({blatt:['K'],wasser:['gw_NO3']});A.setLinien(['wasser']);
+  A.vKombi();A.nachRenderRun();
+  const svg=global.document.getElementById('cKb').innerHTML;
+  const spur=(svg.match(/<svg class="zb spur" data-spur="1"[\s\S]*?<\/svg>/)||[''])[0];
+  const pl=(spur.match(/<polyline[^>]*points="([^"]+)"/)||[])[1]||'';
+  const pkt=pl.split(' ').map(p=>p.split(',').map(Number));
+  const unten=+(spur.match(/<line x1="[\d.]+" x2="[\d.]+" y1="([\d.]+)" y2="[\d.]+" stroke="#B9C4B4"\/>/)||[])[1];
+  ok(pkt.length===3&&Math.abs(pkt[1][1]-unten)<0.01&&pkt[0][1]<unten&&pkt[2][1]<pkt[0][1],'Punkte verbinden: 2 → 0 → 3 – der mittlere Punkt liegt auf der x-Achse, der Dip ist zu sehen');
+  ok(/fill="#fff" stroke="#[0-9A-Fa-f]{6}" stroke-width="1.6"/.test(spur),'Der Punkt bei 0 ist hohl – er sieht nicht aus wie eine gemessene Null');
+  const cl=spur.match(/<clipPath id="[^"]+"><rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/);
+  ok(cl&&+cl[1]+ +cl[2]>unten+5,'Der Zeichenbereich reicht unter die Achse – die Marke bei 0 ist ganz zu sehen');
+  ok(A.getDb().analysen[1].werte.gw_NO3.unter===true&&A.getDb().analysen[1].werte.gw_NO3.wert===0.3,'Im Bestand bleibt der Laborwert «< 0,3» – gespeichert wird keine 0');
+  A.AKTION.detail({id:'n2'});
+  const bericht=global.document.getElementById('dlgBody').innerHTML;
+  ok(/&lt;0[.,]3/.test(bericht)&&/hohl bei 0/.test(bericht),'Der Bericht zeigt «<0,3» und erklärt die Grafik');
+  /* Nur Werte unter der Grenze im Ausschnitt: die Grenze gibt den Massstab */
+  d.analysen=[probe('m1','2026-07-01',{wert:0.3,unter:true}),probe('m2','2026-07-15',{wert:0.3,unter:true})];
+  A.setDb(d);A.vKombi();A.nachRenderRun();
+  const s2=(global.document.getElementById('cKb').innerHTML.match(/<svg class="zb spur" data-spur="1"[\s\S]*?<\/svg>/)||[''])[0];
+  const marken=[...s2.matchAll(/font-family="JetBrains Mono,monospace">([\d.,’']+)</g)].map(m=>m[1]);
+  ok(marken.includes('0')&&!/NaN|Infinity/.test(s2)&&marken.length>=2,'Nur «< 0,3» zu sehen: eine saubere Achse ab 0 ('+marken.join(' ')+')');
+  A.setLinien([]);
 }
 
 console.log('\n════ Migration alter Wasserdaten ════');

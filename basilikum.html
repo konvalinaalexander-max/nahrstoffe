@@ -60,6 +60,9 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);vert
 th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 tr.klick:hover{background:var(--card2);cursor:pointer}
+tr.tagNeu td{border-top:2px solid var(--line)}
+.amTag{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px}
+.amTag .verlauf{margin-left:auto}
 tr.gruppe td{background:var(--card2);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:14px}
 .liste{max-height:620px;overflow:auto;border:1px solid var(--line2);border-radius:var(--rs)}
 .liste thead th{position:sticky;top:0;background:var(--card);z-index:1}
@@ -148,6 +151,8 @@ input[type=checkbox]{accent-color:var(--ok)}
 .verbinden{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
 .verbinden svg{fill:currentColor;color:#4F5E53}
 .verbinden:has(input:checked){color:var(--ink)}
+.chip .dot.hohl{background:#fff;box-shadow:inset 0 0 0 1.5px currentColor}
+.ngInfo{display:inline-flex;gap:5px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .dichteInfo{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 button.klein.offen{color:var(--ink)}
 /* Zeitzeile oben: Zeitraum, feste Zeiträume, − und + */
@@ -904,20 +909,25 @@ document.addEventListener('click',ev=>{
    (Blattalter bzw. Entnahmestelle). Wer nur die Farbe unterscheiden kann,
    liest die Form – und umgekehrt. */
 const FORMEN=['kreis','raute','quadrat','dreieck','kreuz','ring'];
-function marke(form,x,y,r,farbe,deckung){
-  const o=deckung!=null?deckung:1,f=`fill="${farbe}" opacity="${o}"`;
+/* hohl: ein Wert unter der Nachweisgrenze – dieselbe Form, weiss gefüllt,
+   damit er nicht wie eine gemessene Null aussieht. */
+function marke(form,x,y,r,farbe,deckung,hohl){
+  const o=deckung!=null?deckung:1,f=hohl?`fill="#fff" stroke="${farbe}" stroke-width="1.6" opacity="${o}"`:`fill="${farbe}" opacity="${o}"`;
   switch(form){
     case 'raute':   return `<polygon points="${x},${y-r*1.25} ${x+r*1.15},${y} ${x},${y+r*1.25} ${x-r*1.15},${y}" ${f}/>`;
     case 'quadrat': return `<rect x="${x-r*0.92}" y="${y-r*0.92}" width="${r*1.84}" height="${r*1.84}" rx="1" ${f}/>`;
     case 'dreieck': return `<polygon points="${x},${y-r*1.3} ${x+r*1.2},${y+r*0.85} ${x-r*1.2},${y+r*0.85}" ${f}/>`;
-    case 'kreuz':   return `<path d="M${x-r} ${y-r}L${x+r} ${y+r}M${x-r} ${y+r}L${x+r} ${y-r}" stroke="${farbe}" stroke-width="${r*0.75}" stroke-linecap="round" fill="none" opacity="${o}"/>`;
-    case 'ring':    return `<circle cx="${x}" cy="${y}" r="${r*0.95}" fill="#fff" stroke="${farbe}" stroke-width="${r*0.62}" opacity="${o}"/>`;
+    case 'kreuz':   return `<path d="M${x-r} ${y-r}L${x+r} ${y+r}M${x-r} ${y+r}L${x+r} ${y-r}" stroke="${farbe}" stroke-width="${hohl?1.3:r*0.75}" stroke-linecap="round" fill="none" opacity="${hohl?o*0.6:o}"/>`;
+    case 'ring':    return `<circle cx="${x}" cy="${y}" r="${r*0.95}" fill="#fff" stroke="${farbe}" stroke-width="${r*0.62}" opacity="${o}"${hohl?' stroke-dasharray="2 1.5"':''}/>`;
     default:        return `<circle cx="${x}" cy="${y}" r="${r}" ${f}/>`;
   }
 }
 /* Zeichen für eine Reihe, klein, für Knöpfe und Hinweise neben dem
    Diagramm – dieselbe Form wie im Diagramm. */
-const zeichen=(form,farbe)=>`<svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">${marke(form,7,6,4.4,farbe)}</svg>`;
+const zeichen=(form,farbe,hohl)=>`<svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">${marke(form,7,6,hohl?3.8:4.4,farbe,1,hohl)}</svg>`;
+/* Ein Wert unter der Nachweisgrenze im Kästchen: der Laborwert, nie eine 0. */
+const ngText=(w,e)=>w&&w.wert!=null?'< '+nz(w.wert)+(e?' '+e:''):'unter der Nachweisgrenze';
+const NG_FUSS='Unter der Nachweisgrenze des Labors – in der Grafik hohl bei 0.';
 
 /* ── Zeitbild: getrennte Grafiken, eine gemeinsame Zeit ──────────────────
    Jede Grafik steht für sich – Blattsaft, Giesswasser; pH, EC, Sauerstoff –,
@@ -1023,6 +1033,14 @@ function achsenSchritt(lo,hi){
 /* Eine Spur: Titel, Fläche, Punkte, Datumsachse – ein eigenes SVG. Die
    Punkte gehen als Trefferliste nach G.treffer, damit Zeigen den nächsten
    findet; unsichtbare Trefferkreise gibt es nicht mehr. */
+/* Was zusammengehört (Regel «gleiche Genauigkeit»): Laborproben am selben
+   Kalendertag; am Tank die Messungen derselben Minute; ohne Uhrzeit nur
+   Tageswerte ohne Uhrzeit; verdichtet dasselbe Fenster. Keine Toleranz. */
+const tagVon=x=>Math.floor(x/864e5);
+const paarSchluessel=(se,q)=>se.tagNur?'t'+tagVon(q.x):q.ohneZeit?'u'+tagVon(q.x):'m'+Math.floor(q.x/6e4);
+const kmBandHtml=(y0,y1)=>`<rect class="kmBand" x="-99" y="${y0}" width="0" height="${y1-y0}" fill="transparent" pointer-events="none"/>`+
+  `<line class="kmRand l" x1="-99" x2="-99" y1="${y0}" y2="${y1}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity=".5" pointer-events="none"/>`+
+  `<line class="kmRand r" x1="-99" x2="-99" y1="${y0}" y2="${y1}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity=".5" pointer-events="none"/>`;
 function spurSvg(sp,G){
   const {W,ml,mr,x0,x1,X,r}=G,nr=G.treffer.length;
   const kopfH=(sp.titel||sp.yLabel)?20:8,h=sp.hoehe||180,mt=kopfH,unten=kopfH+h,H=unten+26;
@@ -1040,6 +1058,9 @@ function spurSvg(sp,G){
          liegt, würde sonst die Auflösung dorthin ziehen, wo nichts steht.
          Das Band wird dann einfach auf die sichtbare Fläche beschnitten. */
       let lo=Infinity,hi=-Infinity;for(const v of ys){if(v<lo)lo=v;if(v>hi)hi=v}
+      /* Nur Werte unter der Nachweisgrenze zu sehen: die Grenze gibt den
+         Massstab – gezeichnet wird an ihr nichts. */
+      if(!sp.band&&!lageSkala&&sicht.every(p=>p.ng)){const g=Math.max(0,...sicht.map(p=>p.grenze||0));hi=g>0?g*1.15:1}
       y0=lo;y1=hi;
       if(sp.band){
         const spanne=(y1-y0)||Math.abs(y1)||1;
@@ -1058,7 +1079,9 @@ function spurSvg(sp,G){
   const Y=v=>mt+(1-(v-y0)/((y1-y0)||1))*(unten-mt);
   const cid='zbc'+(++clipNr);
   let s=`<svg class="zb spur" data-spur="${nr}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(sp.titel||sp.aria||'Verlauf')}" style="display:block">`+
-    `<defs><clipPath id="${cid}"><rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${unten-mt}"/></clipPath></defs>`;
+    /* Der Clip reicht oben und unten eine Marke weiter: ein Punkt bei 0 sitzt
+       ganz sichtbar auf der Achse. */
+    `<defs><clipPath id="${cid}"><rect x="${ml}" y="${mt-(r+2)}" width="${W-ml-mr}" height="${unten-mt+2*(r+2)}"/></clipPath></defs>`;
   s+=`<rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${unten-mt}" fill="#fff"/>`;
   if(lageSkala){
     s+=`<rect x="${ml}" y="${Y(3)}" width="${W-ml-mr}" height="${Y(2)-Y(3)}" fill="#F6F7F3"/>`;
@@ -1083,7 +1106,7 @@ function spurSvg(sp,G){
   if(sp.titel)s+=`<text x="${ml}" y="13" font-size="11.5" font-weight="600" fill="#141D17">${esc(sp.titel)}</text>`;
   if(sp.yLabel)s+=`<text x="${W-mr}" y="13" text-anchor="end" font-size="10.5" fill="#697A6C">${esc(sp.yLabel)}</text>`;
   /* Das Band eines Balkens aus dem Kulturmanagement, beim Zeigen darauf */
-  s+=`<rect class="kmBand" x="-99" y="${mt}" width="0" height="${unten-mt}" fill="transparent" pointer-events="none"/>`;
+  s+=kmBandHtml(mt,unten);
 
   /* Was gezeichnet wird: jeder Punkt – oder, wenn die Messungen eng liegen,
      je Fenster ein Punkt für den Mittelwert mit einem Strich vom tiefsten
@@ -1096,9 +1119,9 @@ function spurSvg(sp,G){
     const pk=se.punkte.filter(q=>q.x>=x0&&q.x<=x1).sort((a,b)=>a.x-b.x);
     if(st==='einzeln')return pk.map(q=>({x:X(q.x),y:Y(q.y),q}));
     const gruppen=new Map();
-    for(const q of pk){
+    for(const [i,q] of pk.entries()){
       const tag=Math.floor(q.x/864e5);
-      const k=st==='tag'?'d'+tag:(q.ohneZeit?'u'+tag:'h'+Math.floor(q.x/432e5));
+      const k=q.ng?'n'+i:st==='tag'?'d'+tag:(q.ohneZeit?'u'+tag:'h'+Math.floor(q.x/432e5));
       if(!gruppen.has(k))gruppen.set(k,[]);gruppen.get(k).push(q);
     }
     const fensterPx=(st==='tag'?1:0.5)*G.proTag,versatz=(si-(serien.length-1)/2)*Math.min(3,fensterPx/4);
@@ -1113,7 +1136,8 @@ function spurSvg(sp,G){
       const halb=k[0]==='h'?(Math.floor(l[0].x/432e5)%2?', 12–24 Uhr':', 00–12 Uhr'):'';
       const zeiten=!mz.length?(k[0]==='u'?'Uhrzeit nicht erfasst – als Tag zusammengefasst':'Uhrzeit nicht erfasst')
         :(mz.length===1?uhr(mz[0].x):uhr(mz[0].x)+' bis '+uhr(mz[mz.length-1].x))+(mz.length<l.length?', teils ohne Uhrzeit':'');
-      return {x:X(xm)+versatz,y:Y(m),yLo:Y(lo),yHi:Y(hi),mitte:Math.round(xm),
+      const fx0=k[0]==='h'?Math.floor(l[0].x/432e5)*432e5:tag,fx1=k[0]==='h'?fx0+432e5:tag+864e5;
+      return {x:X(xm)+versatz,y:Y(m),yLo:Y(lo),yHi:Y(hi),mitte:Math.round(xm),fenster:k,fx0,fx1,
         tipp:tippBau((se.name||sp.titel||'')+(se.stelle?' · '+se.stelle:''),se.farbe,[
           ['Zeitraum',tagText+halb],['Messungen',l.length+' ('+zeiten+')'],
           ['Mittelwert',nz(m,d)+e],['tiefster Wert',nz(lo,d)+e],['höchster Wert',nz(hi,d)+e]],'Anklicken zeigt jede Messung.')};
@@ -1133,10 +1157,10 @@ function spurSvg(sp,G){
       if(p.yLo!=null){
         if(p.yLo-p.yHi>=2)s+=`<line x1="${p.x}" x2="${p.x}" y1="${p.yHi}" y2="${p.yLo}" stroke="${se.farbe}" stroke-width="3" stroke-linecap="round" opacity=".3"/>`;
         s+=marke(se.form,p.x,p.y,r,se.farbe,1);
-        treffer.push({cx:p.x,cy:p.y,tipp:p.tipp,block:p.mitte});
+        treffer.push({cx:p.x,cy:p.y,tipp:p.tipp,block:p.mitte,t:p.mitte,tag:tagVon(p.mitte),k:'f'+p.fenster,fx0:p.fx0,fx1:p.fx1,r});
       }else{
-        s+=marke(se.form,p.x,p.y,r,se.farbe,1);
-        treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung});
+        s+=marke(se.form,p.x,p.y,r,se.farbe,1,!!p.q.ng);
+        treffer.push({cx:p.x,cy:p.y,tipp:p.q.tipp,kennung:p.q.kennung,ng:!!p.q.ng,t:p.q.x,tag:tagVon(p.q.x),k:paarSchluessel(se,p.q),r});
       }
     }
     s+=`</g>`;
@@ -1144,6 +1168,10 @@ function spurSvg(sp,G){
   s+=`</g>`;
   treffer.sort((a,b)=>a.cx-b.cx);
   G.treffer.push(treffer);
+  /* Was zusammengehört, einmal je Zeichnung: Schlüssel → Punkte aller Spuren */
+  for(const e of treffer){const l=G.index.get(e.k);if(l)l.push({nr,cx:e.cx,cy:e.cy,r:e.r});else G.index.set(e.k,[{nr,cx:e.cx,cy:e.cy,r:e.r}])}
+  G.tageSicht[nr]=new Set(treffer.map(e=>e.tag));
+  G.tageAlle[nr]=sp.tageAlle||null;G.leerWort[nr]=sp.leerWort||'Probe';G.spurTafel[nr]=sp.tafel||'';
   if(!sicht.length){
     s+=`<text x="${(ml+W-mr)/2}" y="${(mt+unten)/2+4}" text-anchor="middle" font-size="11.5" fill="#A8B3A4">${esc(sp.leerText||'keine Messung in diesem Zeitraum')}</text>`;
     /* Wo es weitergeht: die nächste Probe links und rechts, anklickbar. */
@@ -1154,9 +1182,11 @@ function spurSvg(sp,G){
     if(nach<Infinity)s+=`<text class="zbLink" x="${W-mr-10}" y="${yl}" text-anchor="end" font-size="11.5" fill="#2C7A4B" data-tun="zeitZu" data-x="${nach}">nächste ${esc(wort)} ${tg(nach)} ›</text>`;
   }
   s+=zeitAchse(G,unten);
+  s+=`<rect class="fenster" x="-99" width="0" y="${mt}" height="${unten-mt}" fill="#141D17" fill-opacity=".05" stroke="#5E6B61" stroke-dasharray="4 3" pointer-events="none"/>`;
   s+=`<line class="zeiger" x1="-99" x2="-99" y1="${mt}" y2="${unten}" stroke="#141D17" stroke-width="1" opacity=".3" pointer-events="none"/>`;
+  s+=`<g class="paare" pointer-events="none"></g>`;
   s+=`<circle class="ring" cx="-99" cy="-99" r="${r+3}" fill="none" stroke="#141D17" stroke-width="1.5" opacity=".55" pointer-events="none"/>`;
-  s+=`<g class="zeigerDatum" visibility="hidden" pointer-events="none" data-y="${unten+3}"><rect height="18" rx="4" fill="#141D17"/><text y="13" font-size="10.5" fill="#fff" font-family="JetBrains Mono,monospace" text-anchor="middle"></text></g>`;
+  s+=`<g class="zeigerDatum" visibility="hidden" pointer-events="none" data-y="${unten+r+1}"><rect height="18" rx="4" fill="#141D17"/><text y="13" font-size="10.5" fill="#fff" font-family="JetBrains Mono,monospace" text-anchor="middle"></text></g>`;
   return {svg:s+'</svg>'};
 }
 
@@ -1179,7 +1209,9 @@ function kmZeileHtml(G,raster,z,inhalt,opt){
       [2.5,7,11.5].map(y=>`<circle cx="2.5" cy="${y}" r="1.4"/><circle cx="7.5" cy="${y}" r="1.4"/>`).join('')}</svg></button>`:'<span class="kmGriffPlatz"></span>';
   return `<div class="kmZ${leer?' ohne':''}" data-k="${esc(z.key)}">
     <div class="kmZName" style="width:${G.ml-6}px"${opt.tipp?` data-tipp="${esc(opt.tipp)}"`:''}>${griff}${opt.titel||`<span class="kmTitel">${esc(z.name)}</span>`}</div>
-    <svg class="zb kmSvg" viewBox="0 0 ${G.W} ${KM_Z}" width="${G.W}" height="${KM_Z}" aria-hidden="true">${raster}${inhalt}
+    <svg class="zb kmSvg" viewBox="0 0 ${G.W} ${KM_Z}" width="${G.W}" height="${KM_Z}" aria-hidden="true">${raster}${kmBandHtml(0,KM_Z)}
+      <rect class="fenster" x="-99" width="0" y="0" height="${KM_Z}" fill="#141D17" fill-opacity=".05" pointer-events="none"/>${inhalt}
+      <g class="paare" pointer-events="none"></g>
       <line class="zeiger" x1="-99" x2="-99" y1="0" y2="${KM_Z}" stroke="#141D17" stroke-width="1" opacity=".3" pointer-events="none"/></svg></div>`;
 }
 /* Die Balken einer Zeile: im Ausschnitt beschnitten, Beschriftung innen,
@@ -1198,7 +1230,7 @@ function kmBalkenSvg(G,spannen){
     const t=String(s.datum||''),tw=t.length*KM_ZEICHEN,naechste=i+1<l.length?l[i+1].xa-4:W-4;
     const lage=xb-xa>=tw+12?'innen':(xb+spitze+6+tw<=naechste?'rechts':null);
     const rand=xa<vorEnde?' stroke="#fff" stroke-width="1"':'';
-    out+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(s.kennung)}" data-tipp="${esc(s.tipp||'')}" data-x0="${s.x0}" data-x1="${s.x1}" data-farbe="${esc(s.farbe)}">`;
+    out+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(s.kennung)}" data-tipp="${esc(s.tipp||'')}" data-x0="${s.x0}" data-x1="${s.x1}"${s.laeuft?' data-laeuft="1"':''} data-farbe="${esc(s.farbe)}">`;
     out+=`<rect x="${xa}" y="${y}" width="${xb-xa}" height="${KM_H}" rx="4" fill="${f}"${rand}/>`;
     if(spitze)out+=`<path d="M${xb-4} ${y}L${xb+spitze} ${y+KM_H/2}L${xb-4} ${y+KM_H}Z" fill="${f}"/>`;
     const kerben=(s.gaben||[]).filter(g=>g>=Math.max(x0,s.x0)&&g<=Math.min(x1,s.x1)).map(X);
@@ -1212,11 +1244,12 @@ function kmBalkenSvg(G,spannen){
   });
   return {svg:out,sichtbar:l.length>0};
 }
-function kmMarkenSvg(G,spannen){
+function kmMarkenSvg(G,spannen,zeile){
   const {X,x0,x1}=G,cy=KM_Z/2;let out='',n=0;
   for(const s of spannen){
     if(s.x0<x0||s.x0>x1)continue;n++;
     const cx=X(s.x0),f=dunkler(s.farbe,.12);
+    if(G.kmTage&&zeile){const tg=tagVon(s.x0),l=G.kmTage.get(tg)||[];l.push({k:zeile,cx});G.kmTage.set(tg,l)}
     out+=`<g class="spb" style="cursor:pointer" data-tun="spanne" data-id="${esc(s.kennung)}" data-tipp="${esc(s.tipp||'')}" data-x0="${s.x0}" data-x1="${s.x0}" data-farbe="${esc(s.farbe)}">`+
       ((s.n||1)>1?`<rect x="${cx-9}" y="${cy-7}" width="18" height="14" rx="7" fill="${f}"/><text x="${cx}" y="${cy+3.5}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#fff">${s.n}</text>`
         :`<circle cx="${cx}" cy="${cy}" r="5.5" fill="${f}" stroke="#fff" stroke-width="1.5"/>`)+
@@ -1242,11 +1275,13 @@ function kmTafel(km,G){
       const jeTag=new Map();
       for(const z of km.typen)for(const s of z.spannen){if(s.x0<G.x0||s.x0>G.x1)continue;
         const tag=new Date(s.x0).toISOString().slice(0,10);if(!jeTag.has(tag))jeTag.set(tag,{x:s.x0,arten:[]});jeTag.get(tag).arten.push(z.name)}
-      const punkte=[...jeTag].map(([tag,v])=>`<circle cx="${G.X(v.x)}" cy="${KM_Z/2}" r="3.2" fill="#8C9A88" style="cursor:pointer" data-tun="kmEreignisse" data-tipp="${esc(tippBau(fmt(tag),'#8C9A88',[v.arten.join(', ')],'Anklicken klappt die Ereignisse auf.'))}"/>`).join('');
+      const punkte=[...jeTag].map(([tag,v])=>{
+        if(G.kmTage){const tg=tagVon(v.x),l=G.kmTage.get(tg)||[];l.push({k:'klapp',cx:G.X(v.x)});G.kmTage.set(tg,l)}
+        return `<circle class="kmTag" cx="${G.X(v.x)}" cy="${KM_Z/2}" r="3.2" fill="#8C9A88" style="cursor:pointer" data-tun="kmEreignisse" data-x0="${v.x}" data-x1="${v.x}" data-tipp="${esc(tippBau(fmt(tag),'#8C9A88',[v.arten.join(', ')],'Anklicken klappt die Ereignisse auf.'))}"/>`}).join('');
       typen=kmZeileHtml(G,raster,{key:'klapp',name:'Ereignisse'},punkte,{titel:`<button class="kmKlapp" data-tun="kmEreignisse" aria-expanded="false">▸ Ereignisse (${n})</button>`});
     }else{
       typen=kmZeileHtml(G,raster,{key:'klapp',name:'Ereignisse'},'',{titel:`<button class="kmKlapp" data-tun="kmEreignisse" aria-expanded="true">▾ Ereignisse</button>`});
-      typen+=`<div class="kmZeilen2" data-gruppe="typen">${km.typen.map(z=>{const m=kmMarkenSvg(G,z.spannen);
+      typen+=`<div class="kmZeilen2" data-gruppe="typen">${km.typen.map(z=>{const m=kmMarkenSvg(G,z.spannen,z.key);
         return kmZeileHtml(G,raster,z,m.svg,{griff:ordnenT,leer:!m.sichtbar,tipp:nameTipp(z)})}).join('')}</div>`;
     }
   }
@@ -1275,9 +1310,11 @@ function zeitBild(box,o){
   const proTag=P/((x1-x0)/864e5);
   const stufe=o.dicht?verdichtStufe(proTag,STUFE_ALT):'einzeln';
   if(o.dicht)STUFE_ALT=stufe;
-  const G={W,ml,mr,x0,x1,X,r:o.punktR||5,aufKlick:!!o.aufKlick,proTag,stufe,treffer:[],gefasst:false};
-  ZEIT={g0:B.g0,g1:B.g1,letzte:B.letzte,x0,x1,W,ml,mr,min:minD,stufen:o.stufen||[],vorgaben:o.vorgaben||[],
-    treffer:G.treffer,kmOben:-1,aufKlick:!!o.aufKlick,stufe};
+  const G={W,ml,mr,x0,x1,X,r:o.punktR||5,aufKlick:!!o.aufKlick,proTag,stufe,treffer:[],gefasst:false,
+    index:new Map(),tageSicht:[],tageAlle:[],leerWort:[],spurTafel:[],kmTage:new Map()};
+  ZEIT={g0:B.g0,g1:B.g1,letzte:B.letzte,x0,x1,W,ml,mr,X,min:minD,stufen:o.stufen||[],vorgaben:o.vorgaben||[],
+    treffer:G.treffer,kmOben:-1,aufKlick:!!o.aufKlick,stufe,index:G.index,tageSicht:G.tageSicht,tageAlle:G.tageAlle,
+    leerWort:G.leerWort,spurTafel:G.spurTafel,kmTage:G.kmTage};
   let html='';
   /* Das Kulturmanagement steht zwischen den Grafiken (nach der Tafel
      o.kmNach), damit es nah bei beiden ist. */
@@ -1287,9 +1324,9 @@ function zeitBild(box,o){
     let svgs='';
     const verbunden=!!(t.linien&&linienAn.has(t.linien));
     (t.spuren||[]).forEach((sp,si)=>{
-      const r=spurSvg(Object.assign({schluessel:(t.kopf||ti)+'|'+si+'|'+(sp.titel||'')},sp,{linien:verbunden}),G);svgs+=r.svg});
+      const r=spurSvg(Object.assign({schluessel:(t.kopf||ti)+'|'+si+'|'+(sp.titel||''),tafel:t.kopf||''},sp,{linien:verbunden}),G);svgs+=r.svg});
     /* «Punkte verbinden» gehört zu den Werten der Grafik, nicht zur Zeit. */
-    const verbinden=t.linien?`<label class="verbinden" title="Verbindet die Punkte einer Reihe in zeitlicher Folge – nur innerhalb derselben ${t.linien==='blatt'?'Blattetage':'Entnahmestelle'}"><input type="checkbox" data-aend="linienUm" data-ziel="${esc(t.linien)}"${verbunden?' checked':''}><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M2 7L8 3L14 6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="2" cy="7" r="1.8"/><circle cx="8" cy="3" r="1.8"/><circle cx="14" cy="6" r="1.8"/></svg>Punkte verbinden</label>`:'';
+    const verbinden=t.linien?`<label class="verbinden" title="Verbindet die Punkte einer Reihe in zeitlicher Folge – nur innerhalb derselben ${t.linien==='blatt'?'Blattetage':'Entnahmestelle'}${t.linien==='blatt'||t.linien==='wasser'?'. Werte unter der Nachweisgrenze stehen bei 0.':''}"><input type="checkbox" data-aend="linienUm" data-ziel="${esc(t.linien)}"${verbunden?' checked':''}><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden="true"><path d="M2 7L8 3L14 6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="2" cy="7" r="1.8"/><circle cx="8" cy="3" r="1.8"/><circle cx="14" cy="6" r="1.8"/></svg>Punkte verbinden</label>`:'';
     html+=`<section class="tafel"><div class="tafelKopf"><h3>${esc(t.kopf||'')}</h3>${t.neben?`<span class="neben">${t.neben}</span>`:''}${
       t.rechts||(!t.wahl&&verbinden)?`<div class="rechts">${t.rechts||''}${!t.wahl?verbinden:''}</div>`:''}</div>${t.wahl?`<div class="wahl">${t.wahl}<span class="trenner"></span>${verbinden}</div>`:''}<div class="bild">${svgs}</div></section>`;
     if(o.km&&ti===kmNach){ZEIT.kmOben=G.treffer.length-1;html+=kmTafel(o.km,G)}
@@ -1312,6 +1349,10 @@ function zeitBild(box,o){
     box.innerHTML=zeitzeileHtml(o)+`<div class="tafeln" tabindex="0" aria-label="Grafiken: Pfeiltasten verschieben, Plus und Minus zoomen, 0 zeigt alles">${html}</div>`+rollbalkenHtml();
     if(box.querySelector&&box.querySelector('.tafeln')){zeitBedienung(box);rollbalkenStellen(box)}
   }
+  /* Neu gezeichnet: das Gezeigte gilt nicht mehr – ausser es ist festgehalten
+     (Finger, «Im Verlauf zeigen»), dann steht es am neuen Ort wieder da. */
+  PAAR_ALT=null;ZEIT_GEZEIGT=null;box._pz=null;
+  if(ZEIT_FEST&&box.querySelector&&box.querySelector('.tafeln')&&ZEIT_FEST.x>=ZEIT.x0&&ZEIT_FEST.x<=ZEIT.x1)paarZeigen(box,festZ());
 }
 
 /* ── Zeitzeile oben: Zeitraum, feste Zeiträume, − und + ── */
@@ -1472,17 +1513,129 @@ function datumsText(t){
   if(!kurz)return tag;
   return tag+' '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');
 }
+/* Die freie Linie: folgt der Maus, blass und durchgezogen, das Datum nur in
+   der Grafik unter der Maus – eine Ablesehilfe. */
 function zeigerSetzen(box,px,datumSvg){
-  const an=px!=null&&ZEIT&&px>=ZEIT.ml&&px<=ZEIT.W-ZEIT.mr;
-  for(const z of box.querySelectorAll('.zeiger')){z.setAttribute('x1',an?px:-99);z.setAttribute('x2',an?px:-99)}
-  for(const g of box.querySelectorAll('.zeigerDatum')){
-    if(!an||g.ownerSVGElement!==datumSvg){g.setAttribute('visibility','hidden');continue}
-    const t=ZEIT.x0+(px-ZEIT.ml)/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(ZEIT.x1-ZEIT.x0),text=datumsText(t),w=text.length*6.6+12;
-    const x=Math.max(ZEIT.ml+w/2,Math.min(ZEIT.W-ZEIT.mr-w/2,px));
-    g.setAttribute('transform',`translate(${x},${g.dataset.y})`);
-    const r=g.querySelector('rect');r.setAttribute('x',-w/2);r.setAttribute('width',w);
-    g.querySelector('text').textContent=text;g.setAttribute('visibility','visible');
+  if(!ZEIT)return;
+  const an=px!=null&&px>=ZEIT.ml&&px<=ZEIT.W-ZEIT.mr,T=zeitTeile(box);
+  linienStil(box,false);
+  for(const z of T.zeiger){z.setAttribute('x1',an?px:-99);z.setAttribute('x2',an?px:-99)}
+  for(const g of T.datum.values()){
+    if(!an||!g||g.ownerSVGElement!==datumSvg){schildSetzen(g,null);continue}
+    schildSetzen(g,px,datumsText(ZEIT.x0+(px-ZEIT.ml)/((ZEIT.W-ZEIT.ml-ZEIT.mr)||1)*(ZEIT.x1-ZEIT.x0)),false);
   }
+}
+/* Was zu einem Zeichnen gehört, einmal gesucht – beim Bewegen der Maus wird
+   nicht mehr im Dokument gesucht. */
+function zeitTeile(box){
+  if(ZEIT&&ZEIT.teile&&ZEIT.teile.box===box)return ZEIT.teile;
+  const T={box,zeiger:[...box.querySelectorAll('.zeiger')],fenster:[...box.querySelectorAll('.fenster')],datum:new Map(),paare:new Map(),kmPaare:new Map(),fest:null};
+  for(const sv of box.querySelectorAll('svg.spur')){const nr=+sv.dataset.spur;T.datum.set(nr,sv.querySelector('.zeigerDatum'));T.paare.set(nr,sv.querySelector('.paare'))}
+  for(const z of box.querySelectorAll('.kmZ[data-k]')){const g=z.querySelector('svg.kmSvg .paare');if(g)T.kmPaare.set(z.dataset.k,g)}
+  if(ZEIT)ZEIT.teile=T;
+  return T;
+}
+/* Zwei Zustände der Linie: frei (blass, durchgezogen) und eingerastet
+   (gestrichelt, deckend) – umgeschaltet nur, wenn sich etwas ändert. */
+function linienStil(box,fest){
+  const T=zeitTeile(box);if(T.fest===fest)return;T.fest=fest;
+  for(const z of T.zeiger){
+    z.setAttribute('stroke',fest?'#5E6B61':'#141D17');z.setAttribute('opacity',fest?'1':'.3');
+    if(fest){z.setAttribute('stroke-dasharray','4 3');z.setAttribute('shape-rendering','crispEdges')}
+    else{z.removeAttribute('stroke-dasharray');z.removeAttribute('shape-rendering')}
+  }
+}
+/* Das Datumsschild unten an der Achse: dunkel, wo es an dem Tag etwas gibt,
+   hell mit «keine Probe», wo nicht. */
+function schildSetzen(g,px,text,hell){
+  if(!g)return;
+  if(px==null){g.setAttribute('visibility','hidden');return}
+  const w=text.length*6.6+12,x=Math.max(ZEIT.ml+w/2,Math.min(ZEIT.W-ZEIT.mr-w/2,px));
+  g.setAttribute('transform',`translate(${x},${g.dataset.y})`);
+  const r=g.querySelector('rect'),tx=g.querySelector('text');
+  r.setAttribute('x',-w/2);r.setAttribute('width',w);r.setAttribute('fill',hell?'#fff':'#141D17');
+  if(hell)r.setAttribute('stroke','#A8B3A4');else r.removeAttribute('stroke');
+  tx.setAttribute('fill',hell?'#697A6C':'#fff');tx.textContent=text;g.setAttribute('visibility','visible');
+}
+/* ── Was zusammengehört: die Tageslinie ──
+   Zeigt man auf einen Punkt oder ein Ereignis, rastet die Linie auf dessen
+   Zeitpunkt ein – gestrichelt, in jeder Grafik von oben bis unten und durch
+   alle Zeilen des Kulturmanagements. Feine Ringe markieren, was zum selben
+   Zeitpunkt gehört (paarSchluessel); jede Grafik bekommt ein Datumsschild,
+   und wo es an dem Tag nichts gibt, steht «keine Probe». Ein verdichteter
+   Punkt hat keinen einzelnen Zeitpunkt: dann liegt ein Band über seinem
+   Fenster. Nichts wird abgeblendet, nichts bewegt sich von selbst.
+   z = {x, cx, k, tag, fx0, fx1, selbst:{nr,cx,cy}} oder null. */
+let PAAR_ALT=null,ZEIT_GEZEIGT=null,ZEIT_FEST=null;
+const zVon=(t,nr)=>({x:t.t,cx:t.cx,k:t.k,tag:t.tag,fx0:t.fx0,fx1:t.fx1,selbst:{nr,cx:t.cx,cy:t.cy}});
+const zVonZeit=x=>({x,cx:ZEIT.X(x),k:'t'+tagVon(x),tag:tagVon(x)});
+const festZ=()=>Object.assign({},ZEIT_FEST,{cx:ZEIT.X(ZEIT_FEST.x),selbst:null});
+function paarZeigen(box,z){
+  if(!ZEIT)return;
+  const T=zeitTeile(box);
+  const schl=z?[z.k,Math.round(z.cx*10),z.fx0||'',z.selbst?[z.selbst.nr,z.selbst.cx,z.selbst.cy].join(':'):''].join('|'):null;
+  if(schl===PAAR_ALT)return;
+  PAAR_ALT=schl;
+  for(const g of T.paare.values())if(g&&g.firstChild)g.innerHTML='';
+  for(const g of T.kmPaare.values())if(g.firstChild)g.innerHTML='';
+  for(const f of T.fenster){f.setAttribute('x',-99);f.setAttribute('width',0)}
+  if(!z){
+    for(const l of T.zeiger){l.setAttribute('x1',-99);l.setAttribute('x2',-99)}
+    for(const g of T.datum.values())schildSetzen(g,null);
+    return;
+  }
+  /* Linie bzw. Fenster */
+  let mitte=z.cx;
+  if(z.fx0!=null){
+    const a=ZEIT.X(Math.max(ZEIT.x0,z.fx0)),b=ZEIT.X(Math.min(ZEIT.x1,z.fx1));mitte=(a+b)/2;
+    for(const f of T.fenster){f.setAttribute('x',a);f.setAttribute('width',Math.max(1,b-a))}
+    for(const l of T.zeiger){l.setAttribute('x1',-99);l.setAttribute('x2',-99)}
+  }else{
+    const lx=Math.round(z.cx)+0.5;
+    linienStil(box,true);
+    for(const l of T.zeiger){l.setAttribute('x1',lx);l.setAttribute('x2',lx)}
+  }
+  /* Ringe um das, was dazugehört – nicht um den gezeigten Punkt selbst */
+  const jeSpur=new Map();
+  for(const e of ZEIT.index.get(z.k)||[]){
+    if(z.selbst&&e.nr===z.selbst.nr&&e.cx===z.selbst.cx&&e.cy===z.selbst.cy)continue;
+    const l=jeSpur.get(e.nr)||[];if(l.length<60){l.push(e);jeSpur.set(e.nr,l)}
+  }
+  for(const [nr,l] of jeSpur){const g=T.paare.get(nr);
+    if(g)g.innerHTML=l.map(e=>`<circle cx="${e.cx}" cy="${e.cy}" r="${e.r+2.5}" fill="none" stroke="#141D17" stroke-width="1" opacity=".45"/>`).join('')}
+  if(z.fx0==null){
+    const km=new Map();
+    for(const e of ZEIT.kmTage.get(z.tag)||[]){const l=km.get(e.k)||[];l.push(e);km.set(e.k,l)}
+    for(const [k,l] of km){const g=T.kmPaare.get(k);
+      if(g)g.innerHTML=l.map(e=>`<circle cx="${e.cx}" cy="${KM_Z/2}" r="7.5" fill="none" stroke="#141D17" stroke-width="1" opacity=".45"/>`).join('')}
+  }
+  /* Datumsschilder in jeder Grafik */
+  const text=datumsText(z.x);
+  for(const [nr,g] of T.datum){
+    const st=paarStand(nr,z.tag);
+    schildSetzen(g,mitte,st===2?text:text+(st===1?' · kein Wert':' · keine '+(ZEIT.leerWort[nr]||'Probe')),st!==2);
+  }
+}
+/* 2: an dem Tag ist hier etwas gezeichnet · 1: es gibt eine Probe, aber
+   keinen Wert in dieser Auswahl · 0: keine Probe an dem Tag */
+const paarStand=(nr,tag)=>ZEIT.tageSicht[nr]&&ZEIT.tageSicht[nr].has(tag)?2:ZEIT.tageAlle[nr]&&ZEIT.tageAlle[nr].has(tag)?1:0;
+/* Für Bildschirmleser, nur beim festen Zeigen (Finger): was es an dem Tag gibt. */
+function paarAnsage(z){
+  const a=el('ansage');if(!a||!ZEIT||!z)return;
+  const je=new Map();
+  ZEIT.spurTafel.forEach((name,nr)=>{const alt=je.get(name),st=paarStand(nr,z.tag);if(!alt||st>alt.st)je.set(name,{st,w:ZEIT.leerWort[nr]||'Probe'})});
+  a.textContent=datumsText(z.x)+': '+[...je].map(([n,v])=>n+' – '+(v.st===2?v.w:v.st===1?'kein Wert':'keine '+v.w)).join('; ')+'.';
+}
+/* Nicht hin und her springen: der gezeigte Punkt bleibt, solange er höchstens
+   26 px weg ist und kein anderer um 4 px näher liegt. */
+function haltePunkt(nr,px,py){
+  const t=naechsterPunkt(nr,px,py,20),g=ZEIT_GEZEIGT;
+  if(g&&g.zeit===ZEIT&&g.nr===nr){
+    const dg=Math.hypot(g.t.cx-px,g.t.cy-py);
+    if(dg<=26&&(!t||t===g.t||Math.hypot(t.cx-px,t.cy-py)>dg-4))return g.t;
+  }
+  ZEIT_GEZEIGT=t?{nr,t,zeit:ZEIT}:null;
+  return t;
 }
 /* Der nächste gezeichnete Punkt in derselben Grafik – höchstens 20 px weg,
    mit dem Finger 28 px. Bei Gleichstand gewinnt der kleinere Abstand in x. */
@@ -1504,6 +1657,8 @@ document.addEventListener('pointerdown',()=>{perTab=false},true);
 window.addEventListener('pointerup',ev=>{if(zeitLos)zeitLos(ev)});
 window.addEventListener('pointercancel',ev=>{if(zeitLos)zeitLos(ev)});
 function punktZeigen(box,svg,t){
+  if(t&&box._pz===t)return;
+  box._pz=t||null;
   for(const c of box.querySelectorAll('.ring')){if(c.ownerSVGElement!==svg||!t){c.setAttribute('cx',-99);c.setAttribute('cy',-99)}}
   if(!t){svg&&(svg.style.cursor='');return}
   const c=svg.querySelector('.ring');c.setAttribute('cx',t.cx);c.setAttribute('cy',t.cy);
@@ -1560,7 +1715,6 @@ function zeitBedienung(box){
       zeitSetzen(zange.t-zange.anteil*L,zange.t+(1-zange.anteil)*L,true);
       return;
     }
-    const svg=ev.target.closest&&ev.target.closest('svg.zb');
     /* Losgelassen, wo es niemand gemeldet hat (ausserhalb, Fensterwechsel):
        ohne gedrückte Taste gibt es keinen Zug. */
     if(zug&&ev.pointerId===zug.id&&zug.typ!=='touch'&&!(ev.buttons&1))ende();
@@ -1578,22 +1732,40 @@ function zeitBedienung(box){
         if(koVon==null){if(zug.typ!=='touch')zug.verworfen=true;return}
         zug.bewegt=true;ruhig();
         try{tf.setPointerCapture(ev.pointerId)}catch(e){}
-        box.classList.add('zieht');tippWeg();TIPP_FEST=null;punktZeigen(box,null,null);
+        box.classList.add('zieht');tippWeg();punktZeigen(box,null,null);paarZeigen(box,null);
       }
       const d=-dx*zug.k/P()*(zug.x1-zug.x0);
       zeitSetzen(zug.x0+d,zug.x1+d,true);
       return;
     }
     if(ev.pointerType!=='mouse')return;
-    if(!svg){punktZeigen(box,null,null);zeigerSetzen(box,null,null);return}
-    const {px,py}=svgPos(svg,ev);
-    zeigerSetzen(box,px,datumSvg(svg));
-    if(svg.classList.contains('spur')){
-      const t=naechsterPunkt(+svg.dataset.spur,px,py,20);
-      if(t)punktZeigen(box,svg,t);
-      else{punktZeigen(box,null,null);if(!ev.target.closest('[data-tipp]'))tippWeg()}
-    }else punktZeigen(box,null,null);
+    /* Zeigen: einmal je Bild, mit dem letzten Stand der Maus */
+    zeigEv=ev;if(!zeigBild)zeigBild=requestAnimationFrame(()=>{zeigBild=0;const e=zeigEv;zeigEv=null;if(e)zeigen(e)});
   });
+  let zeigEv=null,zeigBild=0;
+  const zeigen=ev=>{
+    if(!ZEIT||zug||kmZug)return;
+    /* Ist ein Tag festgehalten (Finger, «Im Verlauf zeigen»), bleibt er
+       stehen, bis man auf etwas anderes zeigt, ins Leere klickt oder Esc
+       drückt – sonst nähme ihn die erste Mausbewegung wieder weg. */
+    const svg=ev.target.closest&&ev.target.closest('svg.zb');
+    if(!svg||!svg.isConnected){ZEIT_GEZEIGT=null;punktZeigen(box,null,null);if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,null,null)}return}
+    const {px,py}=svgPos(svg,ev);
+    if(svg.classList.contains('spur')){
+      const nr=+svg.dataset.spur,t=haltePunkt(nr,px,py);
+      if(t){ZEIT_FEST=null;punktZeigen(box,svg,t);paarZeigen(box,zVon(t,nr));return}
+      punktZeigen(box,null,null);if(!ev.target.closest('[data-tipp]'))tippWeg();
+      if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,px,svg)}
+      return;
+    }
+    /* Eine Zeile des Kulturmanagements: ein Ereignis ist ein Zeitpunkt
+       (dieselbe Tageslinie), ein Balken ein Zeitraum (das Band übernimmt). */
+    ZEIT_GEZEIGT=null;punktZeigen(box,null,null);
+    const m=ev.target.closest('[data-x0]');
+    if(m&&m.dataset.x0===m.dataset.x1){ZEIT_FEST=null;paarZeigen(box,zVonZeit(+m.dataset.x0));return}
+    if(m){ZEIT_FEST=null;paarZeigen(box,null);zeigerSetzen(box,null,null);return}
+    if(ZEIT_FEST)paarZeigen(box,festZ());else{paarZeigen(box,null);zeigerSetzen(box,px,datumSvg(svg))}
+  };
   const los=ev=>{
     if(ev.pointerType==='touch'){finger.delete(ev.pointerId);if(finger.size<2&&zange){zange=null;ruhig(150)}}
     if(zug&&ev.pointerId===zug.id)ende();
@@ -1602,7 +1774,9 @@ function zeitBedienung(box){
   /* Auch was ausserhalb endet (der Finger hebt über dem Rollbalken ab):
      ein Fänger fürs ganze Fenster, immer für die jüngste Grafik. */
   zeitLos=los;
-  tf.addEventListener('pointerleave',ev=>{if(!zug&&ev.pointerType==='mouse'){zeigerSetzen(box,null,null);punktZeigen(box,null,null);kmBandWeg(box)}});
+  tf.addEventListener('pointerleave',ev=>{if(!zug&&ev.pointerType==='mouse'){
+    zeigEv=null;ZEIT_GEZEIGT=null;zeigerSetzen(box,null,null);punktZeigen(box,null,null);kmBandWeg(box);
+    paarZeigen(box,ZEIT_FEST?festZ():null)}});
   /* Klick: nach einem Ziehen verschluckt. Mit dem Finger zeigt das erste
      Tippen das Kästchen, das zweite öffnet. Sonst: der nächste Punkt. */
   tf.addEventListener('click',ev=>{
@@ -1620,17 +1794,32 @@ function zeitBedienung(box){
     let t=null,ziel=null;
     if(svg){const {px,py}=svgPos(svg,ev);t=naechsterPunkt(+svg.dataset.spur,px,py,letzterZeiger==='touch'?28:20);if(t)ziel='p'+svg.dataset.spur+':'+t.cx+':'+t.cy}
     if(letzterZeiger==='touch'){
-      const balken=tun&&tun.dataset.tun==='spanne'?tun:null;
-      if(balken)ziel='b'+balken.dataset.id;else kmBandWeg(box);
+      /* Ein Ereignis (Marke, eingeklappter Tagespunkt, Gabe an einem Tag)
+         ist ein Zeitpunkt, ein Balken ein Zeitraum. */
+      const spb=tun&&tun.dataset.tun==='spanne'?tun:null;
+      const tagPunkt=tun&&tun.classList&&tun.classList.contains('kmTag')?tun:null;
+      const ereignis=spb&&spb.dataset.x0===spb.dataset.x1?spb:tagPunkt;
+      const balken=spb&&!ereignis?spb:null;
+      if(balken)ziel='b'+balken.dataset.id;
+      else if(ereignis)ziel='e'+ereignis.dataset.x0+':'+(spb?spb.dataset.id:'klapp');
+      if(!balken)kmBandWeg(box);
       if(ziel&&ziel!==TIPP_FEST){
         TIPP_FEST=ziel;
-        if(balken){const r=balken.getBoundingClientRect();tippZeigen(String(balken.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top);kmBandZeigen(box,balken)}
-        else punktZeigen(box,svg,t);
+        if(balken){
+          const r=balken.getBoundingClientRect();tippZeigen(String(balken.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top);
+          kmBandZeigen(box,balken);ZEIT_FEST=null;paarZeigen(box,null);punktZeigen(box,null,null);
+        }else if(ereignis){
+          const r=ereignis.getBoundingClientRect();tippZeigen(String(ereignis.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top);
+          punktZeigen(box,null,null);ZEIT_FEST=zVonZeit(+ereignis.dataset.x0);paarZeigen(box,ZEIT_FEST);paarAnsage(ZEIT_FEST);
+        }else{
+          punktZeigen(box,svg,t);ZEIT_FEST=zVon(t,+svg.dataset.spur);paarZeigen(box,ZEIT_FEST);paarAnsage(ZEIT_FEST);
+        }
         ev.stopPropagation();ev.preventDefault();return;
       }
-      if(!ziel){TIPP_FEST=null;tippWeg();if(svg)punktZeigen(box,null,null)}
+      if(!ziel){TIPP_FEST=null;tippWeg();if(svg)punktZeigen(box,null,null);ZEIT_FEST=null;paarZeigen(box,null)}
       else TIPP_FEST=null;
     }
+    if(!tun&&!t&&svg&&ZEIT_FEST){ZEIT_FEST=null;paarZeigen(box,null)}
     if(tun||!t)return;
     ev.stopPropagation();
     if(t.block!=null)return AKTION.zoomTag({x:t.block});
@@ -1686,11 +1875,11 @@ function zeitBedienung(box){
     else if(ev.key==='+'||ev.key==='='||ev.key==='Add'){ev.preventDefault();zoomStufe(1)}
     else if(ev.key==='-'||ev.key==='Subtract'){ev.preventDefault();zoomStufe(-1)}
     else if(ev.key==='0'){ev.preventDefault();AKTION.zeitVorgabe({v:'alles'})}
-    else if(ev.key==='Escape'){tippWeg();punktZeigen(box,null,null);kmBandWeg(box)}
+    else if(ev.key==='Escape'){tippWeg();punktZeigen(box,null,null);kmBandWeg(box);ZEIT_FEST=null;ZEIT_GEZEIGT=null;paarZeigen(box,null);zeigerSetzen(box,null,null)}
   });
   /* Zeigen auf einen Balken: sein Zeitraum als blasses Band in allen Grafiken. */
   tf.addEventListener('pointerover',ev=>{
-    const g=ev.target.closest&&ev.target.closest('g.spb');if(g&&!zug&&!kmZug)kmBandZeigen(box,g);
+    const g=ev.target.closest&&ev.target.closest('g.spb');if(g&&!zug&&!kmZug&&g.dataset.x0!==g.dataset.x1)kmBandZeigen(box,g);
     const chip=ev.target.closest&&ev.target.closest('.chip.on[data-k],[data-tun="tkStelle"]');
     if(chip)reiheHeben(box,chip);
   });
@@ -1703,15 +1892,22 @@ function zeitBedienung(box){
   const zz=box.querySelector('.zeitzeile');
   if(zz)zz.addEventListener('pointerover',ev=>{const s=ev.target.closest&&ev.target.closest('[data-tun="tkStelle"]');reiheHeben(box,s||null)});
 }
+/* Ein Balken ist ein Zeitraum: ein ruhiges Band in seiner Farbe über alle
+   Grafiken und Zeilen, die Kanten gestrichelt. Läuft er noch (oder reicht
+   er aus dem Ausschnitt), fehlt die Kante auf dieser Seite. */
 function kmBandZeigen(box,g){
   if(!ZEIT)return;
-  const a=Math.max(ZEIT.x0,+g.dataset.x0),b=Math.min(ZEIT.x1,+g.dataset.x1);
-  const X=v=>ZEIT.ml+(v-ZEIT.x0)/((ZEIT.x1-ZEIT.x0)||1)*(ZEIT.W-ZEIT.ml-ZEIT.mr);
-  const xa=X(a),w=Math.max(2,X(b)-xa),farbe=g.dataset.farbe||'#4F5E53';
-  for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',xa);r.setAttribute('width',w);r.setAttribute('fill',farbe);
-    r.setAttribute('fill-opacity',w<=2?'.45':'.09');r.setAttribute('stroke',farbe);r.setAttribute('stroke-opacity','.4');r.setAttribute('stroke-dasharray','3 3')}
+  const v0=+g.dataset.x0,v1=+g.dataset.x1,a=Math.max(ZEIT.x0,v0),b=Math.min(ZEIT.x1,v1);
+  const xa=ZEIT.X(a),xb=Math.max(xa+2,ZEIT.X(b)),farbe=g.dataset.farbe||'#4F5E53';
+  const ohne={l:v0<ZEIT.x0,r:g.dataset.laeuft==='1'||v1>ZEIT.x1};
+  for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',xa);r.setAttribute('width',xb-xa);r.setAttribute('fill',farbe);r.setAttribute('fill-opacity','.07')}
+  for(const l of box.querySelectorAll('.kmRand')){const s=l.classList.contains('r')?'r':'l',x=s==='r'?xb:xa;
+    l.setAttribute('x1',ohne[s]?-99:x);l.setAttribute('x2',ohne[s]?-99:x);l.setAttribute('stroke',farbe)}
 }
-function kmBandWeg(box){for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',-99);r.setAttribute('width',0)}}
+function kmBandWeg(box){
+  for(const r of box.querySelectorAll('.kmBand')){r.setAttribute('x',-99);r.setAttribute('width',0)}
+  for(const l of box.querySelectorAll('.kmRand')){l.setAttribute('x1',-99);l.setAttribute('x2',-99)}
+}
 /* Zeigen auf einen Stoff (oder eine Stelle): seine Reihen bleiben voll, die
    übrigen treten zurück – nur, wenn mehrere Reihen zu sehen sind. */
 let hebUhr=null;
@@ -1878,6 +2074,7 @@ function render(){
   /* Jeder Reiter behält in dieser Sitzung seinen Ausschnitt; beim Neuladen
      steht wieder alles da. */
   if(letzterTab!==tab){
+    ZEIT_FEST=null;
     if(letzterTab)ZEIT_JE_TAB[letzterTab]={koVon,koBis,stufe:STUFE_ALT};
     const z=ZEIT_JE_TAB[tab];koVon=z?z.koVon:null;koBis=z?z.koBis:null;STUFE_ALT=z?z.stufe:null;
   }
@@ -1983,8 +2180,8 @@ function vAnalysen(){
       .map(([v,l,z])=>`<button class="${anFilter===v?'on':''}" data-tun="anFilter" data-v="${v}">${esc(l)} <span style="opacity:.65">${z}</span></button>`).join('')}</span>`:''}</div>`;
   if(!sicht.length)s+=`<p class="muted small">Noch keine Analyse erfasst.</p>`;
   else s+=`<div class="scroll"><table><thead><tr><th>Datum</th><th>Art</th><th>Probe</th><th>Blatt</th><th>Labor</th><th>Probennummer</th><th></th></tr></thead><tbody>
-    ${sicht.map(b=>{const a=b.proben[0];
-      return `<tr class="klick" data-tun="detail" data-id="${esc(a.id)}">
+    ${sicht.map((b,i)=>{const a=b.proben[0],neu=i>0&&b.datum!==sicht[i-1].datum;
+      return `<tr class="klick${neu?' tagNeu':''}" data-tun="detail" data-id="${esc(a.id)}">
       <td class="mono">${fmt(b.datum)}</td>
       <td>${esc(TYPNAME[b.typ]||b.typ||'?')}</td>
       <td>${b.typ==='giesswasser'?esc(gwStelle(a)):b.satz?'Satz <span class="mono">'+esc(b.satz)+'</span>':'–'}${zustandTag(b.zustand)}</td>
@@ -2055,12 +2252,13 @@ function detail(id){
       <span class="tag">${esc(a.labor||'von Hand erfasst')}</span>
       ${ps.filter(p=>p.laborId).map(p=>`<span class="tag">Probe ${esc(p.laborId)}${ps.length>1?' · '+esc(BLATTNAME[p.blattalter]||''):''}</span>`).join('')}
       ${dateien.map(f=>`<span class="tag">${esc(f)}</span>`).join('')}</div>
+    ${amTagZeile(b)}
     ${a.kultur?`<p class="tiny muted">Anbau laut Bericht: ${esc(a.kultur)}</p>`:''}
     ${ps.some(p=>p.einheitAlt)?`<div class="note">Von Hand erfasst, als die Felder noch mg/l hiessen. Das Labor liefert mmol/l und µmol/l – bitte die Werte kontrollieren.</div>`:''}
     <div class="scroll"><table><thead><tr><th>Parameter</th>${kopf}${wasser?'':'<th>Optimum (Labor)</th>'}</tr></thead><tbody>
       ${alleGr.map(gruppe).join('')}
     </tbody></table></div>
-    ${ps.some(p=>Object.values(p.werte||{}).some(w=>w&&w.unter))?'<p class="tiny muted" style="margin-top:8px">«&lt;» heisst: unter der Nachweisgrenze des Labors.</p>':''}
+    ${ps.some(p=>Object.values(p.werte||{}).some(w=>w&&w.unter))?'<p class="tiny muted" style="margin-top:8px">«&lt;» heisst: unter der Nachweisgrenze des Labors. In den Grafiken steht ein solcher Wert hohl bei 0.</p>':''}
     ${wasser?'<p class="tiny muted" style="margin-top:8px">Das Labor liefert Makronährstoffe in mmol/l und Spurenelemente in µmol/l; daneben steht der Wert in mg/l.</p>':''}
     ${texte.map(q=>`<details style="margin-top:12px"><summary>Der Bericht im Wortlaut${q.datei?' («'+esc(q.datei)+'»)':''}</summary>
       <pre class="tiny mono" style="white-space:pre-wrap;max-height:320px;overflow:auto;background:var(--card2);padding:10px;border-radius:8px;border:1px solid var(--line)">${esc(q.text)}</pre></details>`).join('')}`,
@@ -2068,6 +2266,26 @@ function detail(id){
      <button data-tun="loeschBericht" data-id="${esc(a.id)}">Entfernen</button>
      <div style="flex:1"></div><button data-tun="dlgZu">Schliessen</button>`);
 }
+/* Was am selben Tag beprobt wurde – zum Hinüberwechseln – und der Weg in
+   die Grafik, wo die Tageslinie auf diesem Tag stehen bleibt. */
+function amTagZeile(b){
+  if(!b||!b.datum)return '';
+  const andere=berichte().filter(x=>x.datum===b.datum&&x.id!==b.id);
+  const verlauf=b.typ==='blattsaft'||b.typ==='giesswasser';
+  if(!andere.length&&!verlauf)return '';
+  const titel=x=>[TYPNAME[x.typ]||x.typ,x.typ==='giesswasser'?gwStelle(x.proben[0]):x.satz?'Satz '+x.satz:null].filter(Boolean).join(' · ');
+  return `<div class="amTag">${andere.length?`<span class="small muted">Am selben Tag:</span>${andere.map(x=>`<button class="klein ghost" data-tun="detail" data-id="${esc(x.proben[0].id)}">${esc(titel(x))}</button>`).join('')}`:''}
+    ${verlauf?`<button class="klein verlauf" data-tun="imVerlauf" data-x="${+new Date(b.datum)}" title="Zum Reiter Blattsaft &amp; Giesswasser – die Tageslinie steht auf diesem Tag">Im Verlauf zeigen</button>`:''}</div>`;
+}
+AKTION.imVerlauf=d=>{
+  const x=+d.x;if(!isFinite(x))return;
+  if(el('dlg').open)el('dlg').close();
+  if(tab!=='kombi'){tab='kombi';render()}
+  ZEIT_FEST={x,k:'t'+tagVon(x),tag:tagVon(x)};
+  if(ZEIT&&(x<ZEIT.x0||x>ZEIT.x1))AKTION.zeitZu({x});else zeitZeichnen();
+  const b=el('cKb');if(b&&b.scrollIntoView)b.scrollIntoView({block:'start'});
+  paarAnsage(ZEIT_FEST);
+};
 AKTION.bearbeiten=d=>{const b=berichtVon(d.id);if(b)pruefdialog(b.proben.map(p=>JSON.parse(JSON.stringify(p))),true)};
 async function einlesen(liste){
   if(typeof pdfjsLib==='undefined'||!pdfBereit){
@@ -2300,7 +2518,10 @@ function vKombi(){
   if(!blatt.length&&!wasser.length)return leerHinweis('Noch keine Analysen',
     'Hier stehen Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse, darunter die Balken des Kulturmanagements. Dafür braucht es wenigstens eine Analyse.',
     '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
-  const hat=(liste,k)=>liste.some(a=>a.werte&&a.werte[k]&&a.werte[k].wert!=null&&!a.werte[k].unter);
+  /* Auch ein Stoff, der nur unter der Nachweisgrenze lag, steht zur Wahl –
+     er liegt dann auf der Nulllinie. */
+  const hat=(liste,k)=>liste.some(a=>a.werte&&a.werte[k]&&(a.werte[k].wert!=null||a.werte[k].unter));
+  const nurNG=(liste,k)=>{const l=liste.filter(a=>a.werte&&a.werte[k]&&(a.werte[k].wert!=null||a.werte[k].unter));return l.length>0&&l.every(a=>a.werte[k].unter)};
   const blattParams=STOFFREIHE.concat([...new Set(blatt.flatMap(a=>Object.keys(a.werte||{})))].sort())
     .filter((k,i,arr)=>arr.indexOf(k)===i&&hat(blatt,k));
   const wasserParams=GW_PARAM.map(k=>'gw_'+k).filter(k=>hat(wasser,k));
@@ -2331,18 +2552,21 @@ function vKombi(){
       const punkte=[];
       for(const a of blatt){
         if((a.blattalter||'misch')!==al)continue;
-        const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
+        /* Unter der Nachweisgrenze: in der Grafik bei 0 (hohl), im Kästchen
+           der Laborwert «< 0,3». Gespeichert bleibt, was das Labor schrieb. */
+        const w=a.werte[k];if(!w||(w.wert==null&&!w.unter))continue;
+        const ng=!!w.unter,v=ng?0:w.wert;
         const o=optimum(a,k),e=einheit(k);
-        const y=kbSkala==='lage'?lage(w.wert,o):w.wert;
+        const y=kbSkala==='lage'?lage(v,o):v;
         if(y==null)continue;
-        punkte.push({x:+new Date(a.datum),y,wert:w.wert,kennung:a.id,
+        punkte.push({x:+new Date(a.datum),y,wert:v,ng,grenze:ng?w.wert:null,kennung:a.id,
           tipp:tippBau(NAME[k]||k,F[k],[
             ['Satz',a.satz||'–'],['Probe',fmt(a.datum)],['Blatt',BLATTSPALTE[al]],
-            ['Messwert',nz(w.wert)+(e?' '+e:'')],
+            ['Messwert',ng?ngText(w,e):nz(w.wert)+(e?' '+e:'')],
             o?['Optimum (Labor)',optText(o)+(e?' '+e:'')]:null,
-            a.zustand?['Kulturbild',a.zustand]:null],'Anklicken öffnet den Bericht.')});
+            a.zustand?['Kulturbild',a.zustand]:null],(ng?NG_FUSS+' ':'')+'Anklicken öffnet den Bericht.')});
       }
-      if(punkte.length)out.push({id:'b|'+k+'|'+al,param:k,reihe:k,einh:einheit(k),farbe:F[k],form:BLATTFORM[al],punkte});
+      if(punkte.length)out.push({id:'b|'+k+'|'+al,param:k,reihe:k,einh:einheit(k),farbe:F[k],form:BLATTFORM[al],tagNur:true,punkte});
     }
     return out;
   }
@@ -2351,17 +2575,17 @@ function vKombi(){
     for(const k of wahlW())for(const st of stellen){
       const punkte=[];
       for(const a of wasser.filter(x=>stelleSchluessel(x)===st)){
-        const w=a.werte[k];if(!w||w.wert==null||w.unter)continue;
-        const mg=inMgL(k,w.wert);
-        punkte.push({x:+new Date(a.datum),y:w.wert,wert:w.wert,kennung:a.id,
+        const w=a.werte[k];if(!w||(w.wert==null&&!w.unter))continue;
+        const ng=!!w.unter,v=ng?0:w.wert,mg=ng?null:inMgL(k,w.wert);
+        punkte.push({x:+new Date(a.datum),y:v,wert:v,ng,grenze:ng?w.wert:null,kennung:a.id,
           tipp:tippBau(gwName(k),F[k.slice(3)],[
             ['Stelle',stelleName(a)],
             stelleVon(a).roh!==stelleName(a)?['auf dem Bericht',stelleVon(a).roh]:null,
             ['Probe',fmt(a.datum)],
-            ['Messwert',nz(w.wert)+(einheit(k)?' '+einheit(k):'')],
-            mg!=null?['entspricht',nz(mg,2)+' mg/l']:null],'Anklicken öffnet den Bericht.')});
+            ['Messwert',ng?ngText(w,einheit(k)):nz(w.wert)+(einheit(k)?' '+einheit(k):'')],
+            mg!=null?['entspricht',nz(mg,2)+' mg/l']:null],(ng?NG_FUSS+' ':'')+'Anklicken öffnet den Bericht.')});
       }
-      if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,reihe:k.slice(3),einh:einheit(k),farbe:F[k.slice(3)],form:gwForm[st]||'kreis',punkte});
+      if(punkte.length)out.push({id:'w|'+k+'|'+st,param:k,reihe:k.slice(3),einh:einheit(k),farbe:F[k.slice(3)],form:gwForm[st]||'kreis',tagNur:true,punkte});
     }
     return out;
   }
@@ -2392,7 +2616,13 @@ function vKombi(){
     });
   }
   /* Was eine Grafik zeigt, wählt man in ihrer eigenen Kopfzeile. */
-  const chip=(F,k,an,name,tun)=>`<span class="chip stoff ${an?'on':''}" data-tun="${tun}" data-k="${esc(k)}"><span class="dot" style="background:${an?F[k.replace(/^gw_/,'')]:'#C3CDBF'}"></span>${esc(name)}</span>`;
+  const chip=(F,k,an,name,tun,hohl)=>{const f=an?F[k.replace(/^gw_/,'')]:'#C3CDBF';
+    return `<span class="chip stoff ${an?'on':''}" data-tun="${tun}" data-k="${esc(k)}"${hohl?' title="bisher immer unter der Nachweisgrenze"':''}><span class="dot${hohl?' hohl':''}" style="${hohl?'color':'background'}:${f}"></span>${esc(name)}</span>`};
+  /* Liegt eine gewählte Reihe irgendwann unter der Nachweisgrenze, sagt der
+     Kopf der Grafik, was die hohlen Punkte bei 0 sind – unabhängig vom
+     Ausschnitt, damit er beim Verschieben nicht springt. */
+  const ngInfo=serien=>serien.some(se=>se.punkte.some(q=>q.ng))
+    ?`<span class="ngInfo" data-tipp="${esc(tippBau('Unter der Nachweisgrenze','#4F5E53',['Das Labor konnte den Stoff nicht nachweisen. Der Laborwert (z. B. <0,3) steht im Kästchen und im Bericht; in der Grafik steht der Punkt hohl bei 0.']))}">${zeichen('kreis',NEUTRAL,true)}unter der Nachweisgrenze · bei 0</span>`:'';
   function blattOptionen(){
     if(!blattParams.length)return '';
     const etagenKnopf=[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]]));
@@ -2410,13 +2640,16 @@ function vKombi(){
     const offen=stellenListe().filter(x=>x.zustand.offen).length;
     return `<button class="klein${offen?' offen':''}" data-tun="stellen" title="Bezeichnungen wie «RV» und «Reservoir vorne» derselben Stelle zuordnen">Stellen zuordnen${offen?` · ${offen} offen`:''}</button>`;
   };
+  /* An welchen Tagen es eine Probe gibt – gleich, welcher Stoff gewählt ist
+     (für das Schild «kein Wert» bzw. «keine Probe»). */
+  const tageB=new Set(blatt.map(a=>tagVon(+new Date(a.datum)))),tageW=new Set(wasser.map(a=>tagVon(+new Date(a.datum))));
   function zeichnen(){
     const F=farben();
     zeitBild(el('cKb'),{aufKlick:true,minTage:14,stufen:STUFEN_TAGE.kombi,
       vorgaben:[['alles','alles'],['180','6 Monate'],['90','3 Monate']],
-      tafeln:[{kopf:'Blattsaft',linien:'blatt',rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff')).join(''),spuren:blattSpuren(F)},
-              {kopf:'Giesswasser',linien:'wasser',rechts:(stellen.length>1?`<span class="zeichen">${stellen.map(st=>zeichen(gwForm[st],NEUTRAL)+esc(stelleTitel(st).replace(/^Reservoir /,''))).join(' ')}</span>`:'')+stellenKnopf(),
-               wahl:wasserParams.map(k=>chip(F,k,wahlW().includes(k),gwName(k),'kbWass')).join(''),spuren:wasserSpuren(F)}],
+      tafeln:[{kopf:'Blattsaft',linien:'blatt',neben:ngInfo(blattSerien(F)),rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff',nurNG(blatt,k))).join(''),spuren:blattSpuren(F).map(sp=>Object.assign(sp,{tageAlle:tageB}))},
+              {kopf:'Giesswasser',linien:'wasser',neben:ngInfo(wasserSerien(F)),rechts:(stellen.length>1?`<span class="zeichen">${stellen.map(st=>zeichen(gwForm[st],NEUTRAL)+esc(stelleTitel(st).replace(/^Reservoir /,''))).join(' ')}</span>`:'')+stellenKnopf(),
+               wahl:wasserParams.map(k=>chip(F,k,wahlW().includes(k),gwName(k),'kbWass',nurNG(wasser,k))).join(''),spuren:wasserSpuren(F).map(sp=>Object.assign(sp,{tageAlle:tageW}))}],
       km:kmDaten('kombi'),kmNach:0});
   }
   DIAG={teile:[],zeichnen,klick:id=>detail(id)};
@@ -3221,7 +3454,7 @@ function vTank(){
       vorgaben:[['alles','alles'],['90','3 Monate'],['42','6 Wochen'],['7','1 Woche']],tafeln:vorrat.tafeln,km:kmDaten('tank'),kmNach:0});
   }
   function tafelnBauen(){
-    const ms=sicht(),lg=messLage(ms,messStelle),mx=m=>lg.x.get(m);
+    const ms=sicht(),lg=messLage(ms,messStelle),mx=m=>lg.x.get(m),tageT=new Set(ms.map(m=>tagVon(+new Date(m.datum))));
     const reihe=(k,name,einh,dez)=>stellen.filter(st=>tkStelle==='alle'||st===tkStelle).map(st=>{
       const pk=ms.filter(m=>messStelle(m)===st&&m[k]!=null).sort((a,b)=>mx(a)-mx(b));
       return {id:'t|'+k+'|'+st,farbe:farbe[st],form:k==='ecFrisch'?'ring':form[st],name,einh,dez,stelle:st,reihe:st,punkte:pk.map(m=>({x:mx(m),y:m[k],ohneZeit:!m.zeit,
@@ -3235,6 +3468,7 @@ function vTank(){
       {kopf:'pH',linien:'ph',rechts:'%%DICHTE%%',spuren:[{serien:reihe('ph','pH','',2),hoehe:170,aria:'pH',leerWort:'Messung',leerText:'kein pH in diesem Zeitraum'}]},
       {kopf:'EC',linien:'ec',neben:esc('mS/cm'+(alle.some(m=>m.ecFrisch!=null)?' · Ring: frisch angesetzt':'')),spuren:[{serien:ec,hoehe:170,aria:'EC',leerWort:'Messung',leerText:'kein EC in diesem Zeitraum'}]}];
     if(alle.some(m=>m.o2!=null))tafeln.push({kopf:'Sauerstoff',linien:'o2',neben:'mg/l',spuren:[{serien:reihe('o2','Sauerstoff','mg/l',1),hoehe:140,aria:'Sauerstoff',leerWort:'Messung',leerText:'kein Sauerstoff in diesem Zeitraum'}]});
+    for(const t of tafeln)for(const sp of t.spuren)sp.tageAlle=tageT;
     return tafeln;
   }
   /* Die Stelle steht links in der Zeitzeile – das spart eine eigene Leiste. */
@@ -3252,7 +3486,7 @@ function vTank(){
       <span class="sub">Neueste zuerst${tkStelle==='alle'?'':' · nur '+esc(tkStelle)} – zum Nachschlagen und Entfernen.</span></summary>
       <div class="row" style="margin:10px 0"><button data-tun="tabWaehlen">Excel oder CSV einlesen</button></div>
       <div class="liste"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Stelle</th><th>pH</th><th>EC</th>${hatF?'<th>EC frisch</th>':''}${hatO?'<th>O₂ mg/l</th>':''}${hatT?'<th>Temp.</th>':''}<th>Name</th><th>Notiz</th><th>Herkunft</th><th></th></tr></thead><tbody>
-      ${l.map(m=>`<tr><td class="mono">${fmt(m.datum)}</td><td class="mono">${esc(m.zeit||'')}</td><td class="tiny" style="white-space:nowrap">${esc(messStelle(m))}</td>
+      ${l.map((m,i)=>`<tr${i>0&&m.datum!==l[i-1].datum?' class="tagNeu"':''}><td class="mono">${fmt(m.datum)}</td><td class="mono">${esc(m.zeit||'')}</td><td class="tiny" style="white-space:nowrap">${esc(messStelle(m))}</td>
         <td class="mono">${nz(m.ph,2)}</td><td class="mono">${nz(m.ec,2)}</td>
         ${hatF?`<td class="mono">${nz(m.ecFrisch,2)}</td>`:''}${hatO?`<td class="mono">${m.o2!=null?nz(m.o2,1):'–'}</td>`:''}${hatT?`<td class="mono">${m.temp!=null?nz(m.temp,1)+' °C':'–'}</td>`:''}
         <td class="mono tiny">${esc(m.wer||'')}</td><td class="small muted">${esc(m.notiz||'')}</td>
