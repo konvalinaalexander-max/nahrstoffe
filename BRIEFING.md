@@ -386,7 +386,7 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# ohne Browser (794 Einzelprüfungen; im Browser rund 465)
+# ohne Browser (796 Einzelprüfungen; im Browser rund 470)
 for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1 vg1; do node pruefung/$t.js; done
 
 # im Browser (Chromium + playwright; NODE_PATH mit pdfjs-dist@3.11.174, jsqr, pngjs)

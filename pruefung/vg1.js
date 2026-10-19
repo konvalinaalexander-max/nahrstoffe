@@ -249,6 +249,11 @@ console.log('\n════ Aus der Prüfung ════');
   const d2=A.leer();d2.analysen=JSON.parse(JSON.stringify(V.proben)).concat([{id:'g1',typ:'giesswasser',labor:'NovaCropControl',datum:'2026-09-01',stelle:'Basilikum RV',werte:{gw_K:{wert:0.7}},optima:{}}]);
   A.setDb(d2);A.setKombi({blatt:['K'],wasser:['gw_K']});A.vKombi();A.nachRenderRun();
   ok(/8 Vergleichsproben – im eigenen Reiter/.test($('cKb').innerHTML)&&!/Noch keine Blattsaftanalyse/.test($('cKb').innerHTML),'Verlauf mit nur Vergleichsproben: kein «Noch keine Blattsaftanalyse»');
+  const d3=A.leer();d3.analysen=JSON.parse(JSON.stringify(V.proben.filter(p=>p.laborId==='202604171295'))).concat([{id:'g1',typ:'giesswasser',labor:'NovaCropControl',datum:'2026-09-01',stelle:'Basilikum RV',werte:{gw_K:{wert:0.7}},optima:{}}]);
+  A.setDb(d3);A.vKombi();A.nachRenderRun();
+  ok(/1 Vergleichsprobe – im eigenen Reiter/.test($('cKb').innerHTML)&&/1 Vergleichsprobe vom 09\.04\.2026/.test($('cKb').innerHTML),'Eine einzige Vergleichsprobe: «1 Vergleichsprobe» (Einzahl)');
+  d3.analysen=d3.analysen.filter(a=>a.typ==='blattsaft');
+  ok(/Die Blattsaftprobe vom 09\.04\.2026 steht im Reiter/.test(A.vKombi()),'… auch im leeren Verlauf: «Die Blattsaftprobe … steht»');
   /* Zusatz: Wortlaut bleibt, nur ein allein stehendes Kulturbild fällt weg */
   ok(A.zusatzAusText('Adresse: Eichhof Anbau: 08-441 Eichhof Nur gelbe Blätter','08-441')==='Nur gelbe Blätter','«Nur gelbe Blätter» bleibt so, wie es im Bericht steht');
   ok(A.zusatzAusText('Adresse: Eichhof Anbau: 08-441 Eichhof grün','08-441')===null,'«Eichhof grün» → kein Zusatz (das ist das Kulturbild)');

@@ -13,10 +13,10 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# 2 · Logikprüfungen (kein Netz, kein Browser; 794 Einzelprüfungen)
+# 2 · Logikprüfungen (kein Netz, kein Browser; 796 Einzelprüfungen)
 for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1 vg1; do node pruefung/$t.js; done
 
-# 3 · Browser (rund 465 Prüfungen; Chromium und playwright; im NODE_PATH ausserdem
+# 3 · Browser (rund 470 Prüfungen; Chromium und playwright; im NODE_PATH ausserdem
 #     pdfjs-dist@3.11.174 für die PDFs, jsqr und pngjs für den QR-Code)
 node pruefung/browser.js     # die sechs Reiter, Bericht, Import, Grafiken, Zeigen, Zoom, Rollbalken, Kulturmanagement ziehen, Handybreite
 node pruefung/upload.js      # Blattsaft-PDF hochladen bis zum Bericht – mit echtem pdf.js
@@ -59,7 +59,7 @@ Installation umgeleitet (`PDFJS=…/pdfjs-dist/build`, sonst über
 | `tank.js` | Chromium im Handy-Format gegen `server.js` – die Mobile App (`erfassen.html`): Name statt Login, Uhrzeit, messen, Beigabe, Nachfrage bei grossem Sprung, Netz weg, Warteschlange, kein Link ins Dashboard |
 | `online.js` | Chromium gegen `server.js`: Dashboard ohne Login, «Mobile App ↗», ＋ Massnahme sichert laufend, Gleichzeitigkeit, Auffrischen, Einträge der Mobile App, Kopie herunterladen, persönliche Ansicht (Start immer bei Blattsaft & Giesswasser, «Punkte verbinden» gemerkt), **ein alter Stand auf dem Server: «Ältere Daten übernommen» einmal, gleich zurückgeschrieben, nach «Verstanden» nie wieder**, Server weg |
 | `paket.js` | Chromium: leerer Server → Sicherung einspielen → Paket aktivieren → Tank: Kulturmanagement unter dem pH, eine Zeile je Mittel, Verdichtung je Tag/halben Tag, Klick auf den Tagespunkt, Tageslinie mit Ringen derselben Messung in pH/EC/O₂, Band über einen Tagespunkt, Stunden auf der Achse, aufklappbare Marken → Balken von Hand → QR-Code zurückgelesen und gedruckt → Handy mit Namen → Einträge Mobile App → Neustart |
-| `vergleich.js` | Chromium: Reiter leer → «Die 5 Berichte übernehmen» → Kontrolldialog (Zusatz, Zeilennummer, Doppelwarnung ohne Zusatz) → man bleibt im Vergleich → Maus auf Balken und Zeile hebt die Probe überall hervor → Klick öffnet den Bericht, «Im Vergleich zeigen» zurück → Zeilen per Klick und Enter (Fokus bleibt), alle/keine, Kupfer dazu, Ansicht gemerkt, Lage im Optimum → nicht im Verlauf, Hinweis, umschalten → Handy: Reiter sichtbar, kein waagrechtes Scrollen, erst zeigen dann öffnen · **aus der Prüfung:** ausgeblendete Probe nimmt keine Balken zurück, Tastatur (Nährstoffe, Blatt, alle/keine, ✎ – der Fokus bleibt), Tab/Esc heben auf, Tabelle bleibt offen, bei 1024/768/360/320 px keine Werte übereinander, Optimum ganz lesbar, kein waagrechtes Scrollen, Zeilen ohne Überdeckung, Legende zusammen; gedreht bei offenem Bericht; Finger je Balken und Kachel, Scrollen vergisst, Nummer zeigt, Zeile tippen; Laptop mit Touchscreen |
+| `vergleich.js` | Chromium: Reiter leer → «Die 5 Berichte übernehmen» → Kontrolldialog (Zusatz, Zeilennummer, Doppelwarnung ohne Zusatz) → man bleibt im Vergleich → Maus auf Balken und Zeile hebt die Probe überall hervor → Klick öffnet den Bericht, «Im Vergleich zeigen» zurück → Zeilen per Klick und Enter (Fokus bleibt), alle/keine, Kupfer dazu, Ansicht gemerkt, Lage im Optimum → nicht im Verlauf, Hinweis, umschalten → Handy: Reiter sichtbar, kein waagrechtes Scrollen, erst zeigen dann öffnen · **aus der Prüfung:** ausgeblendete Probe nimmt keine Balken zurück, Tastatur (Nährstoffe, Blatt, alle/keine, ✎ – der Fokus bleibt), Tab/Esc heben auf, Tabelle bleibt offen, bei 1024/768/360/320 px keine Werte übereinander, Optimum ganz lesbar, kein waagrechtes Scrollen, Zeilen ohne Überdeckung, Legende zusammen; gedreht bei offenem Bericht; Finger je Balken und Kachel, Scrollen vergisst, Nummer zeigt, Tippen daneben hebt auf (auch nach dem Bericht), Zeile tippen; Stift wie Finger; Laptop mit Touchscreen; Tabelle offen/zu über den Reiterwechsel |
 | `pdfbau.js` | baut aus `seiten.json` und `giesswasser.json` schlichte PDFs (Helvetica, WinAnsi), jedes Textstück an seinem Ort |
 | `pdfbau-pruefen.js` | belegt, dass pdf.js aus den nachgebauten PDFs dieselben Zeilen und der Parser dieselben Werte liest wie aus den echten |
 

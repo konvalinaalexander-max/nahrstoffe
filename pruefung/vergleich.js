@@ -238,9 +238,48 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     ok(!(await h.$eval('#dlg',d=>d.open))&&await h.$eval('.tipp',e=>e.classList.contains('an')),'Nach dem Scrollen ist das Kästchen weg – das nächste Tippen zeigt wieder, statt zu öffnen');
     await tippe('#cVgK .vgKachel[data-k="K"] g.vgNrS[data-nr="3"]');
     ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))==='3','Tippen auf die Nummer ③ zeigt die Probe');
+    /* Tippen daneben (ohne Scrollen) hebt auf */
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
+    const kopf=await (await h.$('#cVgK .vgKachel[data-k="K"] .vgKopf')).boundingBox();
+    await h.touchscreen.tap(kopf.x+20,kopf.y+kopf.height/2);await h.waitForTimeout(250);
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await h.$eval('#cVgP',e=>e.getAttribute('data-zeigt'))===null,'Nach dem ersten Tippen: Tippen auf den Kopf der Kachel hebt die Hervorhebung auf');
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
+    await h.tap('#dlgFoot button:text-is("Schliessen")');await h.waitForTimeout(250);
+    const kopf2=await (await h.$('#cVgK .vgKachel[data-k="K"] .vgKopf')).boundingBox();
+    await h.touchscreen.tap(kopf2.x+20,kopf2.y+kopf2.height/2);await h.waitForTimeout(250);
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null,'Bericht geöffnet und geschlossen: Tippen daneben hebt auf');
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
     await tippe('#cVgP .vgZeile[data-nr="4"] .vgText');
     ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await h.evaluate(()=>!vgAn.has(4)),'Tippen auf eine Zeile blendet sie aus – nichts bleibt hervorgehoben');
     await ctx.close();
+  }
+  {
+    /* Stift ohne Schweben: wie der Finger erst zeigen, dann öffnen */
+    const ctx=await b.newContext({viewport:{width:1024,height:900}});const h=await ctx.newPage();wache(h);
+    await vorbereiten(h,['K']);
+    const cdp=await ctx.newCDPSession(h);
+    const bb=await (await h.$('#cVgK g.vgB[data-nr="2"]')).boundingBox(),x=bb.x+bb.width/2,y=bb.y+bb.height*0.6;
+    const stift=async()=>{for(const type of ['mousePressed','mouseReleased'])await cdp.send('Input.dispatchMouseEvent',{type,x,y,button:'left',clickCount:1,pointerType:'pen'});await h.waitForTimeout(250)};
+    await stift();
+    ok(!(await h.$eval('#dlg',d=>d.open))&&await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))==='2','Stift: das erste Tippen zeigt Probe ② – es öffnet nichts');
+    await stift();
+    ok(await h.$eval('#dlg',d=>d.open),'Stift: das zweite öffnet den Bericht');
+    await ctx.close();
+  }
+  {
+    /* Die zugeklappte Tabelle bleibt zu – auch nach einem Reiterwechsel */
+    await p.click('#nav button:text-is("Living Herbs vs Topfbasilikum")');await p.waitForTimeout(300);
+    if(!(await p.$eval('#cVgK details.vgTabelle',d=>d.open)))await p.click('#cVgK details.vgTabelle summary');
+    await p.click('#cVgK button.chip[data-k="Zn"]');await p.waitForTimeout(200);
+    await p.click('#cVgK details.vgTabelle summary');await p.waitForTimeout(100);
+    await p.click('#nav button:text-is("Analysen")');await p.waitForTimeout(200);
+    await p.click('#nav button:text-is("Living Herbs vs Topfbasilikum")');await p.waitForTimeout(300);
+    ok(!(await p.$eval('#cVgK details.vgTabelle',d=>d.open)),'Zugeklappte Tabelle bleibt nach dem Reiterwechsel zu');
+    await p.click('#cVgK details.vgTabelle summary');await p.waitForTimeout(100);
+    await p.click('#nav button:text-is("Analysen")');await p.waitForTimeout(200);
+    await p.click('#nav button:text-is("Living Herbs vs Topfbasilikum")');await p.waitForTimeout(300);
+    ok(await p.$eval('#cVgK details.vgTabelle',d=>d.open),'… und aufgeklappte bleibt offen');
   }
   {
     /* Laptop mit Touchscreen: nach einem Fingertipp zeigt die Maus wieder */

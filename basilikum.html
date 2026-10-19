@@ -2650,12 +2650,12 @@ const KB_MAX_BLATT=8,KB_MAX_WASSER=6;
 let kbBlatt=null,kbWasser=null,kbEtage='beide',kbSkala='wert';
 function vKombi(){
   /* Die Proben des Vergleichs stehen im eigenen Reiter (siehe 8b). */
-  const vgWeg=vgVerborgen();
+  const vgWeg=vgVerborgen(),vgN=vgWeg.size,vgPr=vgN===1?'Vergleichsprobe':'Vergleichsproben';
   const blatt=db.analysen.filter(a=>a.typ==='blattsaft'&&a.datum&&!vgWeg.has(a.id));
   const wasser=gwProben().filter(gwSichtbar);
-  const vgLink=vgWeg.size?`<button class="ghost klein vgHin" data-tun="reiter" data-reiter="vergleich" title="Diese Proben stehen nur im Reiter ${esc(vgVergleich().titel)} – dort lässt es sich ändern">${vgWeg.size} Vergleichsproben vom ${fmt(vgVergleich().datum)} ›</button>`:'';
+  const vgLink=vgWeg.size?`<button class="ghost klein vgHin" data-tun="reiter" data-reiter="vergleich" title="${vgN===1?'Diese Probe steht':'Diese Proben stehen'} nur im Reiter ${esc(vgVergleich().titel)} – dort lässt es sich ändern">${vgN} ${vgPr} vom ${fmt(vgVergleich().datum)} ›</button>`:'';
   if(!blatt.length&&!wasser.length&&vgWeg.size)return leerHinweis('Noch keine Analysen im Verlauf',
-    `Die ${vgWeg.size} Blattsaftproben vom ${fmt(vgVergleich().datum)} stehen im Reiter «${esc(vgVergleich().titel)}».`,
+    `${vgN===1?'Die Blattsaftprobe':`Die ${vgN} Blattsaftproben`} vom ${fmt(vgVergleich().datum)} ${vgN===1?'steht':'stehen'} im Reiter «${esc(vgVergleich().titel)}».`,
     '<button class="primary" data-tun="reiter" data-reiter="vergleich">Zum Vergleich</button> <button data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
   if(!blatt.length&&!wasser.length)return leerHinweis('Noch keine Analysen',
     'Hier stehen Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse, darunter die Balken des Kulturmanagements. Dafür braucht es wenigstens eine Analyse.',
@@ -2732,7 +2732,7 @@ function vKombi(){
     return out;
   }
   function blattSpuren(F){
-    if(!blatt.length)return [{serien:[],hoehe:80,leerText:vgWeg.size?`${vgWeg.size} Vergleichsproben – im eigenen Reiter.`:'Noch keine Blattsaftanalyse.'}];
+    if(!blatt.length)return [{serien:[],hoehe:80,leerText:vgN?`${vgN} ${vgPr} – im eigenen Reiter.`:'Noch keine Blattsaftanalyse.'}];
     if(!wahlB().length)return [{serien:[],hoehe:80,leerText:'Kein Wert gewählt – oben einen Nährstoff anklicken.'}];
     const serien=blattSerien(F),namen=wahlB().map(k=>NAME[k]||k);
     if(kbSkala==='lage')return [{titel:kurzListe(namen,5),serien,yTyp:'lage',yLabel:'Lage im Optimum des Labors',hoehe:210,
@@ -3170,7 +3170,6 @@ function vgKachel(k,farbe,cl,W,skala){
 }
 function vgZeichnen(){
   const box=el('cVgK');if(!box)return;
-  const d0=box.querySelector&&box.querySelector('details.vgTabelle');if(d0)vgTabOffen=d0.open;   /* bleibt offen beim Neuzeichnen */
   const v=vgVergleich(),zeilen=v.zeilen||[];
   const alle=zeilen.flatMap(z=>vgProbenVon(z,v));
   if(!alle.length){box.innerHTML=`<div class="tafel"><div class="tafelKopf"><h3>Je Nährstoff</h3></div>
@@ -3313,7 +3312,9 @@ document.addEventListener('pointerout',ev=>{
 document.addEventListener('click',ev=>{
   if(tab!=='vergleich')return;
   const g=vgZiel(ev.target,'#cVgK g.vgB');
-  if(vgZeigerArt!=='touch'){if(vgFest!=null){vgFest=null;if(!g)vgZeigen(null)}return}
+  /* Maus: zeigt beim Darüberfahren. Finger und Stift (ohne Schweben):
+     erst zeigen, dann öffnen. */
+  if(vgZeigerArt==='mouse'||vgZeigerArt==='pen'&&!g){if(vgFest!=null){vgFest=null;if(!g)vgZeigen(null)}return}
   if(g){
     /* Je Balken und Kachel: in der zweiten Kachel zeigt das erste Tippen
        wieder erst – der Zustand gehört zum Kästchen (TIPP_FEST) und ist mit
@@ -3330,8 +3331,14 @@ document.addEventListener('click',ev=>{
   /* Die Nummer unter einer Gruppe zeigt die Probe */
   const n=vgZiel(ev.target,'#cVgK g.vgNrS');
   if(n){tippWeg();vgFest='nr:'+n.dataset.nr;vgZeigen(+n.dataset.nr);return}
-  if(vgFest!=null||vgZiel(ev.target,'#cVgK .vgBild')){tippWeg();vgZeigen(null)}
+  /* Tippen daneben hebt auf – gefragt wird, was zu sehen ist: vgFest ist
+     hier schon leer, das Kompatibilitäts-mousemove vor dem click hat das
+     Kästchen (tippWeg) bereits geschlossen. */
+  if(vgGezeigt!=null||vgZiel(ev.target,'#cVgK .vgBild')){tippWeg();vgZeigen(null)}
 },true);
+/* «Werte als Tabelle»: offen oder zu bleibt beim Neuzeichnen und Reiterwechsel
+   (toggle steigt nicht auf – darum in der Capture-Phase) */
+document.addEventListener('toggle',ev=>{const t=ev.target;if(t&&t.matches&&t.matches('#cVgK details.vgTabelle'))vgTabOffen=t.open},true);
 document.addEventListener('keydown',ev=>{
   const z=vgZiel(ev.target,'.vgZeile[data-nr]');
   if(z&&ev.target===z&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();AKTION.vgProbe({nr:z.dataset.nr})}
