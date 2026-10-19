@@ -80,7 +80,7 @@ const kmZeilen=(p,box)=>p.$$eval(`${box} .tafel.km .kmZ`,zs=>zs.map(z=>({k:z.dat
   const namen=zl.map(z=>z.name);
   ok(['Zitronensäure','EM','Halades PE','Biovin','Magnesium'].every(n=>namen.includes(n))&&!namen.some(n=>/Phosphor/.test(n)),'Eine Zeile je Mittel: '+namen.filter(n=>!/Ereignisse/.test(n)).join(', ')+' – keine Phosphorsäure');
   const spannen=await p.evaluate(()=>kmDaten('tank').zeilen.flatMap(z=>z.spannen.map(s=>s.text)));
-  ok(spannen.includes('Zitronensäure 31.08.–09.09.')&&spannen.some(x=>/^EM seit 17\.09\./.test(x))&&spannen.includes('Halades PE 06.08.–19.08.')&&spannen.includes('Biovin 28.07.–26.08.'),'Die Balken: Zitronensäure bis 09.09., EM seit 17.09., Halades 06.–19.08., Biovin ab 28.07.');
+  ok(spannen.includes('Zitronensäure 31.08.–09.09.')&&spannen.some(x=>/^EM (seit )?17\.09\./.test(x))&&spannen.includes('Halades PE 06.08.–19.08.')&&spannen.includes('Biovin 28.07.–26.08.'),'Die Balken: Zitronensäure bis 09.09., EM ab 17.09. (läuft, solange keine 28 Tage vergangen sind), Halades 06.–19.08., Biovin ab 28.07.');
   const mg=zl.find(z=>z.name==='Magnesium');
   ok(mg&&mg.n>=2&&zl.filter(z=>z.name==='Magnesium').length===1,'Magnesium im Mai und im Juli stehen in derselben Zeile ('+(mg&&mg.n)+' Balken)');
   const ueberlappt=await p.$$eval('#cTank .kmZ',zs=>zs.some(z=>{const t=[...z.querySelectorAll('g.spb text')].map(x=>x.getBBox()).sort((a,b)=>a.x-b.x);

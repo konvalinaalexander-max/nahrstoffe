@@ -237,7 +237,8 @@ console.log('\n════ Die echte Tabelle: April bis September 2026 ══�
   /* Ob «seit» oder ein einzelner Tag, haengt davon ab, wie lange der 31.8.
      heute her ist – die Regel sagt: laeuft, solange keine 28 Tage vergangen sind. */
   ok(txt.some(t=>/^Zitronensäure (seit )?31\.08\./.test(t)),'Zitronensäure: 31. August – und danach nichts mehr in der Tabelle');
-  ok(txt.some(t=>/^Schwefelsäure 25 % seit 16\.09\./.test(t)),'Schwefelsäure: seit 16. September, läuft');
+  /* Dasselbe für die Schwefelsäure (zuletzt am 17.9.): bis Mitte Oktober «seit», danach ein Balken mit Ende */
+  ok(txt.some(t=>/^Schwefelsäure 25 % (seit 16\.09\.$|16\.09\.–17\.09\.)/.test(t)),'Schwefelsäure: ab 16. September – läuft, solange keine 28 Tage vergangen sind');
   ok(txt.some(t=>/^Kalisulfat (seit )?26\.08\./.test(t))&&txt.some(t=>/^Zink (seit )?26\.08\./.test(t)),'Kalisulfat und Zink ab 26. August – in der Tabelle steht danach keine weitere Gabe, also kein «seit» ohne Beleg');
   ok(M.every(x=>x.tipp&&/Menge gesamt/.test(x.tipp)),'Im Kästchen die Summe der Mengen');
   ok(txt.some(t=>/^Magnesium 06\.05\./.test(t)),'Magnesium: ein Balken ab 6. Mai');

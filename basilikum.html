@@ -252,6 +252,52 @@ button.klein.offen{color:var(--ink)}
 .tipp .k{color:#9FB39F;margin-top:4px;font-size:11px;white-space:normal}
 
 #qrDruck{display:none}
+/* Living Herbs vs Topfbasilikum: Probenzeilen, Nummern, Kacheln je Nährstoff */
+.vgZeilen{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.vgZeile{display:grid;grid-template-columns:24px 150px 112px minmax(0,1fr) auto auto 30px;grid-template-areas:"nr satz gruppe text blatt stand stift";
+  align-items:center;gap:6px 12px;padding:7px 10px;border-radius:10px;border:1px solid transparent;cursor:pointer;user-select:none;transition:background .12s,opacity .12s}
+.vgZeile>.vgNr{grid-area:nr}.vgZeile>.vgSatz{grid-area:satz;font-weight:600;min-width:0;line-height:1.25}
+.vgZeile>.vgGruppe{grid-area:gruppe;justify-self:start}.vgZeile>.vgText{grid-area:text;font-size:13px}
+.vgZeile>.vgBlatt{grid-area:blatt;display:inline-flex;gap:3px}.vgZeile>.vgStand{grid-area:stand;white-space:nowrap}.vgZeile>.vgStift{grid-area:stift}
+.vgZeile:hover{background:var(--card2);border-color:var(--line2)}
+.vgZeile:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.vgZeile.aus{opacity:.5}.vgZeile.aus:hover{opacity:.75}
+.vgZeile.fehlt .vgSatz{color:var(--muted)}
+.vgZeile.blink{background:#E3F0E1}
+.vgZusatz{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+.vgGruppe.offen{border-style:dashed}
+.vgNr{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--ink);color:#fff;
+  font-size:11.5px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;vertical-align:middle;flex:none}
+.vgNr.hohl{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.vgFuss{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--line2)}
+.vgVerlauf{display:inline-flex;gap:6px;align-items:center;cursor:pointer;margin-left:auto}
+.vgRaster{display:grid;gap:16px}
+.vgKachel{border:1px solid var(--line2);border-radius:var(--rs);padding:10px 10px 4px;min-width:0;background:#fff}
+.vgKopf{display:flex;gap:6px;align-items:center;font-size:13px;margin:0 0 4px;min-width:0}
+.vgKopf .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.vgOptText{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding-left:8px}
+.vgBild{display:block;max-width:100%;height:auto;overflow:visible}
+.vgB{transition:opacity .12s}
+.vgWert.klein{display:none}
+.vgLegende{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:10px}
+.vgLegende svg{vertical-align:middle}
+.vgTabelle{margin-top:10px}
+.vgTag{gap:4px;padding-left:3px}.vgTag .vgNr{min-width:16px;height:16px;font-size:10px}
+.vgHin{margin-left:4px}
+#cVgP[data-zeigt="1"] .vgZeile[data-nr="1"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="1"] .vgStreifen[data-nr="1"]{opacity:.055}#cVgK[data-zeigt="1"] .vgWert.klein[data-nr="1"]{display:inline}#cVgK[data-zeigt="1"] .vgB:not([data-nr="1"]){opacity:.42}
+#cVgP[data-zeigt="2"] .vgZeile[data-nr="2"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="2"] .vgStreifen[data-nr="2"]{opacity:.055}#cVgK[data-zeigt="2"] .vgWert.klein[data-nr="2"]{display:inline}#cVgK[data-zeigt="2"] .vgB:not([data-nr="2"]){opacity:.42}
+#cVgP[data-zeigt="3"] .vgZeile[data-nr="3"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="3"] .vgStreifen[data-nr="3"]{opacity:.055}#cVgK[data-zeigt="3"] .vgWert.klein[data-nr="3"]{display:inline}#cVgK[data-zeigt="3"] .vgB:not([data-nr="3"]){opacity:.42}
+#cVgP[data-zeigt="4"] .vgZeile[data-nr="4"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="4"] .vgStreifen[data-nr="4"]{opacity:.055}#cVgK[data-zeigt="4"] .vgWert.klein[data-nr="4"]{display:inline}#cVgK[data-zeigt="4"] .vgB:not([data-nr="4"]){opacity:.42}
+#cVgP[data-zeigt="5"] .vgZeile[data-nr="5"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="5"] .vgStreifen[data-nr="5"]{opacity:.055}#cVgK[data-zeigt="5"] .vgWert.klein[data-nr="5"]{display:inline}#cVgK[data-zeigt="5"] .vgB:not([data-nr="5"]){opacity:.42}
+#cVgP[data-zeigt="6"] .vgZeile[data-nr="6"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="6"] .vgStreifen[data-nr="6"]{opacity:.055}#cVgK[data-zeigt="6"] .vgWert.klein[data-nr="6"]{display:inline}#cVgK[data-zeigt="6"] .vgB:not([data-nr="6"]){opacity:.42}
+#cVgP[data-zeigt="7"] .vgZeile[data-nr="7"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="7"] .vgStreifen[data-nr="7"]{opacity:.055}#cVgK[data-zeigt="7"] .vgWert.klein[data-nr="7"]{display:inline}#cVgK[data-zeigt="7"] .vgB:not([data-nr="7"]){opacity:.42}
+#cVgP[data-zeigt="8"] .vgZeile[data-nr="8"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="8"] .vgStreifen[data-nr="8"]{opacity:.055}#cVgK[data-zeigt="8"] .vgWert.klein[data-nr="8"]{display:inline}#cVgK[data-zeigt="8"] .vgB:not([data-nr="8"]){opacity:.42}
+#cVgP[data-zeigt="9"] .vgZeile[data-nr="9"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="9"] .vgStreifen[data-nr="9"]{opacity:.055}#cVgK[data-zeigt="9"] .vgWert.klein[data-nr="9"]{display:inline}#cVgK[data-zeigt="9"] .vgB:not([data-nr="9"]){opacity:.42}
+@media (max-width:700px){
+  .vgZeile .vgZusatz{display:inline;margin-left:6px}
+  .vgZeile{grid-template-columns:24px auto minmax(0,1fr) 30px;grid-template-areas:"nr satz gruppe stift" ". text text text" ". blatt stand stand";padding:9px 6px}
+  .vgZeile>.vgStand{justify-self:start}.vgVerlauf{margin-left:0}
+}
 @media print{body.druckQr>*:not(#qrDruck){display:none!important}
   body.druckQr #qrDruck{display:block;text-align:center;padding-top:30mm;font-family:sans-serif}
   #qrDruck h1{font-size:26pt;margin:0 0 12mm}#qrDruck .qr svg{width:120mm;height:120mm}
@@ -473,6 +519,21 @@ function findeZustand(...t){
   const s=t.filter(Boolean).join(' ');const m=s.match(/\b(gelb\w*|gr[üu]n\w*)\b/i);
   return m?{wert:/gelb/i.test(m[1])?'gelb':'grün',beleg:m[0]}:null;
 }
+/* Was im Feld «Anbau» hinter der Satznummer ausser der Adresse und dem
+   Kulturbild steht («08-441 Eichhof Nur Mangel» → «Nur Mangel»): eine Probe
+   desselben Satzes, die eigens bezeichnet ist – sie bleibt ein eigener
+   Bericht. Nur was NACH der Satznummer steht; davor steht oft die Kultur
+   («Basilikum 28-478»), das ist keine eigene Probe. */
+function zusatzAusText(text,satz){
+  const t=String(text||''),anbau=((t.match(/Anbau:\s*(.+)/)||[])[1]||'').trim();
+  const sm=anbau.match(/(\d{1,2}\s*-\s*\d{2,4})/);
+  if(!sm||(satz&&sm[1].replace(/\s+/g,'')!==satz))return null;
+  const adresse=((t.match(/Adresse:\s*(\S+)/)||[])[1]||'').trim();
+  let z=anbau.slice(sm.index+sm[1].length);
+  if(adresse)z=z.replace(new RegExp('(^|\\s)'+adresse.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=\\s|$)'),' ');
+  z=z.replace(/\b(gelb\w*|gr[üu]n\w*)\b/i,' ');
+  return z.replace(/\s+/g,' ').trim()||null;
+}
 function findeTiefe(...t){
   const s=t.filter(Boolean).join(' ');const m=s.match(/(\d{1,2})\s*(?:-\s*\d{1,2}\s*)?cm/i);
   return m?{wert:+m[1],beleg:m[0]}:null;
@@ -535,7 +596,8 @@ function parseNCC(seiten){
   }
   /* Jede Probe bekommt eine EIGENE Kopie der Optima – sonst verändert das
      Bearbeiten der einen Probe stillschweigend die andere. */
-  teile.forEach((t,k)=>r.proben.push({laborId:ids[k]||null,datum,satz,kultur:lage||anbau,blattalter:t.wert,
+  const zusatz=zusatzAusText(text,satz);
+  teile.forEach((t,k)=>r.proben.push({laborId:ids[k]||null,datum,satz,kultur:lage||anbau,anbau:anbau||null,zusatz,blattalter:t.wert,
     blattalterBeleg:t.roh?`Kopfzeile: «${t.roh}»`:null,zustand:z?z.wert:null,
     zustandBeleg:z?`Fundstelle: «${z.beleg}»`:null,werte:werte[k]||{},
     optima:JSON.parse(JSON.stringify(optima)),optArt:JSON.parse(JSON.stringify(optArt))}));
@@ -717,7 +779,7 @@ const PRODUKTE_VORGABE={
    «gehört zu keiner», und was fehlt, ist schlicht noch nicht entschieden. */
 const STELLEN_VORGABE=()=>({gruppen:[{id:'v',name:'Reservoir vorne'},{id:'h',name:'Reservoir hinten'}],zu:{}});
 const leer=()=>({schema:12,version:0,gespeichert:null,analysen:[],ereignisse:[],messungen:[],pakete:{},beigabeZeiten:[],
-  produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),stellen:STELLEN_VORGABE(),einst:{}});
+  produkte:JSON.parse(JSON.stringify(PRODUKTE_VORGABE)),stellen:STELLEN_VORGABE(),einst:{},vergleiche:[]});
 let db=leer(),tab='kombi',dirty=false,nachRender=null;
 /* Registrierung des aktiven Diagramms: erlaubt es, nur das Diagramm samt
    seiner Bedienung neu zu bauen statt der ganzen Seite. Siehe diagFrisch(). */
@@ -747,6 +809,16 @@ function migriere(roh){
   /* Zeiträume von Hand: je Mittel oder als eigene Massnahme mit Namen.
      Ein freiwilliges Feld – fehlt es, ist es leer. */
   d.beigabeZeiten=Array.isArray(roh.beigabeZeiten)?roh.beigabeZeiten.filter(x=>x&&(x.mittel||x.name)&&x.von).map(x=>Object.assign({},x)):[];
+  /* Vergleiche an einem Tag (Living Herbs vs Topfbasilikum) – ebenfalls
+     freiwillig. Nur was eine Kennung und Zeilen hat, bleibt. */
+  d.vergleiche=Array.isArray(roh.vergleiche)?roh.vergleiche.filter(v=>v&&typeof v.id==='string'&&Array.isArray(v.zeilen))
+    .map(v=>Object.assign({},v,{zeilen:v.zeilen.filter(z=>z&&z.satz&&isFinite(+z.nr)).map(z=>Object.assign({},z,{nr:+z.nr}))})):[];
+  /* Der Zusatz hinter der Satznummer («08-441 Eichhof Nur Mangel») wird erst
+     seit Oktober 2026 gelesen. Bei älteren Berichten steht er im
+     mitgespeicherten Wortlaut und wird von dort nachgetragen. */
+  for(const a of d.analysen)if(a.typ==='blattsaft'&&a.zusatz===undefined&&a.satz&&a.quelle&&a.quelle.text){
+    const z=zusatzAusText(a.quelle.text,a.satz);if(z)a.zusatz=z;
+  }
   if(von<4){
     let u=0,s=0,al=0;
     const UM={pH:'sub_pH',Salz:'sub_Salz',Nmin:'sub_Nmin',Mn:'sub_Mn',Cu:'sub_Cu',Zn:'sub_Zn',Fe:'sub_Fe',B:'sub_B'};
@@ -2088,13 +2160,18 @@ document.addEventListener('change',ev=>{
 
 /* Fünf Reiter. Die App zeigt die Daten so, dass man sie gern ansieht –
    sie bewertet nicht und sie empfiehlt nichts. */
-const TABS=[['kombi','Blattsaft & Giesswasser'],['tank','pH, EC & O₂'],['maske','Einträge Mobile App'],['analysen','Analysen'],['einst','Einstellungen']];
-const ANSICHT={analysen:()=>vAnalysen(),kombi:()=>vKombi(),tank:()=>vTank(),maske:()=>vMaske(),einst:()=>vEinst()};
+const TABS=[['kombi','Blattsaft & Giesswasser'],['vergleich','Living Herbs vs Topfbasilikum'],['tank','pH, EC & O₂'],['maske','Einträge Mobile App'],['analysen','Analysen'],['einst','Einstellungen']];
+const ANSICHT={analysen:()=>vAnalysen(),kombi:()=>vKombi(),vergleich:()=>vVergleich(),tank:()=>vTank(),maske:()=>vMaske(),einst:()=>vEinst()};
 function render(){
   if(kmZug){kmZug.nachholen=true;return}
   const yVor=window.scrollY||window.pageYOffset||0;
   tippWeg();   /* das Kästchen zeigt sonst auf einen Punkt, den es nicht mehr gibt */
   el('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'active':''}" data-tun="reiter" data-reiter="${k}">${esc(l)}</button>`).join('');
+  /* Am Handy ist die Reiterleiste breiter als der Schirm: der aktive Reiter
+     wird hineingerollt – nur waagrecht, die Seite bleibt stehen. */
+  {const n=el('nav'),a=n.querySelector&&n.querySelector('button.active');
+   if(a&&a.getBoundingClientRect){const r=a.getBoundingClientRect(),q=n.getBoundingClientRect();
+     if(r.right>q.right||r.left<q.left)n.scrollLeft+=r.left-q.left-14}}
   kopfStand();
   if(!ANSICHT[tab])tab='kombi';
   DIAG=null;
@@ -2172,12 +2249,14 @@ const BLATTSPALTE={jung:'junges Blatt',alt:'altes Blatt',misch:'Mischprobe'};
 /* Ein Blattsaftbericht enthält meist zwei Proben, jung und alt. Sie gehören
    zusammen: gleicher Satz, gleiches Datum, gleiches Kulturbild. Jede
    Wasserprobe ist ihr eigener Bericht. */
-const berichtSchluessel=a=>a.typ==='blattsaft'?['b',a.satz||'',a.datum||'',a.zustand||''].join('|'):'a|'+a.id;
+/* Ein Bericht: derselbe Satz am selben Tag (jung und alt gehören zusammen).
+   Eine eigens bezeichnete Probe («Nur Mangel») bleibt für sich. */
+const berichtSchluessel=a=>a.typ==='blattsaft'?['b',a.satz||'',a.datum||'',a.zustand||''].concat(a.zusatz?[a.zusatz]:[]).join('|'):'a|'+a.id;
 function berichte(){
   const m=new Map();
   for(const a of db.analysen){
     const k=berichtSchluessel(a);
-    if(!m.has(k))m.set(k,{id:k,typ:a.typ,datum:a.datum,satz:a.satz,zustand:a.zustand||null,proben:[]});
+    if(!m.has(k))m.set(k,{id:k,typ:a.typ,datum:a.datum,satz:a.satz,zustand:a.zustand||null,zusatz:a.zusatz||null,proben:[]});
     m.get(k).proben.push(a);
   }
   const out=[...m.values()];
@@ -2187,7 +2266,7 @@ function berichte(){
 }
 const berichtVon=id=>{const a=db.analysen.find(x=>x.id===id);if(!a)return null;const k=berichtSchluessel(a);return berichte().find(b=>b.id===k)||null};
 const berichtTitel=b=>[TYPNAME[b.typ]||b.typ||'Analyse',
-  b.typ==='giesswasser'?gwStelle(b.proben[0]):b.satz?'Satz '+b.satz:null,fmt(b.datum)].filter(Boolean).join(' · ');
+  b.typ==='giesswasser'?gwStelle(b.proben[0]):b.satz?'Satz '+b.satz:null,b.zusatz||null,fmt(b.datum)].filter(Boolean).join(' · ');
 
 let anFilter='alle';
 function vAnalysen(){
@@ -2211,7 +2290,8 @@ function vAnalysen(){
       return `<tr class="klick${neu?' tagNeu':''}" data-tun="detail" data-id="${esc(a.id)}">
       <td class="mono">${fmt(b.datum)}</td>
       <td>${esc(TYPNAME[b.typ]||b.typ||'?')}</td>
-      <td>${b.typ==='giesswasser'?esc(gwStelle(a)):b.satz?'Satz <span class="mono">'+esc(b.satz)+'</span>':'–'}${zustandTag(b.zustand)}</td>
+      <td>${b.typ==='giesswasser'?esc(gwStelle(a)):b.satz?'Satz <span class="mono">'+esc(b.satz)+'</span>':'–'}${b.zusatz?` <span class="small">· ${esc(b.zusatz)}</span>`:''}${zustandTag(b.zustand)}${
+        (vz=>vz?` <span class="tag vgTag" title="Gehört zum Vergleich ${esc(vgVergleich().titel)}">${vgNr(vz.nr)} Vergleich</span>`:'')(b.typ==='blattsaft'?vgZeileVon(a):null)}</td>
       <td>${b.typ==='blattsaft'?b.proben.map(p=>`<span class="tag ${esc(p.blattalter||'misch')}">${esc(BLATTNAME[p.blattalter]||'Blatt?')}</span>`).join(' '):''}</td>
       <td class="tiny muted">${esc(a.labor||'von Hand')}</td>
       <td class="mono tiny">${esc(b.proben.map(p=>p.laborId).filter(Boolean).join(', ')||'–')}</td>
@@ -2298,10 +2378,12 @@ function detail(id){
 function amTagZeile(b){
   if(!b||!b.datum)return '';
   const andere=berichte().filter(x=>x.datum===b.datum&&x.id!==b.id);
-  const verlauf=b.typ==='blattsaft'||b.typ==='giesswasser';
-  if(!andere.length&&!verlauf)return '';
+  const vz=b.typ==='blattsaft'?vgZeileVon(b.proben[0]):null,weg=vz&&vgVerborgen().has(b.proben[0].id);
+  const verlauf=(b.typ==='blattsaft'||b.typ==='giesswasser')&&!weg;
+  if(!andere.length&&!verlauf&&!vz)return '';
   const titel=x=>[TYPNAME[x.typ]||x.typ,x.typ==='giesswasser'?gwStelle(x.proben[0]):x.satz?'Satz '+x.satz:null].filter(Boolean).join(' · ');
   return `<div class="amTag">${andere.length?`<span class="small muted">Am selben Tag:</span>${andere.map(x=>`<button class="klein ghost" data-tun="detail" data-id="${esc(x.proben[0].id)}">${esc(titel(x))}</button>`).join('')}`:''}
+    ${vz?`<button class="klein verlauf" data-tun="imVergleich" data-nr="${vz.nr}" title="Zum Reiter ${esc(vgVergleich().titel)} – diese Probe ist dort hinterlegt">${vgNr(vz.nr)} Im Vergleich zeigen</button>`:''}
     ${verlauf?`<button class="klein verlauf" data-tun="imVerlauf" data-x="${+new Date(b.datum)}" title="Zum Reiter Blattsaft &amp; Giesswasser – die Tageslinie steht auf diesem Tag">Im Verlauf zeigen</button>`:''}</div>`;
 }
 AKTION.imVerlauf=d=>{
@@ -2314,7 +2396,7 @@ AKTION.imVerlauf=d=>{
   paarAnsage(ZEIT_FEST);
 };
 AKTION.bearbeiten=d=>{const b=berichtVon(d.id);if(b)pruefdialog(b.proben.map(p=>JSON.parse(JSON.stringify(p))),true)};
-async function einlesen(liste){
+async function einlesen(liste,ziel){
   if(typeof pdfjsLib==='undefined'||!pdfBereit){
     return dialog('PDFs lassen sich gerade nicht lesen',
       `<p>Zum Einlesen von PDFs lädt die App die Bibliothek <code>pdf.js</code> aus dem Internet. Diesmal hat das nicht geklappt – vermutlich besteht keine Verbindung.</p>
@@ -2331,13 +2413,15 @@ async function einlesen(liste){
         quelle:{datei:f.pfad,text:(r.rohtext||'').slice(0,20000)},hinweise:(r.hinweise||[]).slice()},p)));
     }catch(e){toast('Fehler bei '+f.pfad+': '+e.message)}
   }
-  if(v.length)pruefdialog(v);else toast('Es liessen sich keine Proben lesen.');
+  if(v.length)pruefdialog(v,false,ziel);else toast('Es liessen sich keine Proben lesen.');
 }
 
 /* Kontrolle vor der Übernahme – nichts wandert ungeprüft in die Daten. */
-let PRUEF=[],PRUEF_BEARB=false;
-function pruefdialog(v,bearb){
-  PRUEF=v;PRUEF_BEARB=!!bearb;
+/* ziel: der Reiter, in dem man nach dem Übernehmen bleibt ('vergleich');
+   sonst geht es zu den Analysen. */
+let PRUEF=[],PRUEF_BEARB=false,PRUEF_ZIEL=null;
+function pruefdialog(v,bearb,ziel){
+  PRUEF=v;PRUEF_BEARB=!!bearb;PRUEF_ZIEL=ziel||null;
   const html=v.map((p,i)=>{
     const dop=!bearb&&p.laborId&&db.analysen.some(x=>x.laborId===p.laborId&&x.id!==p.id);
     const keys=Object.keys(p.werte||{});
@@ -2354,6 +2438,8 @@ function pruefdialog(v,bearb){
         ${p.typ==='giesswasser'
           ? `<div style="min-width:190px"><label class="lab">Entnahmestelle</label><input value="${esc(p.stelle||'')}" placeholder="z.B. Reservoir Vorne" style="width:100%" data-aend="pruefFeld" data-i="${i}" data-f="stelle"></div>`
           : `<div><label class="lab">Satz</label><input value="${esc(p.satz||'')}" placeholder="28-478" size="9" data-aend="pruefFeld" data-i="${i}" data-f="satz"></div>`}
+        ${p.typ==='blattsaft'?`<div><label class="lab">Zusatz laut Bericht</label><input value="${esc(p.zusatz||'')}" placeholder="–" size="11" data-aend="pruefFeld" data-i="${i}" data-f="zusatz"
+          title="Was im Bericht hinter der Satznummer steht, z.B. «Nur Mangel». Hält eine eigens bezeichnete Probe desselben Satzes getrennt."></div>`:''}
         ${p.typ==='blattsaft'?`<div><label class="lab">Blatt</label><select data-aend="pruefFeld" data-i="${i}" data-f="blattalter">
           ${[['','– wählen –'],['jung','jung'],['alt','alt'],['misch','Mischprobe']].map(([w,t])=>`<option value="${w}"${(p.blattalter||'')===w?' selected':''}>${t}</option>`).join('')}</select></div>
           <div><label class="lab">Kulturbild</label><select data-aend="pruefFeld" data-i="${i}" data-f="zustand">
@@ -2363,6 +2449,7 @@ function pruefdialog(v,bearb){
       </div>
       ${p.blattalterBeleg||p.zustandBeleg?`<p class="tiny muted" style="margin:0 0 8px">Aus dem Bericht gelesen – ${esc([p.blattalterBeleg,p.zustandBeleg].filter(Boolean).join(' · '))}</p>`:''}
       ${dop?`<div class="note">Probennummer ${esc(p.laborId)} ist bereits erfasst; darum nicht vorausgewählt.</div>`:''}
+      <div data-vg="${i}"></div>
       ${p.hinweise&&p.hinweise.length?`<div class="note">${p.hinweise.map(esc).join('<br>')}</div>`:''}
       <div data-warn="${i}"></div>
       <label class="lab" style="margin-top:8px">Messwerte – bitte gegen das PDF kontrollieren</label>
@@ -2411,7 +2498,7 @@ AKTION.feldDazu=d=>{
 };
 /* Wechselt die Art, wird das Formular neu aufgebaut (Satz oder Stelle) –
    was schon eingetragen ist, bleibt. */
-AKTION.pruefFeld=d=>{if(d.f==='typ'){pruefLesen();pruefdialog(PRUEF,PRUEF_BEARB)}else pruefPruefen()};
+AKTION.pruefFeld=d=>{if(d.f==='typ'){pruefLesen();pruefdialog(PRUEF,PRUEF_BEARB,PRUEF_ZIEL)}else pruefPruefen()};
 function pruefLesen(){
   const v=PRUEF,body=el('dlgBody');
   body.querySelectorAll('[data-f]').forEach(e=>{
@@ -2441,14 +2528,18 @@ function pruefPruefen(){
           w.push('Für diese Entnahmestelle und dieses Datum gibt es bereits eine Probe.');
       }
       else if(!p.satz)w.push('Die Satznummer fehlt.');
-      if(p.typ==='blattsaft'&&p.satz&&p.datum&&p.blattalter&&db.analysen.some(x=>x.id!==p.id&&x.typ==='blattsaft'&&x.satz===p.satz&&x.datum===p.datum&&x.blattalter===p.blattalter&&(x.zustand||'')===(p.zustand||'')))
+      if(p.typ==='blattsaft'&&p.satz&&p.datum&&p.blattalter&&db.analysen.some(x=>x.id!==p.id&&x.typ==='blattsaft'&&x.satz===p.satz&&x.datum===p.datum&&x.blattalter===p.blattalter&&(x.zustand||'')===(p.zustand||'')&&(x.zusatz||'')===(p.zusatz||'')))
         w.push('Für diesen Satz, dieses Datum und dieses Blatt gibt es bereits eine Probe.');
-      if(p.typ==='blattsaft'&&p.blattalter&&v.some((q,j)=>j!==i&&q.__ok!==false&&q.typ==='blattsaft'&&q.satz===p.satz&&q.datum===p.datum&&q.blattalter===p.blattalter&&(q.zustand||'')===(p.zustand||'')))
+      if(p.typ==='blattsaft'&&p.blattalter&&v.some((q,j)=>j!==i&&q.__ok!==false&&q.typ==='blattsaft'&&q.satz===p.satz&&q.datum===p.datum&&q.blattalter===p.blattalter&&(q.zustand||'')===(p.zustand||'')&&(q.zusatz||'')===(p.zusatz||'')))
         w.push('Zwei Proben in diesem Import tragen dieselbe Kennzeichnung.');
       if(!Object.keys(p.werte||{}).length)w.push('Keine Messwerte erfasst.');
     }
     blocker+=w.filter(x=>/welches Blatt|Probendatum fehlt/.test(x)).length;
     box.innerHTML=w.length?`<div class="note">${w.map(esc).join('<br>')}</div>`:'';
+    /* Gehört die Probe zu einer Zeile des Vergleichs, steht es da – Satz,
+       Tag und Zusatz entscheiden, also sieht man es auch beim Ändern. */
+    const vb=document.querySelector(`[data-vg="${i}"]`),vz=p.__ok!==false&&p.typ==='blattsaft'?vgZeileVon(p):null;
+    if(vb)vb.innerHTML=vz?`<p class="tiny muted" style="margin:0 0 6px">${vgNr(vz.nr)} Gehört zum Vergleich «${esc(vgVergleich().titel||'')}», Zeile ${vz.nr}.</p>`:'';
   });
   const b=el('btnUeber');
   if(b){b.disabled=blocker>0;const h=el('pruefHint');if(h)h.textContent=blocker?'Bitte zuerst die markierten Angaben ergänzen.':''}
@@ -2459,6 +2550,7 @@ AKTION.uebernehmen=()=>{
     if(p.__ok===false)continue;
     const rein=Object.assign({},p);
     delete rein.__ok;delete rein.hinweise;delete rein.optArt;
+    if(rein.zusatz!=null)rein.zusatz=String(rein.zusatz).replace(/\s+/g,' ').trim()||null;
     rein.optima=JSON.parse(JSON.stringify(rein.optima||{}));
     const i=db.analysen.findIndex(x=>x.id===p.id);
     if(i>=0)db.analysen[i]=rein;else db.analysen.push(rein);
@@ -2468,10 +2560,19 @@ AKTION.uebernehmen=()=>{
   aend();el('dlg').close();
   const n=neu.length;
   if(PRUEF_BEARB){render();if(neu.length)detail(neu[0].id);return toast('Gespeichert.')}
+  const sichern=ONLINE.an?'':' Zum Behalten oben rechts sichern.';
+  const imVg=neu.filter(a=>a.typ==='blattsaft'&&vgZeileVon(a));
+  if(PRUEF_ZIEL==='vergleich'){
+    tab='vergleich';
+    for(const a of imVg)vgAn.add(vgZeileVon(a).nr);
+    render();
+    const ohne=n-imVg.length;
+    return toast(n?`${n} Probe${n>1?'n':''} übernommen${ohne?` – ${ohne} davon gehör${ohne>1?'en':'t'} zu keiner Zeile des Vergleichs und steh${ohne>1?'en':'t'} unter Analysen`:''}.${sichern}`:'Nichts übernommen.');
+  }
   tab='analysen';render();
   /* Ein einzelner Bericht wird gleich gezeigt – so sieht man, was angekommen ist. */
   if(n&&new Set(neu.map(berichtSchluessel)).size===1)setTimeout(()=>detail(neu[0].id),120);
-  toast(n?`${n} Probe${n>1?'n':''} übernommen.${ONLINE.an?'':' Zum Behalten oben rechts sichern.'}`:'Nichts übernommen.');
+  toast(n?`${n} Probe${n>1?'n':''} übernommen.${imVg.length?` ${imVg.length===n?'Sie gehören':imVg.length+' davon gehören'} zum Vergleich «${vgVergleich().titel}».`:''}${sichern}`:'Nichts übernommen.');
 };
 
 /* ══════════ 8 · Blattsaft und Giesswasser ══════════
@@ -2540,8 +2641,14 @@ const hoeheFuer=n=>n>=3?130:n===2?160:200;
 const KB_MAX_BLATT=8,KB_MAX_WASSER=6;
 let kbBlatt=null,kbWasser=null,kbEtage='beide',kbSkala='wert';
 function vKombi(){
-  const blatt=db.analysen.filter(a=>a.typ==='blattsaft'&&a.datum);
+  /* Die Proben des Vergleichs stehen im eigenen Reiter (siehe 8b). */
+  const vgWeg=vgVerborgen();
+  const blatt=db.analysen.filter(a=>a.typ==='blattsaft'&&a.datum&&!vgWeg.has(a.id));
   const wasser=gwProben().filter(gwSichtbar);
+  const vgLink=vgWeg.size?`<button class="ghost klein vgHin" data-tun="reiter" data-reiter="vergleich" title="Diese Proben stehen nur im Reiter ${esc(vgVergleich().titel)} – dort lässt es sich ändern">${vgWeg.size} Vergleichsproben vom ${fmt(vgVergleich().datum)} ›</button>`:'';
+  if(!blatt.length&&!wasser.length&&vgWeg.size)return leerHinweis('Noch keine Analysen im Verlauf',
+    `Die ${vgWeg.size} Blattsaftproben vom ${fmt(vgVergleich().datum)} stehen im Reiter «${esc(vgVergleich().titel)}».`,
+    '<button class="primary" data-tun="reiter" data-reiter="vergleich">Zum Vergleich</button> <button data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
   if(!blatt.length&&!wasser.length)return leerHinweis('Noch keine Analysen',
     'Hier stehen Blattsaft und Giesswasser auf einer gemeinsamen Zeitachse, darunter die Balken des Kulturmanagements. Dafür braucht es wenigstens eine Analyse.',
     '<button class="primary" data-tun="reiter" data-reiter="analysen">Zu den Analysen</button>');
@@ -2674,7 +2781,7 @@ function vKombi(){
     const F=farben();
     zeitBild(el('cKb'),{aufKlick:true,minTage:14,stufen:STUFEN_TAGE.kombi,
       vorgaben:[['alles','alles'],['180','6 Monate'],['90','3 Monate']],
-      tafeln:[{kopf:'Blattsaft',linien:'blatt',neben:ngInfo(blattSerien(F)),rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff',nurNG(blatt,k))).join(''),spuren:blattSpuren(F).map(sp=>Object.assign(sp,{tageAlle:tageB}))},
+      tafeln:[{kopf:'Blattsaft',linien:'blatt',neben:ngInfo(blattSerien(F))+vgLink,rechts:blattOptionen(),wahl:blattParams.map(k=>chip(F,k,wahlB().includes(k),NAME[k]||k,'kbStoff',nurNG(blatt,k))).join(''),spuren:blattSpuren(F).map(sp=>Object.assign(sp,{tageAlle:tageB}))},
               {kopf:'Giesswasser',linien:'wasser',neben:ngInfo(wasserSerien(F)),rechts:(stellen.length>1?`<span class="zeichen">${stellen.map(st=>zeichen(gwForm[st],NEUTRAL)+esc(stelleTitel(st).replace(/^Reservoir /,''))).join(' ')}</span>`:'')+stellenKnopf(),
                wahl:wasserParams.map(k=>chip(F,k,wahlW().includes(k),gwName(k),'kbWass',nurNG(wasser,k))).join(''),spuren:wasserSpuren(F).map(sp=>Object.assign(sp,{tageAlle:tageW}))}],
       km:kmDaten('kombi'),kmNach:0});
@@ -2862,6 +2969,314 @@ AKTION.stelleWeg=d=>{
 /* Kurzname eines Wasserparameters – der Zusatz «(Wasser)» steht in jeder
    Überschrift schon im Zusammenhang. */
 const gwName=k=>String(NAME[k]||k).replace(' (Wasser)','').replace(' (Giesswasser)','');
+
+/* ══════════ 8b · Living Herbs vs Topfbasilikum ══════════
+   Ein Vergleich an einem Tag: fünf Einsendungen vom 09.04.2026 (acht
+   Laborproben). Oben die fünf Zeilen mit den Beschreibungen aus dem Mail –
+   ①–⑤ sind das Kennzeichen jeder Probe, überall gleich. Darunter je
+   gewähltem Nährstoff eine Kachel mit eigener Achse (Kalium liegt bei
+   tausenden, Molybdän bei Zehntel-ppm); jede weitere kommt daneben. In
+   jeder Kachel je Probe eine Gruppe von Balken: junges Blatt voll (●),
+   altes Blatt hell (◆), Farbe = Nährstoff wie überall in der App, dahinter
+   das Optimum des Labors. Zeigt man auf eine Probe – Balken, Nummer oder
+   Zeile –, ist sie in allen Kacheln hinterlegt. Keine Bewertung.
+   Welche Proben zu einer Zeile gehören, wird nicht gespeichert, sondern
+   abgeleitet: Satz, Tag und Zusatz laut Bericht («Nur Mangel»). So landet
+   ein Bericht auch dann in seiner Zeile, wenn er im Reiter Analysen
+   hochgeladen wird. Gespeichert wird der Vergleich erst, wenn jemand eine
+   Zeile ändert (db.vergleiche, freiwilliges Feld). */
+const VG_GRUPPE={lh:'Living Herbs',topf:'Topfbasilikum'};
+const VG_VORLAGE={id:'lh-topf-2026-04',titel:'Living Herbs vs Topfbasilikum',datum:'2026-04-09',imVerlauf:false,
+  zeilen:[
+    {nr:1,satz:'09-844',zusatz:null,gruppe:'topf',text:'Von Elaine, zum Messzeitpunkt im Verkauf.',beleg:'mail'},
+    {nr:2,satz:'09-498',zusatz:null,gruppe:'lh',text:'Das Pendant zu 09-844 von den Living Herbs, ebenfalls im Verkauf.',beleg:'mail'},
+    {nr:3,satz:'08-441',zusatz:null,gruppe:null,text:'Starke Mangelsymptome, zum Messzeitpunkt bereits etwas überständig. Blatt alt und jung separat gemessen.',beleg:'mail'},
+    {nr:4,satz:'08-441',zusatz:'Nur Mangel',gruppe:null,text:'Zusätzlich eine Probe nur mit den Mangelblättern (laut Labor «Blatt (Alt)»).',beleg:'mail'},
+    {nr:5,satz:'10-228',zusatz:null,gruppe:'lh',text:'Auch eine Living-Herbs-Probe, noch zu klein für den Verkauf – gemäss Notiz schön grün.',beleg:'mail'}],
+  /* Die acht Proben aus den fünf PDFs, so gelesen, wie der Upload sie liest
+     (parseNCC) – zum Übernehmen über den Kontrolldialog. */
+  proben:[{"id":"lh26-202604171290","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"Basilikum Living Herbs im Verkauf 09-498 Eichhof.pdf","text":"1\nPflanzensaft-Probe 202604171290 Probendatum: 9-4-2026\n2\n202604171291\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 09-498 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 1,3 0,2 - 0,4\n2\n% 0,8\n1\npH 5,4 6,1 - 6,2\n2\n4,9\n1\nEC mS/cm 8,4 12,5 - 13,6\n2\nmS/cm 8,2\n1\nK - Kalium ppm 2316 3975 - 4800\n2\nppm 2617\n1\nCa - Kalzium ppm 850 810 - 1275\n2\nppm 681\n1\nK / Ca 2,72\n2\n3,85\n1\nMg - Magnesium ppm 324 310 - 430\n2\nppm 228\n1\nNa - Natrium ppm 11 22 - 44\n2\nppm 16\n1\nNH4 - Ammonium ppm 118 25 - 55\n2\nppm 63\n1\nNO3 - Nitrat ppm 81 2010 - 3530\n2\nppm 207\n1\nN aus Nitrat ppm 18 454 - 797\n2\nppm 47\n1\nN - Gesamt Stickstoff ppm 2083 830 - 1270\n2\nppm 695\n1\nCl - Chlorid ppm 1900 750 - 1775\n2\nppm 1848\n1\nS - Schwefel ppm 75 170 - 230\n2\nppm 53\n1\nP - Phosphor ppm 158 360 - 530\n2\nppm 91\n1\nSi - Silizium ppm 29,9 25,6 - 37,3\n2\nppm 41,3\n1\nFe - Eisen ppm 2,17 0,80 - 1,60\n2\nppm 2,26\n1\nMn - Mangan ppm 18,11 3,00 - 7,00\n2\nppm 17,68\n1\nZn - Zink ppm 1,78 1,60 - 2,25\n2\nppm 1,82\n1\nB - Bor ppm 0,95 0,80 - 2,60\n2\nppm 1,31\n1\nCu - Kupfer ppm 0,33 0,30 - 0,50\n2\nppm 0,18\n1\nMo - Molybdän ppm 0,23 < 0,05\n2\nppm 0,16\n1\nAl - Aluminium ppm 2,24 <0,50 - <0,50\n2\nppm 2,48\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171290","datum":"2026-04-09","satz":"09-498","kultur":"Basil","anbau":"09-498 Eichhof","zusatz":null,"blattalter":"jung","blattalterBeleg":"Kopfzeile: «Blatt (Jung)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":1.3,"unter":false},"pH":{"wert":5.4,"unter":false},"EC":{"wert":8.4,"unter":false},"K":{"wert":2316,"unter":false},"Ca":{"wert":850,"unter":false},"K/Ca":{"wert":2.72,"unter":false},"Mg":{"wert":324,"unter":false},"Na":{"wert":11,"unter":false},"NH4":{"wert":118,"unter":false},"NO3":{"wert":81,"unter":false},"N_aus_NO3":{"wert":18,"unter":false},"N_gesamt":{"wert":2083,"unter":false},"Cl":{"wert":1900,"unter":false},"S":{"wert":75,"unter":false},"P":{"wert":158,"unter":false},"Si":{"wert":29.9,"unter":false},"Fe":{"wert":2.17,"unter":false},"Mn":{"wert":18.11,"unter":false},"Zn":{"wert":1.78,"unter":false},"B":{"wert":0.95,"unter":false},"Cu":{"wert":0.33,"unter":false},"Mo":{"wert":0.23,"unter":false},"Al":{"wert":2.24,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171291","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"Basilikum Living Herbs im Verkauf 09-498 Eichhof.pdf","text":"1\nPflanzensaft-Probe 202604171290 Probendatum: 9-4-2026\n2\n202604171291\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 09-498 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 1,3 0,2 - 0,4\n2\n% 0,8\n1\npH 5,4 6,1 - 6,2\n2\n4,9\n1\nEC mS/cm 8,4 12,5 - 13,6\n2\nmS/cm 8,2\n1\nK - Kalium ppm 2316 3975 - 4800\n2\nppm 2617\n1\nCa - Kalzium ppm 850 810 - 1275\n2\nppm 681\n1\nK / Ca 2,72\n2\n3,85\n1\nMg - Magnesium ppm 324 310 - 430\n2\nppm 228\n1\nNa - Natrium ppm 11 22 - 44\n2\nppm 16\n1\nNH4 - Ammonium ppm 118 25 - 55\n2\nppm 63\n1\nNO3 - Nitrat ppm 81 2010 - 3530\n2\nppm 207\n1\nN aus Nitrat ppm 18 454 - 797\n2\nppm 47\n1\nN - Gesamt Stickstoff ppm 2083 830 - 1270\n2\nppm 695\n1\nCl - Chlorid ppm 1900 750 - 1775\n2\nppm 1848\n1\nS - Schwefel ppm 75 170 - 230\n2\nppm 53\n1\nP - Phosphor ppm 158 360 - 530\n2\nppm 91\n1\nSi - Silizium ppm 29,9 25,6 - 37,3\n2\nppm 41,3\n1\nFe - Eisen ppm 2,17 0,80 - 1,60\n2\nppm 2,26\n1\nMn - Mangan ppm 18,11 3,00 - 7,00\n2\nppm 17,68\n1\nZn - Zink ppm 1,78 1,60 - 2,25\n2\nppm 1,82\n1\nB - Bor ppm 0,95 0,80 - 2,60\n2\nppm 1,31\n1\nCu - Kupfer ppm 0,33 0,30 - 0,50\n2\nppm 0,18\n1\nMo - Molybdän ppm 0,23 < 0,05\n2\nppm 0,16\n1\nAl - Aluminium ppm 2,24 <0,50 - <0,50\n2\nppm 2,48\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171291","datum":"2026-04-09","satz":"09-498","kultur":"Basil","anbau":"09-498 Eichhof","zusatz":null,"blattalter":"alt","blattalterBeleg":"Kopfzeile: «Blatt (Alt)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":0.8,"unter":false},"pH":{"wert":4.9,"unter":false},"EC":{"wert":8.2,"unter":false},"K":{"wert":2617,"unter":false},"Ca":{"wert":681,"unter":false},"K/Ca":{"wert":3.85,"unter":false},"Mg":{"wert":228,"unter":false},"Na":{"wert":16,"unter":false},"NH4":{"wert":63,"unter":false},"NO3":{"wert":207,"unter":false},"N_aus_NO3":{"wert":47,"unter":false},"N_gesamt":{"wert":695,"unter":false},"Cl":{"wert":1848,"unter":false},"S":{"wert":53,"unter":false},"P":{"wert":91,"unter":false},"Si":{"wert":41.3,"unter":false},"Fe":{"wert":2.26,"unter":false},"Mn":{"wert":17.68,"unter":false},"Zn":{"wert":1.82,"unter":false},"B":{"wert":1.31,"unter":false},"Cu":{"wert":0.18,"unter":false},"Mo":{"wert":0.16,"unter":false},"Al":{"wert":2.48,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171294","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"Pflanzensaft - 08-441 Eichhof Nur Mangel.pdf","text":"Pflanzensaft-Probe 202604171294 Probendatum: 9-4-2026\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 08-441 Eichhof Nur Mangel\n8603 Schwerzenbach Ernte: Basilikum\nSwitzerland Pflanzenteil: Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\nZucker % 1,4 0,2 - 0,4\npH 4,3 6,1 - 6,2\nEC mS/cm 7,0 12,5 - 13,6\nK - Kalium ppm 1998 3975 - 4800\nCa - Kalzium ppm 813 810 - 1275\nK / Ca 2,46\nMg - Magnesium ppm 309 310 - 430\nNa - Natrium ppm 4 22 - 44\nNH4 - Ammonium ppm 50 25 - 55\nNO3 - Nitrat ppm 34 2010 - 3530\nN aus Nitrat ppm 8 454 - 797\nN - Gesamt Stickstoff ppm 705 830 - 1270\nCl - Chlorid ppm 1300 750 - 1775\nS - Schwefel ppm 42 170 - 230\nP - Phosphor ppm 80 360 - 530\nSi - Silizium ppm 27,2 25,6 - 37,3\nFe - Eisen ppm 2,55 0,80 - 1,60\nMn - Mangan ppm 18,52 3,00 - 7,00\nZn - Zink ppm 2,56 1,60 - 2,25\nB - Bor ppm 1,77 0,80 - 2,60\nCu - Kupfer ppm <0,10 0,30 - 0,50\nMo - Molybdän ppm 0,19 < 0,05\nAl - Aluminium ppm 2,87 <0,50 - <0,50\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171294","datum":"2026-04-09","satz":"08-441","kultur":"Basil","anbau":"08-441 Eichhof Nur Mangel","zusatz":"Nur Mangel","blattalter":"alt","blattalterBeleg":"Kopfzeile: «Blatt (Alt)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":1.4,"unter":false},"pH":{"wert":4.3,"unter":false},"EC":{"wert":7,"unter":false},"K":{"wert":1998,"unter":false},"Ca":{"wert":813,"unter":false},"K/Ca":{"wert":2.46,"unter":false},"Mg":{"wert":309,"unter":false},"Na":{"wert":4,"unter":false},"NH4":{"wert":50,"unter":false},"NO3":{"wert":34,"unter":false},"N_aus_NO3":{"wert":8,"unter":false},"N_gesamt":{"wert":705,"unter":false},"Cl":{"wert":1300,"unter":false},"S":{"wert":42,"unter":false},"P":{"wert":80,"unter":false},"Si":{"wert":27.2,"unter":false},"Fe":{"wert":2.55,"unter":false},"Mn":{"wert":18.52,"unter":false},"Zn":{"wert":2.56,"unter":false},"B":{"wert":1.77,"unter":false},"Cu":{"wert":0.1,"unter":true},"Mo":{"wert":0.19,"unter":false},"Al":{"wert":2.87,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171292","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"Pflanzensaft - Basil - 08-441 Eichhof.pdf","text":"1\nPflanzensaft-Probe 202604171292 Probendatum: 9-4-2026\n2\n202604171293\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 08-441 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 0,9 0,2 - 0,4\n2\n% 1,0\n1\npH 4,9 6,1 - 6,2\n2\n4,8\n1\nEC mS/cm 8,4 12,5 - 13,6\n2\nmS/cm 8,0\n1\nK - Kalium ppm 1994 3975 - 4800\n2\nppm 2448\n1\nCa - Kalzium ppm 778 810 - 1275\n2\nppm 718\n1\nK / Ca 2,56\n2\n3,41\n1\nMg - Magnesium ppm 377 310 - 430\n2\nppm 205\n1\nNa - Natrium ppm 8 22 - 44\n2\nppm 10\n1\nNH4 - Ammonium ppm 190 25 - 55\n2\nppm 62\n1\nNO3 - Nitrat ppm 90 2010 - 3530\n2\nppm 141\n1\nN aus Nitrat ppm 20 454 - 797\n2\nppm 32\n1\nN - Gesamt Stickstoff ppm 1644 830 - 1270\n2\nppm 524\n1\nCl - Chlorid ppm 1941 750 - 1775\n2\nppm 1696\n1\nS - Schwefel ppm 57 170 - 230\n2\nppm 49\n1\nP - Phosphor ppm 152 360 - 530\n2\nppm 83\n1\nSi - Silizium ppm 28,5 25,6 - 37,3\n2\nppm 37,5\n1\nFe - Eisen ppm 2,28 0,80 - 1,60\n2\nppm 2,88\n1\nMn - Mangan ppm 18,64 3,00 - 7,00\n2\nppm 12,77\n1\nZn - Zink ppm 1,99 1,60 - 2,25\n2\nppm 1,61\n1\nB - Bor ppm 1,39 0,80 - 2,60\n2\nppm 1,38\n1\nCu - Kupfer ppm 0,22 0,30 - 0,50\n2\nppm 0,13\n1\nMo - Molybdän ppm 0,11 < 0,05\n2\nppm 0,11\n1\nAl - Aluminium ppm 2,59 <0,50 - <0,50\n2\nppm 2,98\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171292","datum":"2026-04-09","satz":"08-441","kultur":"Basil","anbau":"08-441 Eichhof","zusatz":null,"blattalter":"jung","blattalterBeleg":"Kopfzeile: «Blatt (Jung)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":0.9,"unter":false},"pH":{"wert":4.9,"unter":false},"EC":{"wert":8.4,"unter":false},"K":{"wert":1994,"unter":false},"Ca":{"wert":778,"unter":false},"K/Ca":{"wert":2.56,"unter":false},"Mg":{"wert":377,"unter":false},"Na":{"wert":8,"unter":false},"NH4":{"wert":190,"unter":false},"NO3":{"wert":90,"unter":false},"N_aus_NO3":{"wert":20,"unter":false},"N_gesamt":{"wert":1644,"unter":false},"Cl":{"wert":1941,"unter":false},"S":{"wert":57,"unter":false},"P":{"wert":152,"unter":false},"Si":{"wert":28.5,"unter":false},"Fe":{"wert":2.28,"unter":false},"Mn":{"wert":18.64,"unter":false},"Zn":{"wert":1.99,"unter":false},"B":{"wert":1.39,"unter":false},"Cu":{"wert":0.22,"unter":false},"Mo":{"wert":0.11,"unter":false},"Al":{"wert":2.59,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171293","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"Pflanzensaft - Basil - 08-441 Eichhof.pdf","text":"1\nPflanzensaft-Probe 202604171292 Probendatum: 9-4-2026\n2\n202604171293\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 08-441 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 0,9 0,2 - 0,4\n2\n% 1,0\n1\npH 4,9 6,1 - 6,2\n2\n4,8\n1\nEC mS/cm 8,4 12,5 - 13,6\n2\nmS/cm 8,0\n1\nK - Kalium ppm 1994 3975 - 4800\n2\nppm 2448\n1\nCa - Kalzium ppm 778 810 - 1275\n2\nppm 718\n1\nK / Ca 2,56\n2\n3,41\n1\nMg - Magnesium ppm 377 310 - 430\n2\nppm 205\n1\nNa - Natrium ppm 8 22 - 44\n2\nppm 10\n1\nNH4 - Ammonium ppm 190 25 - 55\n2\nppm 62\n1\nNO3 - Nitrat ppm 90 2010 - 3530\n2\nppm 141\n1\nN aus Nitrat ppm 20 454 - 797\n2\nppm 32\n1\nN - Gesamt Stickstoff ppm 1644 830 - 1270\n2\nppm 524\n1\nCl - Chlorid ppm 1941 750 - 1775\n2\nppm 1696\n1\nS - Schwefel ppm 57 170 - 230\n2\nppm 49\n1\nP - Phosphor ppm 152 360 - 530\n2\nppm 83\n1\nSi - Silizium ppm 28,5 25,6 - 37,3\n2\nppm 37,5\n1\nFe - Eisen ppm 2,28 0,80 - 1,60\n2\nppm 2,88\n1\nMn - Mangan ppm 18,64 3,00 - 7,00\n2\nppm 12,77\n1\nZn - Zink ppm 1,99 1,60 - 2,25\n2\nppm 1,61\n1\nB - Bor ppm 1,39 0,80 - 2,60\n2\nppm 1,38\n1\nCu - Kupfer ppm 0,22 0,30 - 0,50\n2\nppm 0,13\n1\nMo - Molybdän ppm 0,11 < 0,05\n2\nppm 0,11\n1\nAl - Aluminium ppm 2,59 <0,50 - <0,50\n2\nppm 2,98\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171293","datum":"2026-04-09","satz":"08-441","kultur":"Basil","anbau":"08-441 Eichhof","zusatz":null,"blattalter":"alt","blattalterBeleg":"Kopfzeile: «Blatt (Alt)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":1,"unter":false},"pH":{"wert":4.8,"unter":false},"EC":{"wert":8,"unter":false},"K":{"wert":2448,"unter":false},"Ca":{"wert":718,"unter":false},"K/Ca":{"wert":3.41,"unter":false},"Mg":{"wert":205,"unter":false},"Na":{"wert":10,"unter":false},"NH4":{"wert":62,"unter":false},"NO3":{"wert":141,"unter":false},"N_aus_NO3":{"wert":32,"unter":false},"N_gesamt":{"wert":524,"unter":false},"Cl":{"wert":1696,"unter":false},"S":{"wert":49,"unter":false},"P":{"wert":83,"unter":false},"Si":{"wert":37.5,"unter":false},"Fe":{"wert":2.88,"unter":false},"Mn":{"wert":12.77,"unter":false},"Zn":{"wert":1.61,"unter":false},"B":{"wert":1.38,"unter":false},"Cu":{"wert":0.13,"unter":false},"Mo":{"wert":0.11,"unter":false},"Al":{"wert":2.98,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171288","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"PflanzensBasilikum_Elaine 10.5er im Verkauf 09-844.pdf","text":"1\nPflanzensaft-Probe 202604171288 Probendatum: 9-4-2026\n2\n202604171289\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 09-844 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 1,6 0,2 - 0,4\n2\n% 0,8\n1\npH 6,2 6,1 - 6,2\n2\n6,1\n1\nEC mS/cm 11,1 12,5 - 13,6\n2\nmS/cm 11,3\n1\nK - Kalium ppm 4518 3975 - 4800\n2\nppm 4179\n1\nCa - Kalzium ppm 571 810 - 1275\n2\nppm 1001\n1\nK / Ca 7,92\n2\n4,18\n1\nMg - Magnesium ppm 166 310 - 430\n2\nppm 197\n1\nNa - Natrium ppm 36 22 - 44\n2\nppm 16\n1\nNH4 - Ammonium ppm 29 25 - 55\n2\nppm 28\n1\nNO3 - Nitrat ppm 221 2010 - 3530\n2\nppm 478\n1\nN aus Nitrat ppm 50 454 - 797\n2\nppm 108\n1\nN - Gesamt Stickstoff ppm 789 830 - 1270\n2\nppm 692\n1\nCl - Chlorid ppm 1745 750 - 1775\n2\nppm 2171\n1\nS - Schwefel ppm 160 170 - 230\n2\nppm 88\n1\nP - Phosphor ppm 341 360 - 530\n2\nppm 211\n1\nSi - Silizium ppm 38,9 25,6 - 37,3\n2\nppm 54,5\n1\nFe - Eisen ppm 2,95 0,80 - 1,60\n2\nppm 2,27\n1\nMn - Mangan ppm 6,51 3,00 - 7,00\n2\nppm 11,81\n1\nZn - Zink ppm 1,29 1,60 - 2,25\n2\nppm 1,57\n1\nB - Bor ppm 0,35 0,80 - 2,60\n2\nppm 0,51\n1\nCu - Kupfer ppm 0,55 0,30 - 0,50\n2\nppm 0,35\n1\nMo - Molybdän ppm 0,16 < 0,05\n2\nppm 0,06\n1\nAl - Aluminium ppm 3,21 <0,50 - <0,50\n2\nppm 2,37\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171288","datum":"2026-04-09","satz":"09-844","kultur":"Basil","anbau":"09-844 Eichhof","zusatz":null,"blattalter":"jung","blattalterBeleg":"Kopfzeile: «Blatt (Jung)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":1.6,"unter":false},"pH":{"wert":6.2,"unter":false},"EC":{"wert":11.1,"unter":false},"K":{"wert":4518,"unter":false},"Ca":{"wert":571,"unter":false},"K/Ca":{"wert":7.92,"unter":false},"Mg":{"wert":166,"unter":false},"Na":{"wert":36,"unter":false},"NH4":{"wert":29,"unter":false},"NO3":{"wert":221,"unter":false},"N_aus_NO3":{"wert":50,"unter":false},"N_gesamt":{"wert":789,"unter":false},"Cl":{"wert":1745,"unter":false},"S":{"wert":160,"unter":false},"P":{"wert":341,"unter":false},"Si":{"wert":38.9,"unter":false},"Fe":{"wert":2.95,"unter":false},"Mn":{"wert":6.51,"unter":false},"Zn":{"wert":1.29,"unter":false},"B":{"wert":0.35,"unter":false},"Cu":{"wert":0.55,"unter":false},"Mo":{"wert":0.16,"unter":false},"Al":{"wert":3.21,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171289","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"PflanzensBasilikum_Elaine 10.5er im Verkauf 09-844.pdf","text":"1\nPflanzensaft-Probe 202604171288 Probendatum: 9-4-2026\n2\n202604171289\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 09-844 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\n1 2\nSwitzerland Pflanzenteil: Blatt (Jung) Blatt (Alt)\nHinweise\nParameter Aktuellen Niveau Optimum\n1\nZucker % 1,6 0,2 - 0,4\n2\n% 0,8\n1\npH 6,2 6,1 - 6,2\n2\n6,1\n1\nEC mS/cm 11,1 12,5 - 13,6\n2\nmS/cm 11,3\n1\nK - Kalium ppm 4518 3975 - 4800\n2\nppm 4179\n1\nCa - Kalzium ppm 571 810 - 1275\n2\nppm 1001\n1\nK / Ca 7,92\n2\n4,18\n1\nMg - Magnesium ppm 166 310 - 430\n2\nppm 197\n1\nNa - Natrium ppm 36 22 - 44\n2\nppm 16\n1\nNH4 - Ammonium ppm 29 25 - 55\n2\nppm 28\n1\nNO3 - Nitrat ppm 221 2010 - 3530\n2\nppm 478\n1\nN aus Nitrat ppm 50 454 - 797\n2\nppm 108\n1\nN - Gesamt Stickstoff ppm 789 830 - 1270\n2\nppm 692\n1\nCl - Chlorid ppm 1745 750 - 1775\n2\nppm 2171\n1\nS - Schwefel ppm 160 170 - 230\n2\nppm 88\n1\nP - Phosphor ppm 341 360 - 530\n2\nppm 211\n1\nSi - Silizium ppm 38,9 25,6 - 37,3\n2\nppm 54,5\n1\nFe - Eisen ppm 2,95 0,80 - 1,60\n2\nppm 2,27\n1\nMn - Mangan ppm 6,51 3,00 - 7,00\n2\nppm 11,81\n1\nZn - Zink ppm 1,29 1,60 - 2,25\n2\nppm 1,57\n1\nB - Bor ppm 0,35 0,80 - 2,60\n2\nppm 0,51\n1\nCu - Kupfer ppm 0,55 0,30 - 0,50\n2\nppm 0,35\n1\nMo - Molybdän ppm 0,16 < 0,05\n2\nppm 0,06\n1\nAl - Aluminium ppm 3,21 <0,50 - <0,50\n2\nppm 2,37\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171289","datum":"2026-04-09","satz":"09-844","kultur":"Basil","anbau":"09-844 Eichhof","zusatz":null,"blattalter":"alt","blattalterBeleg":"Kopfzeile: «Blatt (Alt)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":0.8,"unter":false},"pH":{"wert":6.1,"unter":false},"EC":{"wert":11.3,"unter":false},"K":{"wert":4179,"unter":false},"Ca":{"wert":1001,"unter":false},"K/Ca":{"wert":4.18,"unter":false},"Mg":{"wert":197,"unter":false},"Na":{"wert":16,"unter":false},"NH4":{"wert":28,"unter":false},"NO3":{"wert":478,"unter":false},"N_aus_NO3":{"wert":108,"unter":false},"N_gesamt":{"wert":692,"unter":false},"Cl":{"wert":2171,"unter":false},"S":{"wert":88,"unter":false},"P":{"wert":211,"unter":false},"Si":{"wert":54.5,"unter":false},"Fe":{"wert":2.27,"unter":false},"Mn":{"wert":11.81,"unter":false},"Zn":{"wert":1.57,"unter":false},"B":{"wert":0.51,"unter":false},"Cu":{"wert":0.35,"unter":false},"Mo":{"wert":0.06,"unter":false},"Al":{"wert":2.37,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}},{"id":"lh26-202604171295","typ":"blattsaft","labor":"NovaCropControl","quelle":{"datei":"R00202604171295  Basil - 10-228 Eichhof).pdf","text":"Pflanzensaft-Probe 202604171295 Probendatum: 9-4-2026\nName: Hansjurg Imhof Bio-Produkte (imhofbio) Lage/Grundstück: Basil\nAdresse: Eichhof Anbau: 10-228 Eichhof\n8603 Schwerzenbach Ernte: Basilikum\nSwitzerland Pflanzenteil: Blatt (Jung)\nHinweise\nParameter Aktuellen Niveau Optimum\nZucker % 1,2 0,2 - 0,4\npH 5,5 6,1 - 6,2\nEC mS/cm 9,0 12,5 - 13,6\nK - Kalium ppm 3045 3975 - 4800\nCa - Kalzium ppm 693 810 - 1275\nK / Ca 4,39\nMg - Magnesium ppm 225 310 - 430\nNa - Natrium ppm 20 22 - 44\nNH4 - Ammonium ppm 61 25 - 55\nNO3 - Nitrat ppm 404 2010 - 3530\nN aus Nitrat ppm 91 454 - 797\nN - Gesamt Stickstoff ppm 1330 830 - 1270\nCl - Chlorid ppm 2135 750 - 1775\nS - Schwefel ppm 87 170 - 230\nP - Phosphor ppm 147 360 - 530\nSi - Silizium ppm 35,9 25,6 - 37,3\nFe - Eisen ppm 2,29 0,80 - 1,60\nMn - Mangan ppm 12,34 3,00 - 7,00\nZn - Zink ppm 1,27 1,60 - 2,25\nB - Bor ppm 1,12 0,80 - 2,60\nCu - Kupfer ppm 0,25 0,30 - 0,50\nMo - Molybdän ppm 0,13 < 0,05\nAl - Aluminium ppm 2,16 <0,50 - <0,50\nVM13-501.20260312\nFragen Sie Ihren Berater nach geeigneten Dünger Empfehlungen\nDa NovaCropControl keinen Effekt und/oder keine Kontrolle hat über die Probenahme, übernimmt NovaCropControl keine Haftung für nachteiligen Folgen als Ergebnis ihrer Analyse oder Beratung\n20-4-2026 1 / 1"},"laborId":"202604171295","datum":"2026-04-09","satz":"10-228","kultur":"Basil","anbau":"10-228 Eichhof","zusatz":null,"blattalter":"jung","blattalterBeleg":"Kopfzeile: «Blatt (Jung)»","zustand":null,"zustandBeleg":null,"werte":{"Zucker":{"wert":1.2,"unter":false},"pH":{"wert":5.5,"unter":false},"EC":{"wert":9,"unter":false},"K":{"wert":3045,"unter":false},"Ca":{"wert":693,"unter":false},"K/Ca":{"wert":4.39,"unter":false},"Mg":{"wert":225,"unter":false},"Na":{"wert":20,"unter":false},"NH4":{"wert":61,"unter":false},"NO3":{"wert":404,"unter":false},"N_aus_NO3":{"wert":91,"unter":false},"N_gesamt":{"wert":1330,"unter":false},"Cl":{"wert":2135,"unter":false},"S":{"wert":87,"unter":false},"P":{"wert":147,"unter":false},"Si":{"wert":35.9,"unter":false},"Fe":{"wert":2.29,"unter":false},"Mn":{"wert":12.34,"unter":false},"Zn":{"wert":1.27,"unter":false},"B":{"wert":1.12,"unter":false},"Cu":{"wert":0.25,"unter":false},"Mo":{"wert":0.13,"unter":false},"Al":{"wert":2.16,"unter":false}},"optima":{"Zucker":[0.2,0.4],"pH":[6.1,6.2],"EC":[12.5,13.6],"K":[3975,4800],"Ca":[810,1275],"Mg":[310,430],"Na":[22,44],"NH4":[25,55],"NO3":[2010,3530],"N_aus_NO3":[454,797],"N_gesamt":[830,1270],"Cl":[750,1775],"S":[170,230],"P":[360,530],"Si":[25.6,37.3],"Fe":[0.8,1.6],"Mn":[3,7],"Zn":[1.6,2.25],"B":[0.8,2.6],"Cu":[0.3,0.5],"Mo":[null,0.05],"Al":[null,0.5]}}]};
+const vgVergleich=()=>(Array.isArray(db.vergleiche)&&db.vergleiche[0])||VG_VORLAGE;
+/* Ab der ersten Änderung steht der Vergleich im Bestand – ohne die Proben
+   der Vorlage, die gehören in db.analysen. */
+function vgSchreiben(){
+  if(!Array.isArray(db.vergleiche))db.vergleiche=[];
+  if(!db.vergleiche.length){const v=JSON.parse(JSON.stringify(VG_VORLAGE));delete v.proben;db.vergleiche.push(v)}
+  return db.vergleiche[0];
+}
+const vgPasst=(a,z,v)=>a&&a.typ==='blattsaft'&&a.satz===z.satz&&a.datum===v.datum&&(a.zusatz||'')===(z.zusatz||'');
+const vgProbenVon=(z,v)=>db.analysen.filter(a=>vgPasst(a,z,v||vgVergleich()))
+  .sort((x,y)=>BLATT_REIHE.indexOf(x.blattalter||'misch')-BLATT_REIHE.indexOf(y.blattalter||'misch'));
+/* Zu welcher Zeile eine Analyse gehört (oder null) */
+function vgZeileVon(a){const v=vgVergleich();return (v.zeilen||[]).find(z=>vgPasst(a,z,v))||null}
+/* Die Proben des Vergleichs stehen nicht in der Zeitreihe Blattsaft &
+   Giesswasser – vier Sätze am selben Tag würden dort übereinanderliegen –,
+   ausser man schaltet es ein. */
+function vgVerborgen(){
+  const v=vgVergleich(),s=new Set();
+  if(v.imVerlauf)return s;
+  for(const a of db.analysen)if(a.typ==='blattsaft'&&(v.zeilen||[]).some(z=>vgPasst(a,z,v)))s.add(a.id);
+  return s;
+}
+const heller=(hex,f)=>{const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
+  const n=parseInt(m[1],16),k=c=>Math.round(c+(255-c)*f).toString(16).padStart(2,'0');return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255)};
+const VG_MAX=8;
+let vgAn=new Set([1,2,3,4,5]),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgFest=null;
+const vgNr=(nr,hohl)=>`<span class="vgNr${hohl?' hohl':''}" aria-hidden="true">${nr}</span>`;
+function vgProbenHtml(){
+  const v=vgVergleich(),zeilen=v.zeilen||[];
+  const da=zeilen.map(z=>vgProbenVon(z,v));
+  const fehlt=da.filter(l=>!l.length).length;
+  const zeile=(z,i)=>{
+    const l=da[i],an=vgAn.has(z.nr);
+    const blatt=l.map(a=>zeichen(BLATTFORM[a.blattalter]||'quadrat',NEUTRAL)).join('');
+    return `<div class="vgZeile${an?'':' aus'}${l.length?'':' fehlt'}" data-nr="${z.nr}" data-tun="vgProbe" role="button" tabindex="0" aria-pressed="${an}" title="${an?'Ausblenden':'Einblenden'}">
+      ${vgNr(z.nr,!an)}
+      <span class="vgSatz"><span class="mono">${esc(z.satz)}</span>${z.zusatz?`<span class="vgZusatz">${esc(z.zusatz)}</span>`:''}</span>
+      <span class="tag vgGruppe${z.gruppe?'':' offen'}">${esc(VG_GRUPPE[z.gruppe]||'nicht angegeben')}</span>
+      <span class="vgText">${esc(z.text||'')}${z.beleg==='geändert'?' <span class="tiny muted">(geändert)</span>':''}</span>
+      <span class="vgBlatt" title="${esc(l.map(a=>BLATTSPALTE[a.blattalter]||'Blatt').join(', '))}">${blatt}</span>
+      <span class="vgStand">${l.length?`<button class="ghost klein" data-tun="detail" data-id="${esc(l[0].id)}" title="Bericht öffnen">${l.length} Probe${l.length>1?'n':''} · Bericht ›</button>`:'<span class="tiny muted">Bericht fehlt</span>'}</span>
+      <button class="ghost klein vgStift" data-tun="vgBearb" data-nr="${z.nr}" title="Beschreibung und Gruppe ändern" aria-label="Zeile ${z.nr} ändern">✎</button></div>`;
+  };
+  return `<div class="hd"><div><h2>${esc(v.titel||'Living Herbs vs Topfbasilikum')}</h2>
+      <p class="sub">${zeilen.length} Einsendungen vom ${fmt(v.datum)} · Beschreibungen aus dem Mail · Optimum laut Labor</p></div>
+    <div class="row" style="gap:8px;align-items:center">${fehlt?`<button class="primary" data-tun="vgVorlage" title="Die Berichte aus dem Mail – zuerst im Kontrolldialog prüfen">${fehlt===zeilen.length?`Die ${zeilen.length} Berichte übernehmen`:`Fehlende Berichte übernehmen (${fehlt})`}</button>`:''}
+      <button class="klein" data-tun="vgDatei">PDFs hinzufügen</button></div></div>
+    <div class="vgZeilen">${zeilen.map(zeile).join('')}</div>
+    <div class="vgFuss tiny muted">
+      <span>Antippen blendet eine Probe ein oder aus · <button class="ghost klein" data-tun="vgAlle" data-v="an">alle</button> <button class="ghost klein" data-tun="vgAlle" data-v="aus">keine</button></span>
+      <span>Ob 08-441 Living Herbs oder Topfbasilikum war, sagt das Mail nicht.</span>
+      <label class="vgVerlauf"><input type="checkbox" data-aend="vgImVerlauf"${v.imVerlauf?' checked':''}> auch im Verlauf (Blattsaft &amp; Giesswasser) zeigen</label></div>`;
+}
+/* Eine Kachel je Nährstoff */
+function vgKachel(k,farbe,cl,W,skala){
+  const ml=38,mr=6,mt=14,ph=118,unten=mt+ph,H=unten+36,P=W-ml-mr;
+  const e=einheit(k),werte=[],opt=new Map();
+  for(const c of cl)for(const s of c.slots){
+    const w=s.a&&s.a.werte&&s.a.werte[k];s.w=w&&(w.wert!=null||w.unter)?w:null;
+    s.o=s.a?optimum(s.a,k):null;if(s.w&&!s.w.unter)werte.push(s.w.wert);
+    if(s.a)opt.set(JSON.stringify(s.o),s.o);
+  }
+  const optAlle=[...opt.values()],gleich=optAlle.length<=1?optAlle[0]||null:null,verschieden=optAlle.length>1;
+  let y1,ticks,dez,oben=false,ohneOpt=false;
+  if(skala==='lage'){y1=3;ohneOpt=!optAlle.some(Boolean)}
+  else{
+    const mx=werte.length?Math.max(...werte):0;
+    const hiO=Math.max(0,...optAlle.filter(Boolean).map(o=>o[1]!=null?o[1]:o[0]||0));
+    const loO=Math.min(Infinity,...optAlle.filter(o=>o&&o[0]!=null).map(o=>o[0]));
+    /* Liegt das Optimum weit über allen Werten (Nitrat), richtet sich die
+       Achse nach den Werten; das Band steht als Streifen oben. */
+    oben=mx>0&&loO!==Infinity&&loO>3*mx;
+    let top=oben?mx:Math.max(mx,hiO);
+    if(!(top>0)){const g=Math.max(0,...cl.flatMap(c=>c.slots).filter(s=>s.w&&s.w.unter).map(s=>s.w.wert||0));top=g>0?g:1}
+    const a=achsenSchritt(0,top*1.1);y1=a.y1;ticks=a.marken.filter(v=>v>=0);dez=a.dez;
+  }
+  const Y=v=>Math.round((mt+(1-Math.min(v,y1)/(y1||1))*ph)*100)/100;
+  const nSlots=cl.reduce((n,c)=>n+c.slots.length,0)||1,gap=cl.length>1?10:0;
+  const sw=Math.max(8,(P-gap*(cl.length-1))/nSlots),bw=Math.max(6,Math.min(30,sw-4)),zeigWert=bw>=20;
+  let s=`<svg class="vgBild" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(NAME[k]||k)}">`;
+  /* Fläche und Optimum */
+  if(skala==='lage'){
+    s+=`<rect x="${ml}" y="${Y(3)}" width="${P}" height="${Y(2)-Y(3)}" fill="#F6F7F3"/><rect x="${ml}" y="${Y(2)}" width="${P}" height="${Y(1)-Y(2)}" fill="#E3F0E1"/><rect x="${ml}" y="${Y(1)}" width="${P}" height="${Y(0)-Y(1)}" fill="#F6F7F3"/>`;
+    s+=`<text x="${ml-5}" y="${(Y(2)+Y(1))/2+3}" text-anchor="end" font-size="9.5" fill="#2C7A4B">Opt.</text>`;
+  }else{
+    for(const v of ticks){const y=Y(v);s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/><text x="${ml-5}" y="${y+3.5}" text-anchor="end" font-size="9.5" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v,dez)}</text>`}
+    if(gleich&&!oben){const lo=gleich[0]!=null?gleich[0]:0,hi=gleich[1]!=null?gleich[1]:y1;
+      if(lo<y1)s+=`<rect class="vgOpt" x="${ml}" y="${Y(hi)}" width="${P}" height="${Math.max(1,Y(lo)-Y(hi))}" fill="#E3F0E1" opacity=".85"/>`}
+    if(oben)s+=`<rect class="vgOpt" x="${ml}" y="${mt-6}" width="${P}" height="4" fill="#CFE5CC"/>`;
+  }
+  /* Gruppen je Probe */
+  let x=ml;const marken=[];
+  for(const c of cl){
+    const cw=c.slots.length*sw,cx=x+cw/2;
+    s+=`<rect class="vgStreifen" data-nr="${c.nr}" x="${x-gap/2+1}" y="${mt-12}" width="${cw+gap-2}" height="${H-mt+10}" rx="6" fill="#141D17" opacity="0" pointer-events="none"/>`;
+    c.slots.forEach((sl,i)=>{
+      const sx=x+i*sw+sw/2,bx=sx-bw/2;
+      if(verschieden&&sl.o&&skala!=='lage'){const lo=sl.o[0]!=null?sl.o[0]:0,hi=sl.o[1]!=null?sl.o[1]:y1;
+        if(lo<y1)s+=`<rect x="${sx-sw/2+1}" y="${Y(hi)}" width="${sw-2}" height="${Math.max(1,Y(lo)-Y(hi))}" fill="#E3F0E1"/>`}
+      const al=sl.a?sl.a.blattalter:sl.al,form=BLATTFORM[al]||'quadrat';
+      marken.push(marke(form,sx,unten+9,3,NEUTRAL,.85));
+      if(!sl.a||!sl.w){
+        s+=`<text x="${sx}" y="${unten-4}" text-anchor="middle" font-size="11" fill="#A8B3A4" data-tipp="${esc(tippBau('Probe '+c.nr,NEUTRAL,[sl.a?'Diesen Wert hat das Labor nicht angegeben.':`Von dieser Probe wurde kein ${al==='jung'?'junges':'altes'} Blatt eingeschickt.`]))}">–</text>`;
+        return;
+      }
+      const ng=!!sl.w.unter,v=ng?0:sl.w.wert,lg=skala==='lage'?lage(v,sl.o):null;
+      const yv=skala==='lage'?(lg==null?null:lg):v;
+      const jung=al!=='alt',fill=jung?farbe:heller(farbe,.55);
+      const z=c.zeile,e2=e?' '+e:'';
+      const tipp=tippBau(NAME[k]||k,farbe,[
+        ['Probe',`${c.nr} · ${z.satz}${z.zusatz?' · '+z.zusatz:''}`],['Gruppe',VG_GRUPPE[z.gruppe]||'nicht angegeben'],
+        ['Blatt',(BLATTSPALTE[al]||'Blatt')+(z.zusatz&&al==='alt'?' (laut Labor)':'')],
+        ['Messwert',ng?ngText(sl.w,e):nz(sl.w.wert)+e2],
+        sl.o?['Optimum (Labor)',optText(sl.o)+e2]:null,
+        skala==='lage'&&lg==null?'Ohne Optimum des Labors keine Lage.':null,
+        sl.a.laborId?['Labor-Nr.',sl.a.laborId]:null],(ng?NG_FUSS+' ':'')+'Anklicken öffnet den Bericht.');
+      s+=`<g class="vgB" data-nr="${c.nr}" data-tun="detail" data-id="${esc(sl.a.id)}" data-tipp="${esc(tipp)}" style="cursor:pointer">`;
+      s+=`<rect x="${sx-sw/2}" y="${mt-12}" width="${sw}" height="${ph+30}" fill="transparent"/>`;
+      if(yv==null){s+=`<text x="${sx}" y="${unten-4}" text-anchor="middle" font-size="11" fill="#A8B3A4">–</text>`}
+      /* Unter der Nachweisgrenze: kein Balken, eine hohle Marke auf der Nulllinie */
+      else if(ng){s+=marke(form,sx,unten-5,4,farbe,1,true);
+        s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${unten-14}" text-anchor="middle" font-size="9.5" fill="#4F5E53">&lt;${nz(sl.w.wert)}</text>`}
+      else{
+        const yt=Y(yv),h=Math.max(1,unten-yt);
+        s+=`<rect x="${bx}" y="${yt}" width="${bw}" height="${h}" rx="2" fill="${fill}"${jung?'':` stroke="${farbe}" stroke-width="1.2"`}/>`;
+        if(skala==='lage'&&lg>=3)s+=`<path d="M${sx-4} ${yt-3}L${sx+4} ${yt-3}L${sx} ${yt-9}Z" fill="${farbe}"/>`;
+        else s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${yt-4}" text-anchor="middle" font-size="9.5" fill="#4F5E53">${nz(sl.w.wert)}</text>`;
+      }
+      s+=`</g>`;
+    });
+    /* Die Nummer unter der Gruppe – dieselbe wie oben in der Zeile */
+    s+=`<g class="vgNrS" data-nr="${c.nr}" style="cursor:default"><title>${esc(c.zeile.satz+(c.zeile.zusatz?' · '+c.zeile.zusatz:''))}</title><circle cx="${cx}" cy="${unten+24}" r="8.5" fill="#141D17"/><text x="${cx}" y="${unten+27.5}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${c.nr}</text></g>`;
+    x+=cw+gap;
+  }
+  /* Achse und Blattzeichen lassen Zeiger und Finger zum Balken durch */
+  s+=`<g pointer-events="none"><line x1="${ml}" x2="${W-mr}" y1="${unten}" y2="${unten}" stroke="#B9C4B4"/>${marken.join('')}</g></svg>`;
+  const optKopf=skala==='lage'?(ohneOpt?'kein Optimum des Labors':'Lage im Optimum des Labors')
+    :verschieden?'Optimum je Bericht verschieden':gleich?`Optimum ${optText(gleich)}${oben?' ↑ oberhalb':''}`:'kein Optimum des Labors';
+  return `<div class="vgKachel" data-k="${esc(k)}"><div class="vgKopf"><span class="dot" style="background:${farbe}"></span><b>${esc(NAME[k]||k)}</b>${e&&skala!=='lage'?` <span class="muted">${esc(e)}</span>`:''}<span class="vgOptText">${esc(optKopf)}</span></div>${s}</div>`;
+}
+function vgZeichnen(){
+  const box=el('cVgK');if(!box)return;
+  const v=vgVergleich(),zeilen=v.zeilen||[];
+  const alle=zeilen.flatMap(z=>vgProbenVon(z,v));
+  if(!alle.length){box.innerHTML=`<div class="tafel"><div class="tafelKopf"><h3>Je Nährstoff</h3></div>
+    <p class="muted small" style="margin:0 0 10px">Noch keine Berichte zu diesen Proben. Die fünf PDFs aus dem Mail sind in der App hinterlegt; vor dem Übernehmen stehen alle Werte zur Kontrolle da.</p>
+    <button class="primary" data-tun="vgVorlage">Die ${zeilen.length} Berichte übernehmen</button> <button data-tun="vgDatei">Eigene PDFs hinzufügen</button></div>`;return}
+  const params=STOFFREIHE.filter(k=>alle.some(a=>a.werte&&a.werte[k])).concat([...new Set(alle.flatMap(a=>Object.keys(a.werte||{})))].filter(k=>!STOFFREIHE.includes(k)));
+  if(!vgStoffe)vgStoffe=(kbBlatt&&kbBlatt.filter(k=>params.includes(k)).length?kbBlatt.filter(k=>params.includes(k)):['K','Ca','Mg'].filter(k=>params.includes(k))).slice(0,VG_MAX);
+  vgStoffe=vgStoffe.filter(k=>params.includes(k));
+  const F=farbenFuer(vgStoffe);
+  const etagen=BLATT_REIHE.filter(al=>alle.some(a=>(a.blattalter||'misch')===al));
+  if(vgEtage!=='beide'&&!etagen.includes(vgEtage))vgEtage='beide';
+  const nurNG=k=>{const l=alle.filter(a=>a.werte&&a.werte[k]);return l.length>0&&l.every(a=>a.werte[k].unter)};
+  const chip=k=>{const an=vgStoffe.includes(k),hohl=nurNG(k),f=an?F[k]:'#C3CDBF';
+    return `<span class="chip stoff ${an?'on':''}" data-tun="vgStoff" data-k="${esc(k)}"${hohl?' title="immer unter der Nachweisgrenze"':''}><span class="dot${hohl?' hohl':''}" style="${hohl?'color':'background'}:${f}"></span>${esc(NAME[k]||k)}</span>`};
+  /* Gruppen: je eingeschaltete Zeile die Proben nach Blatt; fehlt das
+     gewählte Blatt, bleibt ein schmaler Platz – die Nummern stehen in allen
+     Kacheln gleich. */
+  const cl=zeilen.filter(z=>vgAn.has(z.nr)).map(z=>{
+    const l=vgProbenVon(z,v).filter(a=>vgEtage==='beide'||(a.blattalter||'misch')===vgEtage);
+    return {nr:z.nr,zeile:z,slots:l.length?l.map(a=>({a})):[{a:null,al:vgEtage==='beide'?'jung':vgEtage}]};
+  });
+  /* Alle Kacheln gleich gross, gleich wie viele gewählt sind – Rand und
+     Innenabstand der Kachel (2 × 11 px) gehen von der Breite ab. */
+  const cw=box.clientWidth||900,spalten=Math.max(1,Math.floor((cw+16)/(300+16))),W=Math.floor((cw-16*(spalten-1))/spalten)-22;
+  const kopf=`<div class="tafelKopf"><h3>Je Nährstoff</h3><div class="rechts">
+      <span class="lab2">Blatt</span><span class="seg">${[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]])).map(([w,l])=>`<button class="${vgEtage===w?'on':''}" data-tun="vgEtage" data-v="${w}">${
+        w==='beide'?etagen.map(al=>zeichen(BLATTFORM[al],NEUTRAL)).join(''):zeichen(BLATTFORM[w],NEUTRAL)}${esc(l)}</button>`).join('')}</span>
+      <span class="lab2">Anzeige</span><span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([w,l])=>`<button class="${vgSkala===w?'on':''}" data-tun="vgSkala" data-v="${w}">${l}</button>`).join('')}</span></div></div>
+    <div class="wahl">${params.map(chip).join('')}</div>`;
+  const ng=vgStoffe.some(k=>alle.some(a=>a.werte&&a.werte[k]&&a.werte[k].unter));
+  const legende=`<div class="vgLegende tiny muted">${zeichen('kreis',NEUTRAL)} junges Blatt (voll) · ${zeichen('raute',NEUTRAL)} altes Blatt (hell) · ${vgNr('1–5')} Probe wie oben · Band: Optimum laut Labor${ng?` · ${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0`:''}</div>`;
+  const kacheln=vgStoffe.length&&cl.length?vgStoffe.map(k=>vgKachel(k,F[k],cl.map(c=>({nr:c.nr,zeile:c.zeile,slots:c.slots.map(s=>Object.assign({},s))})),W,vgSkala)).join('')
+    :`<p class="muted small">${cl.length?'Oben einen Nährstoff anklicken.':'Keine Probe eingeschaltet – oben eine Zeile antippen.'}</p>`;
+  /* Zum genauen Ablesen und für Bildschirmleser: alles als Tabelle */
+  const spaltenT=cl.flatMap(c=>c.slots.filter(s=>s.a).map(s=>({c,a:s.a})));
+  const tabelle=vgStoffe.length&&spaltenT.length?`<details class="aufklapp vgTabelle"><summary>Werte als Tabelle</summary><div class="scroll"><table><thead><tr><th>Nährstoff</th>${
+      spaltenT.map(({c,a})=>`<th>${vgNr(c.nr)} ${esc(BLATTNAME[a.blattalter]||'')}</th>`).join('')}</tr></thead><tbody>${
+      vgStoffe.map(k=>`<tr><td><strong>${esc(NAME[k]||k)}</strong> <span class="tiny muted">${esc(einheit(k))}</span></td>${
+        spaltenT.map(({a})=>`<td class="mono">${zeigeWert(a.werte&&a.werte[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`:'';
+  box.innerHTML=`<div class="tafel">${kopf}<div class="vgRaster" style="grid-template-columns:repeat(${spalten},minmax(0,1fr))">${kacheln}</div>${legende}${tabelle}</div>`;
+  if(vgGezeigt!=null)vgZeigen(vgGezeigt);
+}
+function vVergleich(){
+  vgFest=null;vgGezeigt=null;   /* neu aufgebaut: nichts ist mehr festgehalten */
+  DIAG={teile:[['cVgP',vgProbenHtml]],zeichnen:vgZeichnen,klick:detail};
+  nachRender=vgZeichnen;
+  return `<div class="card" id="cVgP">${vgProbenHtml()}</div><div class="card"><div id="cVgK"></div></div>`;
+}
+/* Zeigen: eine Probe in allen Kacheln und ihre Zeile hinterlegen */
+function vgZeigen(nr){
+  vgGezeigt=nr;
+  for(const id of ['cVgP','cVgK']){const b=el(id);if(!b||!b.setAttribute)continue;if(nr==null)b.removeAttribute('data-zeigt');else b.setAttribute('data-zeigt',String(nr))}
+}
+AKTION.vgProbe=d=>{
+  const nr=+d.nr;if(vgAn.has(nr))vgAn.delete(nr);else vgAn.add(nr);ansichtMerken();
+  /* Die Zeilen werden neu gebaut – wer mit der Tastatur umschaltet, bleibt auf seiner Zeile */
+  const a=document.activeElement,fokus=a&&a.classList&&a.classList.contains('vgZeile');
+  diagFrisch();
+  if(fokus){const z=document.querySelector(`#cVgP .vgZeile[data-nr="${nr}"]`);if(z)z.focus()}
+};
+AKTION.vgAlle=d=>{const v=vgVergleich();vgAn=d.v==='an'?new Set((v.zeilen||[]).map(z=>z.nr)):new Set();ansichtMerken();diagFrisch()};
+AKTION.vgStoff=d=>{
+  const k=d.k,l=vgStoffe||[];
+  if(l.includes(k))vgStoffe=l.filter(x=>x!==k);
+  else{if(l.length>=VG_MAX)return toast(`Höchstens ${VG_MAX} Nährstoffe auf einmal – erst einen abwählen.`);vgStoffe=l.concat([k])}
+  ansichtMerken();vgZeichnen();
+};
+AKTION.vgEtage=d=>{vgEtage=d.v;ansichtMerken();vgZeichnen()};
+AKTION.vgSkala=d=>{vgSkala=d.v;ansichtMerken();vgZeichnen()};
+AKTION.vgImVerlauf=(d,ev)=>{const v=vgSchreiben();v.imVerlauf=!!(ev&&ev.target&&ev.target.checked);aend();
+  toast(v.imVerlauf?'Die Vergleichsproben stehen jetzt auch im Verlauf Blattsaft & Giesswasser.':'Die Vergleichsproben stehen nur noch hier.')};
+/* Nur was noch fehlt – eine schon übernommene (vielleicht bearbeitete)
+   Probe wird nicht überschrieben. */
+AKTION.vgVorlage=()=>{
+  const da=new Set(db.analysen.map(a=>a.laborId).filter(Boolean));
+  const v=VG_VORLAGE.proben.filter(p=>!da.has(p.laborId));
+  if(!v.length)return toast('Alle Proben aus dem Mail sind schon übernommen.');
+  pruefdialog(JSON.parse(JSON.stringify(v)),false,'vergleich');
+};
+AKTION.vgDatei=()=>{el('filePdf').click()};
+AKTION.vgBearb=d=>{
+  const z=(vgVergleich().zeilen||[]).find(x=>x.nr===+d.nr);if(!z)return;
+  dialog(`Probe ${z.nr} · ${z.satz}${z.zusatz?' · '+z.zusatz:''}`,
+    `<label class="lab">Beschreibung</label><textarea id="vgText" rows="3" style="width:100%">${esc(z.text||'')}</textarea>
+     <label class="lab" style="margin-top:12px">Gruppe</label>
+     <span class="seg" id="vgGruppe">${[['lh','Living Herbs'],['topf','Topfbasilikum'],['','nicht angegeben']].map(([w,l])=>`<button class="${(z.gruppe||'')===w?'on':''}" data-tun="vgGruppeWahl" data-v="${w}">${l}</button>`).join('')}</span>
+     <p class="tiny muted" style="margin-top:12px">Gilt für alle, die das Dashboard öffnen.${z.beleg==='mail'?' Der Text steht so im Mail.':''}</p>`,
+    `<div style="flex:1"></div><button data-tun="dlgZu">Abbrechen</button><button class="primary" data-tun="vgSpeichern" data-nr="${z.nr}">Speichern</button>`);
+};
+AKTION.vgGruppeWahl=d=>{const s=el('vgGruppe');if(!s)return;for(const b of s.querySelectorAll('button'))b.classList.toggle('on',b.dataset.v===d.v)};
+AKTION.vgSpeichern=d=>{
+  const v=vgSchreiben(),z=v.zeilen.find(x=>x.nr===+d.nr);if(!z)return;
+  const text=(el('vgText').value||'').trim(),g=el('vgGruppe')&&el('vgGruppe').querySelector('button.on');
+  const gruppe=g?(g.dataset.v||null):z.gruppe;
+  if(text!==z.text||gruppe!==z.gruppe){z.text=text;z.gruppe=gruppe;z.beleg='geändert';aend()}
+  el('dlg').close();diagFrisch();
+};
+AKTION.imVergleich=d=>{
+  const nr=+d.nr;if(el('dlg').open)el('dlg').close();
+  vgAn.add(nr);tab='vergleich';render();vgZeigen(nr);
+  const z=document.querySelector&&document.querySelector(`#cVgP .vgZeile[data-nr="${nr}"]`);
+  if(z){z.classList.add('blink');if(z.scrollIntoView)z.scrollIntoView({block:'nearest'});setTimeout(()=>z.classList.remove('blink'),1400)}
+};
+/* Zeigen mit Maus und Finger – ein Beobachter für das ganze Dokument, er
+   überlebt jedes Neuzeichnen. Mit dem Finger zeigt das erste Tippen auf
+   einen Balken Kästchen und Probe, das zweite öffnet den Bericht. */
+let vgZeigerArt='mouse';
+document.addEventListener('pointerdown',ev=>{vgZeigerArt=ev.pointerType||'mouse'},true);
+document.addEventListener('pointerover',ev=>{
+  if(tab!=='vergleich'||vgFest!=null)return;
+  const t=ev.target&&ev.target.closest?ev.target.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
+  if(t)vgZeigen(+t.dataset.nr);
+});
+document.addEventListener('pointerout',ev=>{
+  if(tab!=='vergleich'||vgFest!=null)return;
+  const t=ev.target&&ev.target.closest?ev.target.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
+  const r=ev.relatedTarget&&ev.relatedTarget.closest?ev.relatedTarget.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
+  if(t&&(!r||r.dataset.nr!==t.dataset.nr))vgZeigen(null);
+});
+document.addEventListener('click',ev=>{
+  if(tab!=='vergleich')return;
+  const g=ev.target&&ev.target.closest?ev.target.closest('#cVgK g.vgB'):null;
+  if(vgZeigerArt==='mouse'||vgZeigerArt==='pen'&&!g){if(!g&&vgFest!=null){vgFest=null;vgZeigen(null)}return}
+  if(g){
+    if(vgFest!==g.dataset.id){
+      vgFest=g.dataset.id;vgZeigen(+g.dataset.nr);
+      const r=g.getBoundingClientRect();tippZeigen(String(g.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top+20);
+      ev.stopPropagation();ev.preventDefault();return;
+    }
+    vgFest=null;return;
+  }
+  if(ev.target.closest&&ev.target.closest('#cVgK .vgBild')){vgFest=null;vgZeigen(null);tippWeg()}
+},true);
+document.addEventListener('keydown',ev=>{
+  const z=ev.target&&ev.target.closest?ev.target.closest('.vgZeile[data-nr]'):null;
+  if(z&&ev.target===z&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();AKTION.vgProbe({nr:z.dataset.nr})}
+  if(ev.key==='Escape'&&vgFest!=null&&tab==='vergleich'){vgFest=null;vgZeigen(null);tippWeg()}
+});
+document.addEventListener('focusin',ev=>{const z=ev.target&&ev.target.closest?ev.target.closest('.vgZeile[data-nr]'):null;if(z&&tab==='vergleich')vgZeigen(+z.dataset.nr)});
 
 /* ══════════ 9 · Kulturmanagement ══════════
    Die Balken unter den Diagrammen: was in den Tank kam und was sonst an der
@@ -4666,7 +5081,8 @@ AKTION.hinweisVerstanden=d=>{if(d.k)hinweisMerken(d.k);el('dlg').close()};
 el('dlg').addEventListener('close',()=>{const d=el('dlg');if(d.dataset.gesehen){hinweisMerken(d.dataset.gesehen);delete d.dataset.gesehen}});
 function ansichtMerken(){
   try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({kbBlatt,kbWasser,kbEtage,kbSkala,linien:[...linienAn],
-    tkStelle,anFilter,meFilter,kmAus:[...kmAus],kmReihe,kmEreignisseOffen,tkListeOffen}))}catch(e){}
+    tkStelle,anFilter,meFilter,kmAus:[...kmAus],kmReihe,kmEreignisseOffen,tkListeOffen,
+    vgAn:[...vgAn],vgStoffe,vgEtage,vgSkala}))}catch(e){}
 }
 function ansichtLaden(){
   let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
@@ -4687,6 +5103,10 @@ function ansichtLaden(){
   if(liste(a.kmReihe))kmReihe=liste(a.kmReihe);
   if(typeof a.kmEreignisseOffen==='boolean')kmEreignisseOffen=a.kmEreignisseOffen;
   if(typeof a.tkListeOffen==='boolean')tkListeOffen=a.tkListeOffen;
+  if(Array.isArray(a.vgAn))vgAn=new Set(a.vgAn.filter(n=>Number.isInteger(n)));
+  if(liste(a.vgStoffe))vgStoffe=liste(a.vgStoffe);
+  vgEtage=wort(a.vgEtage,['beide','jung','alt','misch'])||vgEtage;
+  vgSkala=wort(a.vgSkala,['wert','lage'])||vgSkala;
 }
 
 /* ══════════ 15 · QR-Code zur Maske ══════════
@@ -4756,7 +5176,7 @@ AKTION.qrBildSpeichern=()=>{
    einmal. Messungen und Beigaben vom Handy kommen dabei immer mit, weil sie
    nur angehängt, nie ersetzt werden. */
 const ONLINE={an:false,version:0,geaendert:null,von:null,zustand:'aus',fehler:null,laeuft:false,nochmal:false,zeitgeber:null,abfrage:null};
-const LISTEN=['analysen','ereignisse','messungen','beigabeZeiten'];
+const LISTEN=['analysen','ereignisse','messungen','beigabeZeiten','vergleiche'];
 function onlineStand(){
   if(!ONLINE.an)return dirty?'ungesicherte Änderungen':(db.gespeichert?'gesichert '+new Date(db.gespeichert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'');
   const wann=ONLINE.geaendert?new Date(ONLINE.geaendert).toLocaleString('de-CH',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
@@ -4865,7 +5285,7 @@ async function onlineAbfragen(){
 
 /* ══════════ 17 · Verdrahtung ══════════ */
 el('fileJson').onchange=e=>{const f=e.target.files[0];if(f)laden(f);e.target.value=''};
-el('filePdf').onchange=e=>{const l=[...e.target.files].map(f=>({pfad:f.name,file:f}));if(l.length)einlesen(l);e.target.value=''};
+el('filePdf').onchange=e=>{const l=[...e.target.files].map(f=>({pfad:f.name,file:f}));if(l.length)einlesen(l,tab==='vergleich'?'vergleich':null);e.target.value=''};
 el('fileTab').onchange=e=>{const f=e.target.files[0];if(f)tabelleEinlesen(f);e.target.value=''};
 /* PDFs und Tabellen lassen sich auf jedem Reiter ablegen. Ohne
    preventDefault auf dragover öffnet der Browser die Datei stattdessen. */
@@ -4878,7 +5298,8 @@ document.addEventListener('drop',e=>{
   const alle=[...((e.dataTransfer&&e.dataTransfer.files)||[])];
   const pdfs=alle.filter(f=>/\.pdf$/i.test(f.name));
   const tabellen=alle.filter(f=>/\.(xlsx|xlsm|xls|csv)$/i.test(f.name));
-  if(pdfs.length){if(tab!=='analysen'){tab='analysen';render()}einlesen(pdfs.map(f=>({pfad:f.name,file:f})))}
+  /* Im Vergleich bleibt man im Vergleich – sonst geht es zu den Analysen. */
+  if(pdfs.length){const vg=tab==='vergleich';if(!vg&&tab!=='analysen'){tab='analysen';render()}einlesen(pdfs.map(f=>({pfad:f.name,file:f})),vg?'vergleich':null)}
   if(tabellen.length)tabelleEinlesen(tabellen[0]);
 });
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});

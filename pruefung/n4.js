@@ -54,12 +54,12 @@ ok(JSON.stringify(erg2.db.analysen)===JSON.stringify(erg.db.analysen),'Analysen 
 ok(JSON.stringify(erg2.db.ereignisse)===JSON.stringify(erg.db.ereignisse),'Einträge bleiben beim Rundlauf identisch');
 A.setDb(erg2.db);
 const bad=[];
-for(const t of ['vAnalysen','vKombi','vTank','vMaske','vEinst']){
+for(const t of ['vAnalysen','vKombi','vVergleich','vTank','vMaske','vEinst']){
   try{const x=A[t]();A.nachRenderRun();if(/undefined|NaN|\[object Object\]/.test(x))bad.push(t)}
   catch(e){bad.push(t+' WIRFT '+e.message)}
 }
-ok(!bad.length,'Alle fünf Reiter rendern die geladene Datei sauber'+(bad.length?': '+bad.join(', '):''));
-ok(A.TABS.map(t=>t[1]).join('|')==='Blattsaft & Giesswasser|pH, EC & O₂|Einträge Mobile App|Analysen|Einstellungen','Fünf Reiter: Blattsaft & Giesswasser, pH, EC & O₂, Einträge Mobile App, Analysen, Einstellungen');
+ok(!bad.length,'Alle sechs Reiter rendern die geladene Datei sauber'+(bad.length?': '+bad.join(', '):''));
+ok(A.TABS.map(t=>t[1]).join('|')==='Blattsaft & Giesswasser|Living Herbs vs Topfbasilikum|pH, EC & O₂|Einträge Mobile App|Analysen|Einstellungen','Sechs Reiter: Blattsaft & Giesswasser, Living Herbs vs Topfbasilikum, pH, EC & O₂, Einträge Mobile App, Analysen, Einstellungen');
 
 console.log('\n════ Der Bericht: Werte, Optimum, sonst nichts ════');
 const d=A.leer();

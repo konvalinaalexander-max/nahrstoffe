@@ -45,7 +45,8 @@ const NAMEN=['toNum','isLim','putz','nurMarker','leseOptimum','parseNCC','parseI
  'paketNeues','PAKETE','PAKET_RES26','paketStand','paketZeitraum','paketAltImport','paketHinweis','paketKarte',
  'zeitNorm','zeitMin','zeitpunkt','chrono','chronoAb','messLage','fmtZ','heute','sichern','laden','datenAusText','datenAusSeite',
  'seiteMitDaten','seiteMerken','sichernJson','vereinigen','ONLINE','onlineStand','ansichtMerken','ansichtLaden',
- 'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER','tabZeit','dbBytes'];
+ 'tabBlatt','tabDatum','tabZahl','bemerkungLesen','csvZeilen','tabZusammen','kopfArt','MITTEL_MUSTER','tabZeit','dbBytes',
+ 'vVergleich','vgZeichnen','vgKachel','vgProbenHtml','vgProbenVon','vgZeileVon','vgVerborgen','vgVergleich','vgSchreiben','vgZeigen','VG_VORLAGE','VG_GRUPPE','zusatzAusText','heller','amTagZeile'];
 
 const fn=new Function('module','exports','require','document','window','globalThis',
   src+'\n;return {'+NAMEN.map(n=>n+':typeof '+n+'!=="undefined"?'+n+':undefined').join(',')+
@@ -53,5 +54,6 @@ const fn=new Function('module','exports','require','document','window','globalTh
   ' setKombi:o=>{if(o.blatt)kbBlatt=o.blatt;if(o.wasser)kbWasser=o.wasser;if(o.etage)kbEtage=o.etage;if(o.skala)kbSkala=o.skala;if(o.linien){if(o.linien===\'reihe\'){linienAn.add(\'blatt\');linienAn.add(\'wasser\')}else{linienAn.delete(\'blatt\');linienAn.delete(\'wasser\')}}},'+
   ' getKombi:()=>({blatt:kbBlatt,wasser:kbWasser,etage:kbEtage,skala:kbSkala,linien:linienAn.has(\'blatt\')?\'reihe\':\'keine\'}), resetKombi:()=>{kbBlatt=null;kbWasser=null},'+
   ' setTabPruef:x=>{TABPRUEF=x}, setPruef:(v,b)=>{PRUEF=v;PRUEF_BEARB=!!b}, setSeite:x=>{SEITE_ROH=x}, getSeite:()=>SEITE_ROH,'+
-  ' getDiag:()=>DIAG, getZeit:()=>({ZEIT,koVon,koBis,wahl:vorgabeAktiv()}), setZeit:(v,b)=>{koVon=v;koBis=b}, getKm:()=>({reihe:kmReihe,offen:kmEreignisseOffen}), setKmOffen:x=>{kmEreignisseOffen=x}, getLinien:()=>linienAn, setLinien:x=>{linienAn=new Set(x)}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}}}');
+  ' getDiag:()=>DIAG, getZeit:()=>({ZEIT,koVon,koBis,wahl:vorgabeAktiv()}), setZeit:(v,b)=>{koVon=v;koBis=b}, getKm:()=>({reihe:kmReihe,offen:kmEreignisseOffen}), setKmOffen:x=>{kmEreignisseOffen=x}, getLinien:()=>linienAn, setLinien:x=>{linienAn=new Set(x)}, nachRenderRun:()=>{if(nachRender){const g=nachRender;nachRender=null;g()}},'+
+  ' setVg:o=>{if(o.an)vgAn=new Set(o.an);if(o.stoffe!==undefined)vgStoffe=o.stoffe;if(o.etage)vgEtage=o.etage;if(o.skala)vgSkala=o.skala}, getVg:()=>({an:[...vgAn],stoffe:vgStoffe,etage:vgEtage,skala:vgSkala}), getPruefZiel:()=>PRUEF_ZIEL}');
 module.exports=fn(module,{},require,global.document,global.window,global);

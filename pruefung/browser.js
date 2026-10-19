@@ -27,7 +27,7 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
 
   const reiter=await p.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(b=>b.textContent));
   console.log('Reiter:',reiter.join(' · '));
-  ok(reiter.join('|')==='Blattsaft & Giesswasser|pH, EC & O₂|Einträge Mobile App|Analysen|Einstellungen','Fünf Reiter in der gewünschten Reihenfolge');
+  ok(reiter.join('|')==='Blattsaft & Giesswasser|Living Herbs vs Topfbasilikum|pH, EC & O₂|Einträge Mobile App|Analysen|Einstellungen','Sechs Reiter in der gewünschten Reihenfolge');
   ok(await p.$eval('#nav button.active',e=>e.textContent)==='Blattsaft & Giesswasser','Die App öffnet mit Blattsaft & Giesswasser');
 
   console.log('\n── leere Datenbank ──');

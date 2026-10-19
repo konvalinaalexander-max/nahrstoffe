@@ -98,7 +98,7 @@ const ok=(b,t)=>{if(!b)fehler++;console.log((b?'  ✓ ':'  ✗ FEHLER ')+t)};
 
   console.log('\n   ── und weiterarbeiten ──');
   const reiter=await p2.$$eval('#nav button[data-tun="reiter"]',bs=>bs.map(x=>x.textContent));
-  ok(reiter.length===5,'Alle fünf Reiter sind da');
+  ok(reiter.length===6,'Alle sechs Reiter sind da');
   for(const t of reiter){
     await p2.click(`#nav button:text-is("${t}")`);await p2.waitForTimeout(250);
     const txt=await p2.$eval('#view',e=>e.innerText);
