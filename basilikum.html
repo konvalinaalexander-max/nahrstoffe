@@ -254,7 +254,7 @@ button.klein.offen{color:var(--ink)}
 #qrDruck{display:none}
 /* Living Herbs vs Topfbasilikum: Probenzeilen, Nummern, Kacheln je Nährstoff */
 .vgZeilen{display:flex;flex-direction:column;gap:2px;margin-top:6px}
-.vgZeile{display:grid;grid-template-columns:24px 150px 112px minmax(0,1fr) auto auto 30px;grid-template-areas:"nr satz gruppe text blatt stand stift";
+.vgZeile{display:grid;grid-template-columns:24px 104px 112px minmax(0,1fr) auto auto 30px;grid-template-areas:"nr satz gruppe text blatt stand stift";
   align-items:center;gap:6px 12px;padding:7px 10px;border-radius:10px;border:1px solid transparent;cursor:pointer;user-select:none;transition:background .12s,opacity .12s}
 .vgZeile>.vgNr{grid-area:nr}.vgZeile>.vgSatz{grid-area:satz;font-weight:600;min-width:0;line-height:1.25}
 .vgZeile>.vgGruppe{grid-area:gruppe;justify-self:start}.vgZeile>.vgText{grid-area:text;font-size:13px}
@@ -273,7 +273,7 @@ button.klein.offen{color:var(--ink)}
 .vgVerlauf{display:inline-flex;gap:6px;align-items:center;cursor:pointer;margin-left:auto}
 .vgRaster{display:grid;gap:16px}
 .vgKachel{border:1px solid var(--line2);border-radius:var(--rs);padding:10px 10px 4px;min-width:0;background:#fff}
-.vgKopf{display:flex;gap:6px;align-items:center;font-size:13px;margin:0 0 4px;min-width:0}
+.vgKopf{display:flex;flex-wrap:wrap;gap:2px 6px;align-items:center;font-size:13px;margin:0 0 4px;min-width:0}
 .vgKopf .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .vgOptText{margin-left:auto;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;padding-left:8px}
 .vgBild{display:block;max-width:100%;height:auto;overflow:visible}
@@ -284,6 +284,9 @@ button.klein.offen{color:var(--ink)}
 .vgTabelle{margin-top:10px}
 .vgTag{gap:4px;padding-left:3px}.vgTag .vgNr{min-width:16px;height:16px;font-size:10px}
 .vgHin{margin-left:4px}
+.vgPaar{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px}.vgLegende .vgPaar{flex-wrap:nowrap;white-space:nowrap;gap:4px}
+button.chip{font:inherit;font-size:12px;color:var(--ink);transition:none}button.chip.on{color:#fff}
+button.chip:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 #cVgP[data-zeigt="1"] .vgZeile[data-nr="1"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="1"] .vgStreifen[data-nr="1"]{opacity:.055}#cVgK[data-zeigt="1"] .vgWert.klein[data-nr="1"]{display:inline}#cVgK[data-zeigt="1"] .vgB:not([data-nr="1"]){opacity:.42}
 #cVgP[data-zeigt="2"] .vgZeile[data-nr="2"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="2"] .vgStreifen[data-nr="2"]{opacity:.055}#cVgK[data-zeigt="2"] .vgWert.klein[data-nr="2"]{display:inline}#cVgK[data-zeigt="2"] .vgB:not([data-nr="2"]){opacity:.42}
 #cVgP[data-zeigt="3"] .vgZeile[data-nr="3"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="3"] .vgStreifen[data-nr="3"]{opacity:.055}#cVgK[data-zeigt="3"] .vgWert.klein[data-nr="3"]{display:inline}#cVgK[data-zeigt="3"] .vgB:not([data-nr="3"]){opacity:.42}
@@ -293,11 +296,13 @@ button.klein.offen{color:var(--ink)}
 #cVgP[data-zeigt="7"] .vgZeile[data-nr="7"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="7"] .vgStreifen[data-nr="7"]{opacity:.055}#cVgK[data-zeigt="7"] .vgWert.klein[data-nr="7"]{display:inline}#cVgK[data-zeigt="7"] .vgB:not([data-nr="7"]){opacity:.42}
 #cVgP[data-zeigt="8"] .vgZeile[data-nr="8"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="8"] .vgStreifen[data-nr="8"]{opacity:.055}#cVgK[data-zeigt="8"] .vgWert.klein[data-nr="8"]{display:inline}#cVgK[data-zeigt="8"] .vgB:not([data-nr="8"]){opacity:.42}
 #cVgP[data-zeigt="9"] .vgZeile[data-nr="9"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="9"] .vgStreifen[data-nr="9"]{opacity:.055}#cVgK[data-zeigt="9"] .vgWert.klein[data-nr="9"]{display:inline}#cVgK[data-zeigt="9"] .vgB:not([data-nr="9"]){opacity:.42}
-@media (max-width:700px){
-  .vgZeile .vgZusatz{display:inline;margin-left:6px}
+/* Schmaler als 900 px: Beschreibung unter Satz und Gruppe, über die volle Breite */
+@media (max-width:900px){
   .vgZeile{grid-template-columns:24px auto minmax(0,1fr) 30px;grid-template-areas:"nr satz gruppe stift" ". text text text" ". blatt stand stand";padding:9px 6px}
-  .vgZeile>.vgStand{justify-self:start}.vgVerlauf{margin-left:0}
+  .vgZeile>.vgGruppe{white-space:normal;max-width:100%}
+  .vgZeile>.vgStand{justify-self:start;white-space:normal;min-width:0}
 }
+@media (max-width:700px){.vgVerlauf{margin-left:0}}
 @media print{body.druckQr>*:not(#qrDruck){display:none!important}
   body.druckQr #qrDruck{display:block;text-align:center;padding-top:30mm;font-family:sans-serif}
   #qrDruck h1{font-size:26pt;margin:0 0 12mm}#qrDruck .qr svg{width:120mm;height:120mm}
@@ -531,8 +536,10 @@ function zusatzAusText(text,satz){
   const adresse=((t.match(/Adresse:\s*(\S+)/)||[])[1]||'').trim();
   let z=anbau.slice(sm.index+sm[1].length);
   if(adresse)z=z.replace(new RegExp('(^|\\s)'+adresse.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=\\s|$)'),' ');
-  z=z.replace(/\b(gelb\w*|gr[üu]n\w*)\b/i,' ');
-  return z.replace(/\s+/g,' ').trim()||null;
+  /* Steht nach der Adresse nur das Kulturbild («gelb»), ist das kein
+     Zusatz; mitten im Text bleibt der Wortlaut des Berichts unangetastet. */
+  const rest=z.replace(/\s+/g,' ').trim();
+  return /^(gelb\w*|gr[üu]n\w*)$/i.test(rest)?null:rest||null;
 }
 function findeTiefe(...t){
   const s=t.filter(Boolean).join(' ');const m=s.match(/(\d{1,2})\s*(?:-\s*\d{1,2}\s*)?cm/i);
@@ -943,7 +950,7 @@ const FARBEN=['#2C7A4B','#BE6F16','#3A6DA6','#7A4E8C','#A2432E','#3F7F7A','#8A71
 let TIPP=null;
 /* Am Finger zeigt das erste Tippen, das zweite öffnet: was zuletzt gezeigt
    wurde. Gehört zum Kästchen und verschwindet mit ihm. */
-let TIPP_FEST=null;
+let TIPP_FEST=null,vgFest=null;
 function tippKasten(){
   if(!TIPP){TIPP=document.createElement('div');TIPP.className='tipp';document.body.appendChild(TIPP)}
   return TIPP;
@@ -960,7 +967,7 @@ function tippZeigen(html,x,y){
   t.style.left=lx+'px';t.style.top=ly+'px';
 }
 /* Verschwindet das Kästchen, ist auch das «erste Tippen» vergessen. */
-const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an');TIPP_FEST=null};
+const tippWeg=()=>{if(TIPP)TIPP.classList.remove('an');TIPP_FEST=null;vgFest=null};
 /* Ein Beobachter fuer das ganze Dokument statt einer Bindung je Diagramm:
    ueberlebt jedes Neuzeichnen, weil er nicht an den Elementen haengt. */
 document.addEventListener('mousemove',ev=>{
@@ -2256,7 +2263,7 @@ function berichte(){
   const m=new Map();
   for(const a of db.analysen){
     const k=berichtSchluessel(a);
-    if(!m.has(k))m.set(k,{id:k,typ:a.typ,datum:a.datum,satz:a.satz,zustand:a.zustand||null,zusatz:a.zusatz||null,proben:[]});
+    if(!m.has(k))m.set(k,{id:k,typ:a.typ,datum:a.datum,satz:a.satz,zustand:a.zustand||null,zusatz:a.typ==='blattsaft'&&a.zusatz||null,proben:[]});
     m.get(k).proben.push(a);
   }
   const out=[...m.values()];
@@ -2381,7 +2388,7 @@ function amTagZeile(b){
   const vz=b.typ==='blattsaft'?vgZeileVon(b.proben[0]):null,weg=vz&&vgVerborgen().has(b.proben[0].id);
   const verlauf=(b.typ==='blattsaft'||b.typ==='giesswasser')&&!weg;
   if(!andere.length&&!verlauf&&!vz)return '';
-  const titel=x=>[TYPNAME[x.typ]||x.typ,x.typ==='giesswasser'?gwStelle(x.proben[0]):x.satz?'Satz '+x.satz:null].filter(Boolean).join(' · ');
+  const titel=x=>[TYPNAME[x.typ]||x.typ,x.typ==='giesswasser'?gwStelle(x.proben[0]):x.satz?'Satz '+x.satz:null,x.zusatz||null].filter(Boolean).join(' · ');
   return `<div class="amTag">${andere.length?`<span class="small muted">Am selben Tag:</span>${andere.map(x=>`<button class="klein ghost" data-tun="detail" data-id="${esc(x.proben[0].id)}">${esc(titel(x))}</button>`).join('')}`:''}
     ${vz?`<button class="klein verlauf" data-tun="imVergleich" data-nr="${vz.nr}" title="Zum Reiter ${esc(vgVergleich().titel)} – diese Probe ist dort hinterlegt">${vgNr(vz.nr)} Im Vergleich zeigen</button>`:''}
     ${verlauf?`<button class="klein verlauf" data-tun="imVerlauf" data-x="${+new Date(b.datum)}" title="Zum Reiter Blattsaft &amp; Giesswasser – die Tageslinie steht auf diesem Tag">Im Verlauf zeigen</button>`:''}</div>`;
@@ -2550,7 +2557,8 @@ AKTION.uebernehmen=()=>{
     if(p.__ok===false)continue;
     const rein=Object.assign({},p);
     delete rein.__ok;delete rein.hinweise;delete rein.optArt;
-    if(rein.zusatz!=null)rein.zusatz=String(rein.zusatz).replace(/\s+/g,' ').trim()||null;
+    if(rein.typ!=='blattsaft')delete rein.zusatz;
+    else if(rein.zusatz!=null)rein.zusatz=String(rein.zusatz).replace(/\s+/g,' ').trim()||null;
     rein.optima=JSON.parse(JSON.stringify(rein.optima||{}));
     const i=db.analysen.findIndex(x=>x.id===p.id);
     if(i>=0)db.analysen[i]=rein;else db.analysen.push(rein);
@@ -2572,7 +2580,7 @@ AKTION.uebernehmen=()=>{
   tab='analysen';render();
   /* Ein einzelner Bericht wird gleich gezeigt – so sieht man, was angekommen ist. */
   if(n&&new Set(neu.map(berichtSchluessel)).size===1)setTimeout(()=>detail(neu[0].id),120);
-  toast(n?`${n} Probe${n>1?'n':''} übernommen.${imVg.length?` ${imVg.length===n?'Sie gehören':imVg.length+' davon gehören'} zum Vergleich «${vgVergleich().titel}».`:''}${sichern}`:'Nichts übernommen.');
+  toast(n?`${n} Probe${n>1?'n':''} übernommen.${imVg.length?` ${imVg.length===n?(n>1?'Sie gehören':'Sie gehört'):imVg.length+' davon gehör'+(imVg.length>1?'en':'t')} zum Vergleich «${vgVergleich().titel}».`:''}${sichern}`:'Nichts übernommen.');
 };
 
 /* ══════════ 8 · Blattsaft und Giesswasser ══════════
@@ -2695,7 +2703,7 @@ function vKombi(){
         if(y==null)continue;
         punkte.push({x:+new Date(a.datum),y,wert:v,ng,grenze:ng?w.wert:null,kennung:a.id,
           tipp:tippBau(NAME[k]||k,F[k],[
-            ['Satz',a.satz||'–'],['Probe',fmt(a.datum)],['Blatt',BLATTSPALTE[al]],
+            ['Satz',(a.satz||'–')+(a.zusatz?' · '+a.zusatz:'')],['Probe',fmt(a.datum)],['Blatt',BLATTSPALTE[al]],
             ['Messwert',ng?ngText(w,e):nz(w.wert)+(e?' '+e:'')],
             o?['Optimum (Labor)',optText(o)+(e?' '+e:'')]:null,
             a.zustand?['Kulturbild',a.zustand]:null],(ng?NG_FUSS+' ':'')+'Anklicken öffnet den Bericht.')});
@@ -2724,7 +2732,7 @@ function vKombi(){
     return out;
   }
   function blattSpuren(F){
-    if(!blatt.length)return [{serien:[],hoehe:80,leerText:'Noch keine Blattsaftanalyse.'}];
+    if(!blatt.length)return [{serien:[],hoehe:80,leerText:vgWeg.size?`${vgWeg.size} Vergleichsproben – im eigenen Reiter.`:'Noch keine Blattsaftanalyse.'}];
     if(!wahlB().length)return [{serien:[],hoehe:80,leerText:'Kein Wert gewählt – oben einen Nährstoff anklicken.'}];
     const serien=blattSerien(F),namen=wahlB().map(k=>NAME[k]||k);
     if(kbSkala==='lage')return [{titel:kurzListe(namen,5),serien,yTyp:'lage',yLabel:'Lage im Optimum des Labors',hoehe:210,
@@ -3021,12 +3029,14 @@ function vgVerborgen(){
 const heller=(hex,f)=>{const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
   const n=parseInt(m[1],16),k=c=>Math.round(c+(255-c)*f).toString(16).padStart(2,'0');return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255)};
 const VG_MAX=8;
-let vgAn=new Set([1,2,3,4,5]),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgFest=null;
+let vgAn=new Set([1,2,3,4,5]),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgTabOffen=false;
 const vgNr=(nr,hohl)=>`<span class="vgNr${hohl?' hohl':''}" aria-hidden="true">${nr}</span>`;
 function vgProbenHtml(){
   const v=vgVergleich(),zeilen=v.zeilen||[];
   const da=zeilen.map(z=>vgProbenVon(z,v));
   const fehlt=da.filter(l=>!l.length).length;
+  /* Wie in vgVorlage: was aus den hinterlegten PDFs noch nicht im Bestand ist */
+  const offen=VG_VORLAGE.proben.filter(p=>!db.analysen.some(a=>a.laborId&&a.laborId===p.laborId)).length;
   const zeile=(z,i)=>{
     const l=da[i],an=vgAn.has(z.nr);
     const blatt=l.map(a=>zeichen(BLATTFORM[a.blattalter]||'quadrat',NEUTRAL)).join('');
@@ -3041,7 +3051,7 @@ function vgProbenHtml(){
   };
   return `<div class="hd"><div><h2>${esc(v.titel||'Living Herbs vs Topfbasilikum')}</h2>
       <p class="sub">${zeilen.length} Einsendungen vom ${fmt(v.datum)} · Beschreibungen aus dem Mail · Optimum laut Labor</p></div>
-    <div class="row" style="gap:8px;align-items:center">${fehlt?`<button class="primary" data-tun="vgVorlage" title="Die Berichte aus dem Mail – zuerst im Kontrolldialog prüfen">${fehlt===zeilen.length?`Die ${zeilen.length} Berichte übernehmen`:`Fehlende Berichte übernehmen (${fehlt})`}</button>`:''}
+    <div class="row" style="gap:8px;align-items:center">${offen?`<button class="primary" data-tun="vgVorlage" title="Die Berichte aus dem Mail – zuerst im Kontrolldialog prüfen">${fehlt===zeilen.length?`Die ${zeilen.length} Berichte übernehmen`:`Fehlende Proben übernehmen (${offen})`}</button>`:''}
       <button class="klein" data-tun="vgDatei">PDFs hinzufügen</button></div></div>
     <div class="vgZeilen">${zeilen.map(zeile).join('')}</div>
     <div class="vgFuss tiny muted">
@@ -3049,6 +3059,8 @@ function vgProbenHtml(){
       <span>Ob 08-441 Living Herbs oder Topfbasilikum war, sagt das Mail nicht.</span>
       <label class="vgVerlauf"><input type="checkbox" data-aend="vgImVerlauf"${v.imVerlauf?' checked':''}> auch im Verlauf (Blattsaft &amp; Giesswasser) zeigen</label></div>`;
 }
+/* Breite einer Wertbeschriftung in 9,5 px – Ziffern breiter als Trennzeichen */
+const vgTextBreite=t=>[...String(t)].reduce((n,ch)=>n+(/[0-9<]/.test(ch)?5.7:/[’'.,]/.test(ch)?2.6:5.2),0);
 /* Eine Kachel je Nährstoff */
 function vgKachel(k,farbe,cl,W,skala){
   const ml=38,mr=6,mt=14,ph=118,unten=mt+ph,H=unten+36,P=W-ml-mr;
@@ -3074,12 +3086,20 @@ function vgKachel(k,farbe,cl,W,skala){
   }
   const Y=v=>Math.round((mt+(1-Math.min(v,y1)/(y1||1))*ph)*100)/100;
   const nSlots=cl.reduce((n,c)=>n+c.slots.length,0)||1,gap=cl.length>1?10:0;
-  const sw=Math.max(8,(P-gap*(cl.length-1))/nSlots),bw=Math.max(6,Math.min(30,sw-4)),zeigWert=bw>=20;
+  const sw=Math.max(8,(P-gap*(cl.length-1))/nSlots),bw=Math.max(6,Math.min(30,sw-4));
+  /* Die Werte stehen an den Balken, wenn die breiteste Beschriftung in einen
+     Platz passt; sonst erst beim Zeigen, dann jeder zweite Platz etwas höher. */
+  const lw=Math.max(0,...cl.flatMap(c=>c.slots).filter(x=>x.w).map(x=>vgTextBreite((x.w.unter?'<':'')+nz(x.w.wert))));
+  const zeigWert=sw>=lw+3;
   let s=`<svg class="vgBild" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(NAME[k]||k)}">`;
   /* Fläche und Optimum */
   if(skala==='lage'){
-    s+=`<rect x="${ml}" y="${Y(3)}" width="${P}" height="${Y(2)-Y(3)}" fill="#F6F7F3"/><rect x="${ml}" y="${Y(2)}" width="${P}" height="${Y(1)-Y(2)}" fill="#E3F0E1"/><rect x="${ml}" y="${Y(1)}" width="${P}" height="${Y(0)-Y(1)}" fill="#F6F7F3"/>`;
-    s+=`<text x="${ml-5}" y="${(Y(2)+Y(1))/2+3}" text-anchor="end" font-size="9.5" fill="#2C7A4B">Opt.</text>`;
+    /* Ohne Optimum des Labors kein grünes Band – nur die Fläche */
+    if(ohneOpt)s+=`<rect x="${ml}" y="${Y(3)}" width="${P}" height="${Y(0)-Y(3)}" fill="#F6F7F3"/>`;
+    else{
+      s+=`<rect x="${ml}" y="${Y(3)}" width="${P}" height="${Y(2)-Y(3)}" fill="#F6F7F3"/><rect x="${ml}" y="${Y(2)}" width="${P}" height="${Y(1)-Y(2)}" fill="#E3F0E1"/><rect x="${ml}" y="${Y(1)}" width="${P}" height="${Y(0)-Y(1)}" fill="#F6F7F3"/>`;
+      s+=`<text x="${ml-5}" y="${(Y(2)+Y(1))/2+3}" text-anchor="end" font-size="9.5" fill="#2C7A4B">Opt.</text>`;
+    }
   }else{
     for(const v of ticks){const y=Y(v);s+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="#EDF1E9"/><text x="${ml-5}" y="${y+3.5}" text-anchor="end" font-size="9.5" fill="#697A6C" font-family="JetBrains Mono,monospace">${nz(v,dez)}</text>`}
     if(gleich&&!oben){const lo=gleich[0]!=null?gleich[0]:0,hi=gleich[1]!=null?gleich[1]:y1;
@@ -3091,14 +3111,21 @@ function vgKachel(k,farbe,cl,W,skala){
   for(const c of cl){
     const cw=c.slots.length*sw,cx=x+cw/2;
     s+=`<rect class="vgStreifen" data-nr="${c.nr}" x="${x-gap/2+1}" y="${mt-12}" width="${cw+gap-2}" height="${H-mt+10}" rx="6" fill="#141D17" opacity="0" pointer-events="none"/>`;
+    /* Stehen die Werte erst beim Zeigen und eng, hält jede Beschriftung der
+       Gruppe 11 px Abstand zur vorigen – auch wenn die Balken gleich hoch sind. */
+    let vorY=null;
+    const ly=y0=>{let y=y0;if(!zeigWert&&vorY!=null&&Math.abs(y-vorY)<11)y=vorY-11;vorY=Math.max(9,y);return vorY};
     c.slots.forEach((sl,i)=>{
       const sx=x+i*sw+sw/2,bx=sx-bw/2;
       if(verschieden&&sl.o&&skala!=='lage'){const lo=sl.o[0]!=null?sl.o[0]:0,hi=sl.o[1]!=null?sl.o[1]:y1;
         if(lo<y1)s+=`<rect x="${sx-sw/2+1}" y="${Y(hi)}" width="${sw-2}" height="${Math.max(1,Y(lo)-Y(hi))}" fill="#E3F0E1"/>`}
       const al=sl.a?sl.a.blattalter:sl.al,form=BLATTFORM[al]||'quadrat';
-      marken.push(marke(form,sx,unten+9,3,NEUTRAL,.85));
+      if(sl.a||al)marken.push(marke(form,sx,unten+9,3,NEUTRAL,.85));
       if(!sl.a||!sl.w){
-        s+=`<text x="${sx}" y="${unten-4}" text-anchor="middle" font-size="11" fill="#A8B3A4" data-tipp="${esc(tippBau('Probe '+c.nr,NEUTRAL,[sl.a?'Diesen Wert hat das Labor nicht angegeben.':`Von dieser Probe wurde kein ${al==='jung'?'junges':'altes'} Blatt eingeschickt.`]))}">–</text>`;
+        /* Nur sagen, was die Daten hergeben – nichts über die Einsendung */
+        const warum=sl.a?'Diesen Wert hat das Labor nicht angegeben.':sl.ohneBericht?'Für diese Probe ist noch kein Bericht übernommen.'
+          :`In den übernommenen Proben steht ${al==='misch'?'keine Mischprobe':'kein '+(BLATTSPALTE[al]||'Blatt')}.`;
+        s+=`<text x="${sx}" y="${unten-4}" text-anchor="middle" font-size="11" fill="#A8B3A4" data-tipp="${esc(tippBau('Probe '+c.nr,NEUTRAL,[warum]))}">–</text>`;
         return;
       }
       const ng=!!sl.w.unter,v=ng?0:sl.w.wert,lg=skala==='lage'?lage(v,sl.o):null;
@@ -3116,13 +3143,14 @@ function vgKachel(k,farbe,cl,W,skala){
       s+=`<rect x="${sx-sw/2}" y="${mt-12}" width="${sw}" height="${ph+30}" fill="transparent"/>`;
       if(yv==null){s+=`<text x="${sx}" y="${unten-4}" text-anchor="middle" font-size="11" fill="#A8B3A4">–</text>`}
       /* Unter der Nachweisgrenze: kein Balken, eine hohle Marke auf der Nulllinie */
-      else if(ng){s+=marke(form,sx,unten-5,4,farbe,1,true);
-        s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${unten-14}" text-anchor="middle" font-size="9.5" fill="#4F5E53">&lt;${nz(sl.w.wert)}</text>`}
+      else if(ng){const cy=skala==='lage'?Math.min(unten-5,Y(lg)):unten-5;   /* in «Lage» dort, wo lage() sie hinlegt */
+        s+=marke(form,sx,cy,4,farbe,1,true);
+        s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${ly(cy-9)}" text-anchor="middle" font-size="9.5" fill="#4F5E53">&lt;${nz(sl.w.wert)}</text>`}
       else{
         const yt=Y(yv),h=Math.max(1,unten-yt);
         s+=`<rect x="${bx}" y="${yt}" width="${bw}" height="${h}" rx="2" fill="${fill}"${jung?'':` stroke="${farbe}" stroke-width="1.2"`}/>`;
         if(skala==='lage'&&lg>=3)s+=`<path d="M${sx-4} ${yt-3}L${sx+4} ${yt-3}L${sx} ${yt-9}Z" fill="${farbe}"/>`;
-        else s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${yt-4}" text-anchor="middle" font-size="9.5" fill="#4F5E53">${nz(sl.w.wert)}</text>`;
+        else s+=`<text class="vgWert${zeigWert?'':' klein'}" data-nr="${c.nr}" x="${sx}" y="${ly(yt-4)}" text-anchor="middle" font-size="9.5" fill="#4F5E53">${nz(sl.w.wert)}</text>`;
       }
       s+=`</g>`;
     });
@@ -3134,10 +3162,11 @@ function vgKachel(k,farbe,cl,W,skala){
   s+=`<g pointer-events="none"><line x1="${ml}" x2="${W-mr}" y1="${unten}" y2="${unten}" stroke="#B9C4B4"/>${marken.join('')}</g></svg>`;
   const optKopf=skala==='lage'?(ohneOpt?'kein Optimum des Labors':'Lage im Optimum des Labors')
     :verschieden?'Optimum je Bericht verschieden':gleich?`Optimum ${optText(gleich)}${oben?' ↑ oberhalb':''}`:'kein Optimum des Labors';
-  return `<div class="vgKachel" data-k="${esc(k)}"><div class="vgKopf"><span class="dot" style="background:${farbe}"></span><b>${esc(NAME[k]||k)}</b>${e&&skala!=='lage'?` <span class="muted">${esc(e)}</span>`:''}<span class="vgOptText">${esc(optKopf)}</span></div>${s}</div>`;
+  return `<div class="vgKachel" data-k="${esc(k)}"><div class="vgKopf"><span class="dot" style="background:${farbe}"></span><b>${esc(NAME[k]||k)}</b>${e&&skala!=='lage'?` <span class="muted">${esc(e)}</span>`:''}<span class="vgOptText" title="${esc(optKopf)}">${esc(optKopf)}</span></div>${s}</div>`;
 }
 function vgZeichnen(){
   const box=el('cVgK');if(!box)return;
+  const d0=box.querySelector&&box.querySelector('details.vgTabelle');if(d0)vgTabOffen=d0.open;   /* bleibt offen beim Neuzeichnen */
   const v=vgVergleich(),zeilen=v.zeilen||[];
   const alle=zeilen.flatMap(z=>vgProbenVon(z,v));
   if(!alle.length){box.innerHTML=`<div class="tafel"><div class="tafelKopf"><h3>Je Nährstoff</h3></div>
@@ -3151,30 +3180,30 @@ function vgZeichnen(){
   if(vgEtage!=='beide'&&!etagen.includes(vgEtage))vgEtage='beide';
   const nurNG=k=>{const l=alle.filter(a=>a.werte&&a.werte[k]);return l.length>0&&l.every(a=>a.werte[k].unter)};
   const chip=k=>{const an=vgStoffe.includes(k),hohl=nurNG(k),f=an?F[k]:'#C3CDBF';
-    return `<span class="chip stoff ${an?'on':''}" data-tun="vgStoff" data-k="${esc(k)}"${hohl?' title="immer unter der Nachweisgrenze"':''}><span class="dot${hohl?' hohl':''}" style="${hohl?'color':'background'}:${f}"></span>${esc(NAME[k]||k)}</span>`};
+    return `<button type="button" class="chip stoff ${an?'on':''}" aria-pressed="${an}" data-tun="vgStoff" data-k="${esc(k)}"${hohl?' title="immer unter der Nachweisgrenze"':''}><span class="dot${hohl?' hohl':''}" style="${hohl?'color':'background'}:${f}"></span>${esc(NAME[k]||k)}</button>`};
   /* Gruppen: je eingeschaltete Zeile die Proben nach Blatt; fehlt das
      gewählte Blatt, bleibt ein schmaler Platz – die Nummern stehen in allen
      Kacheln gleich. */
   const cl=zeilen.filter(z=>vgAn.has(z.nr)).map(z=>{
-    const l=vgProbenVon(z,v).filter(a=>vgEtage==='beide'||(a.blattalter||'misch')===vgEtage);
-    return {nr:z.nr,zeile:z,slots:l.length?l.map(a=>({a})):[{a:null,al:vgEtage==='beide'?'jung':vgEtage}]};
+    const alleZ=vgProbenVon(z,v),l=alleZ.filter(a=>vgEtage==='beide'||(a.blattalter||'misch')===vgEtage);
+    return {nr:z.nr,zeile:z,slots:l.length?l.map(a=>({a})):[{a:null,al:vgEtage==='beide'?null:vgEtage,ohneBericht:!alleZ.length}]};
   });
   /* Alle Kacheln gleich gross, gleich wie viele gewählt sind – Rand und
      Innenabstand der Kachel (2 × 11 px) gehen von der Breite ab. */
   const cw=box.clientWidth||900,spalten=Math.max(1,Math.floor((cw+16)/(300+16))),W=Math.floor((cw-16*(spalten-1))/spalten)-22;
   const kopf=`<div class="tafelKopf"><h3>Je Nährstoff</h3><div class="rechts">
-      <span class="lab2">Blatt</span><span class="seg">${[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]])).map(([w,l])=>`<button class="${vgEtage===w?'on':''}" data-tun="vgEtage" data-v="${w}">${
-        w==='beide'?etagen.map(al=>zeichen(BLATTFORM[al],NEUTRAL)).join(''):zeichen(BLATTFORM[w],NEUTRAL)}${esc(l)}</button>`).join('')}</span>
-      <span class="lab2">Anzeige</span><span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([w,l])=>`<button class="${vgSkala===w?'on':''}" data-tun="vgSkala" data-v="${w}">${l}</button>`).join('')}</span></div></div>
+      <span class="vgPaar"><span class="lab2">Blatt</span><span class="seg">${[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]])).map(([w,l])=>`<button class="${vgEtage===w?'on':''}" data-tun="vgEtage" data-v="${w}">${
+        w==='beide'?etagen.map(al=>zeichen(BLATTFORM[al],NEUTRAL)).join(''):zeichen(BLATTFORM[w],NEUTRAL)}${esc(l)}</button>`).join('')}</span></span>
+      <span class="vgPaar"><span class="lab2">Anzeige</span><span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([w,l])=>`<button class="${vgSkala===w?'on':''}" data-tun="vgSkala" data-v="${w}">${l}</button>`).join('')}</span></span></div></div>
     <div class="wahl">${params.map(chip).join('')}</div>`;
   const ng=vgStoffe.some(k=>alle.some(a=>a.werte&&a.werte[k]&&a.werte[k].unter));
-  const legende=`<div class="vgLegende tiny muted">${zeichen('kreis',NEUTRAL)} junges Blatt (voll) · ${zeichen('raute',NEUTRAL)} altes Blatt (hell) · ${vgNr('1–5')} Probe wie oben · Band: Optimum laut Labor${ng?` · ${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0`:''}</div>`;
+  const legende=`<div class="vgLegende tiny muted"><span class="vgPaar">${zeichen('kreis',NEUTRAL)} junges Blatt (voll)</span><span class="vgPaar">${zeichen('raute',NEUTRAL)} altes Blatt (hell)</span><span class="vgPaar">${vgNr('1–5')} Probe wie oben</span><span class="vgPaar">Band: Optimum laut Labor</span>${ng?`<span class="vgPaar">${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0</span>`:''}</div>`;
   const kacheln=vgStoffe.length&&cl.length?vgStoffe.map(k=>vgKachel(k,F[k],cl.map(c=>({nr:c.nr,zeile:c.zeile,slots:c.slots.map(s=>Object.assign({},s))})),W,vgSkala)).join('')
     :`<p class="muted small">${cl.length?'Oben einen Nährstoff anklicken.':'Keine Probe eingeschaltet – oben eine Zeile antippen.'}</p>`;
   /* Zum genauen Ablesen und für Bildschirmleser: alles als Tabelle */
   const spaltenT=cl.flatMap(c=>c.slots.filter(s=>s.a).map(s=>({c,a:s.a})));
-  const tabelle=vgStoffe.length&&spaltenT.length?`<details class="aufklapp vgTabelle"><summary>Werte als Tabelle</summary><div class="scroll"><table><thead><tr><th>Nährstoff</th>${
-      spaltenT.map(({c,a})=>`<th>${vgNr(c.nr)} ${esc(BLATTNAME[a.blattalter]||'')}</th>`).join('')}</tr></thead><tbody>${
+  const tabelle=vgStoffe.length&&spaltenT.length?`<details class="aufklapp vgTabelle"${vgTabOffen?' open':''}><summary>Werte als Tabelle</summary><div class="scroll"><table><thead><tr><th scope="col">Nährstoff</th>${
+      spaltenT.map(({c,a})=>`<th scope="col">${vgNr(c.nr)}<span class="sr">Probe ${c.nr}, ${esc(c.zeile.satz)}${c.zeile.zusatz?' '+esc(c.zeile.zusatz):''}, </span> ${esc(BLATTNAME[a.blattalter]||'')}</th>`).join('')}</tr></thead><tbody>${
       vgStoffe.map(k=>`<tr><td><strong>${esc(NAME[k]||k)}</strong> <span class="tiny muted">${esc(einheit(k))}</span></td>${
         spaltenT.map(({a})=>`<td class="mono">${zeigeWert(a.werte&&a.werte[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`:'';
   box.innerHTML=`<div class="tafel">${kopf}<div class="vgRaster" style="grid-template-columns:repeat(${spalten},minmax(0,1fr))">${kacheln}</div>${legende}${tabelle}</div>`;
@@ -3189,24 +3218,35 @@ function vVergleich(){
 /* Zeigen: eine Probe in allen Kacheln und ihre Zeile hinterlegen */
 function vgZeigen(nr){
   vgGezeigt=nr;
-  for(const id of ['cVgP','cVgK']){const b=el(id);if(!b||!b.setAttribute)continue;if(nr==null)b.removeAttribute('data-zeigt');else b.setAttribute('data-zeigt',String(nr))}
+  for(const id of ['cVgP','cVgK']){const b=el(id);if(!b||!b.setAttribute)continue;
+    /* In der Grafik nur, wenn die Probe dort eine Gruppe hat – sonst träten alle Balken zurück */
+    const da=nr!=null&&(id==='cVgP'||!!(b.querySelector&&b.querySelector(`[data-nr="${nr}"]`)));
+    if(da)b.setAttribute('data-zeigt',String(nr));else b.removeAttribute('data-zeigt')}
+}
+/* Nach dem Neuzeichnen steht der Fokus wieder auf demselben Knopf – wer mit
+   der Tastatur bedient, finge sonst oben auf der Seite an. */
+function vgFokus(fn){
+  const a=document.activeElement,v=el('view');
+  const f=a&&a.dataset&&a.dataset.tun&&v&&v.contains&&v.contains(a)?{tun:a.dataset.tun,v:a.dataset.v,k:a.dataset.k,nr:a.dataset.nr}:null;
+  fn();
+  if(!f||document.body.contains(a))return;
+  const q=x=>String(x).replace(/["\\]/g,'\\$&');
+  const n=v.querySelector(`[data-tun="${q(f.tun)}"]`+(f.v!=null?`[data-v="${q(f.v)}"]`:'')+(f.k!=null?`[data-k="${q(f.k)}"]`:'')+(f.nr!=null?`[data-nr="${q(f.nr)}"]`:''));
+  if(n)n.focus({preventScroll:true});
 }
 AKTION.vgProbe=d=>{
   const nr=+d.nr;if(vgAn.has(nr))vgAn.delete(nr);else vgAn.add(nr);ansichtMerken();
-  /* Die Zeilen werden neu gebaut – wer mit der Tastatur umschaltet, bleibt auf seiner Zeile */
-  const a=document.activeElement,fokus=a&&a.classList&&a.classList.contains('vgZeile');
-  diagFrisch();
-  if(fokus){const z=document.querySelector(`#cVgP .vgZeile[data-nr="${nr}"]`);if(z)z.focus()}
+  vgFokus(diagFrisch);   /* wer mit der Tastatur umschaltet, bleibt auf seiner Zeile */
 };
-AKTION.vgAlle=d=>{const v=vgVergleich();vgAn=d.v==='an'?new Set((v.zeilen||[]).map(z=>z.nr)):new Set();ansichtMerken();diagFrisch()};
+AKTION.vgAlle=d=>{const v=vgVergleich();vgAn=d.v==='an'?new Set((v.zeilen||[]).map(z=>z.nr)):new Set();ansichtMerken();vgFokus(diagFrisch)};
 AKTION.vgStoff=d=>{
   const k=d.k,l=vgStoffe||[];
   if(l.includes(k))vgStoffe=l.filter(x=>x!==k);
   else{if(l.length>=VG_MAX)return toast(`Höchstens ${VG_MAX} Nährstoffe auf einmal – erst einen abwählen.`);vgStoffe=l.concat([k])}
-  ansichtMerken();vgZeichnen();
+  ansichtMerken();vgFokus(vgZeichnen);
 };
-AKTION.vgEtage=d=>{vgEtage=d.v;ansichtMerken();vgZeichnen()};
-AKTION.vgSkala=d=>{vgSkala=d.v;ansichtMerken();vgZeichnen()};
+AKTION.vgEtage=d=>{vgEtage=d.v;ansichtMerken();vgFokus(vgZeichnen)};
+AKTION.vgSkala=d=>{vgSkala=d.v;ansichtMerken();vgFokus(vgZeichnen)};
 AKTION.vgImVerlauf=(d,ev)=>{const v=vgSchreiben();v.imVerlauf=!!(ev&&ev.target&&ev.target.checked);aend();
   toast(v.imVerlauf?'Die Vergleichsproben stehen jetzt auch im Verlauf Blattsaft & Giesswasser.':'Die Vergleichsproben stehen nur noch hier.')};
 /* Nur was noch fehlt – eine schon übernommene (vielleicht bearbeitete)
@@ -3234,49 +3274,72 @@ AKTION.vgSpeichern=d=>{
   const gruppe=g?(g.dataset.v||null):z.gruppe;
   if(text!==z.text||gruppe!==z.gruppe){z.text=text;z.gruppe=gruppe;z.beleg='geändert';aend()}
   el('dlg').close();diagFrisch();
+  const b=document.querySelector(`#cVgP .vgZeile[data-nr="${z.nr}"] .vgStift`);if(b&&b.focus)b.focus({preventScroll:true});
 };
 AKTION.imVergleich=d=>{
   const nr=+d.nr;if(el('dlg').open)el('dlg').close();
   vgAn.add(nr);tab='vergleich';render();vgZeigen(nr);
   const z=document.querySelector&&document.querySelector(`#cVgP .vgZeile[data-nr="${nr}"]`);
-  if(z){z.classList.add('blink');if(z.scrollIntoView)z.scrollIntoView({block:'nearest'});setTimeout(()=>z.classList.remove('blink'),1400)}
+  if(z){z.classList.add('blink');if(z.scrollIntoView)z.scrollIntoView({block:'nearest'});if(z.focus)z.focus({preventScroll:true});setTimeout(()=>z.classList.remove('blink'),1400)}
 };
 /* Zeigen mit Maus und Finger – ein Beobachter für das ganze Dokument, er
    überlebt jedes Neuzeichnen. Mit dem Finger zeigt das erste Tippen auf
    einen Balken Kästchen und Probe, das zweite öffnet den Bericht. */
 let vgZeigerArt='mouse';
+const vgZiel=(t,sel)=>t&&t.closest?t.closest(sel):null;
+const VG_ZEIGBAR='#cVgK [data-nr],#cVgP .vgZeile[data-nr]';
 document.addEventListener('pointerdown',ev=>{vgZeigerArt=ev.pointerType||'mouse'},true);
 document.addEventListener('pointerover',ev=>{
-  if(tab!=='vergleich'||vgFest!=null)return;
-  const t=ev.target&&ev.target.closest?ev.target.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
+  if(tab!=='vergleich')return;
+  /* Bewegt sich die Maus, gilt das Festhalten durch den Finger nicht mehr */
+  if(vgFest!=null){if(ev.pointerType!=='mouse')return;vgFest=null;vgZeigen(null)}
+  const t=vgZiel(ev.target,VG_ZEIGBAR);
   if(t)vgZeigen(+t.dataset.nr);
 });
 document.addEventListener('pointerout',ev=>{
   if(tab!=='vergleich'||vgFest!=null)return;
-  const t=ev.target&&ev.target.closest?ev.target.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
-  const r=ev.relatedTarget&&ev.relatedTarget.closest?ev.relatedTarget.closest('#cVgK [data-nr],#cVgP .vgZeile[data-nr]'):null;
+  const t=vgZiel(ev.target,VG_ZEIGBAR),r=vgZiel(ev.relatedTarget,VG_ZEIGBAR);
   if(t&&(!r||r.dataset.nr!==t.dataset.nr))vgZeigen(null);
 });
 document.addEventListener('click',ev=>{
   if(tab!=='vergleich')return;
-  const g=ev.target&&ev.target.closest?ev.target.closest('#cVgK g.vgB'):null;
-  if(vgZeigerArt==='mouse'||vgZeigerArt==='pen'&&!g){if(!g&&vgFest!=null){vgFest=null;vgZeigen(null)}return}
+  const g=vgZiel(ev.target,'#cVgK g.vgB');
+  if(vgZeigerArt!=='touch'){if(vgFest!=null){vgFest=null;if(!g)vgZeigen(null)}return}
   if(g){
-    if(vgFest!==g.dataset.id){
-      vgFest=g.dataset.id;vgZeigen(+g.dataset.nr);
+    /* Je Balken und Kachel: in der zweiten Kachel zeigt das erste Tippen
+       wieder erst – der Zustand gehört zum Kästchen (TIPP_FEST) und ist mit
+       ihm weg, etwa nach dem Scrollen. */
+    const key='vg|'+((g.closest('.vgKachel')||{dataset:{}}).dataset.k||'')+'|'+g.dataset.id;
+    if(TIPP_FEST!==key){
+      vgZeigen(+g.dataset.nr);
       const r=g.getBoundingClientRect();tippZeigen(String(g.dataset.tipp||'').replace(/Anklicken/g,'Nochmals tippen'),r.left+r.width/2,r.top+20);
+      TIPP_FEST=key;vgFest=g.dataset.id;
       ev.stopPropagation();ev.preventDefault();return;
     }
     vgFest=null;return;
   }
-  if(ev.target.closest&&ev.target.closest('#cVgK .vgBild')){vgFest=null;vgZeigen(null);tippWeg()}
+  /* Die Nummer unter einer Gruppe zeigt die Probe */
+  const n=vgZiel(ev.target,'#cVgK g.vgNrS');
+  if(n){tippWeg();vgFest='nr:'+n.dataset.nr;vgZeigen(+n.dataset.nr);return}
+  if(vgFest!=null||vgZiel(ev.target,'#cVgK .vgBild')){tippWeg();vgZeigen(null)}
 },true);
 document.addEventListener('keydown',ev=>{
-  const z=ev.target&&ev.target.closest?ev.target.closest('.vgZeile[data-nr]'):null;
+  const z=vgZiel(ev.target,'.vgZeile[data-nr]');
   if(z&&ev.target===z&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();AKTION.vgProbe({nr:z.dataset.nr})}
-  if(ev.key==='Escape'&&vgFest!=null&&tab==='vergleich'){vgFest=null;vgZeigen(null);tippWeg()}
+  if(ev.key==='Escape'&&tab==='vergleich'&&(vgFest!=null||vgGezeigt!=null)){tippWeg();vgZeigen(null)}
 });
-document.addEventListener('focusin',ev=>{const z=ev.target&&ev.target.closest?ev.target.closest('.vgZeile[data-nr]'):null;if(z&&tab==='vergleich')vgZeigen(+z.dataset.nr)});
+/* Mit der Tastatur zeigt die Zeile mit dem Fokus ihre Probe – nur mit der
+   Tastatur, ein Tippen auf die Zeile blendet sie ein oder aus. */
+document.addEventListener('focusin',ev=>{
+  const z=vgZiel(ev.target,'.vgZeile[data-nr]');if(!z||tab!=='vergleich'||vgFest!=null)return;
+  let sichtbar=true;try{sichtbar=ev.target.matches(':focus-visible')}catch(e){}
+  if(sichtbar)vgZeigen(+z.dataset.nr);
+});
+document.addEventListener('focusout',ev=>{
+  if(tab!=='vergleich'||vgFest!=null)return;
+  const z=vgZiel(ev.target,'.vgZeile[data-nr]'),r=vgZiel(ev.relatedTarget,'.vgZeile[data-nr]');
+  if(z&&!r&&vgGezeigt===+z.dataset.nr)vgZeigen(null);
+});
 
 /* ══════════ 9 · Kulturmanagement ══════════
    Die Balken unter den Diagrammen: was in den Tank kam und was sonst an der
@@ -5307,10 +5370,11 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
    der Fenstergrösse werden sie neu gezeichnet – die Seite bleibt stehen. */
 /* Neu gezeichnet wird nur, wenn sich die Breite ändert – am Handy feuert
    resize auch, wenn beim Scrollen die Adressleiste kommt und geht. */
-let rt,breiteAlt=window.innerWidth;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
-  if(el('dlg').open||window.innerWidth===breiteAlt)return;
-  breiteAlt=window.innerWidth;
-  if(DIAG&&DIAG.zeichnen)zeitZeichnen()},250)});
+let rt,breiteAlt=window.innerWidth;
+const breiteNeu=()=>{if(el('dlg').open||window.innerWidth===breiteAlt)return;breiteAlt=window.innerWidth;if(DIAG&&DIAG.zeichnen)zeitZeichnen()};
+window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(breiteNeu,250)});
+/* Wurde das Handy bei offenem Dialog gedreht, wird nach dem Schliessen neu gezeichnet. */
+el('dlg').addEventListener('close',()=>setTimeout(breiteNeu,0));
 document.addEventListener('keydown',e=>{
   if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();AKTION.sichern()}
 });

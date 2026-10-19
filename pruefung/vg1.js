@@ -121,7 +121,7 @@ console.log('\n════ Der Reiter ════');
   A.setVg({stoffe:['K','Mg'],skala:'wert',etage:'jung'});A.vgZeichnen();
   const j=$('cVgK').innerHTML;
   ok((j.match(/<g class="vgB"/g)||[]).length===8,'Nur junges Blatt: vier Balken je Kachel');
-  ok(/kein junges Blatt eingeschickt/.test(j),'Die Mangelprobe hat kein junges Blatt – ein Strich mit Erklärung');
+  ok(/In den übernommenen Proben steht kein junges Blatt/.test(j)&&!/eingeschickt/.test(j),'Die Mangelprobe hat kein junges Blatt – ein Strich mit Erklärung, nichts über die Einsendung');
 
   A.setVg({etage:'beide',stoffe:['K']});
   A.AKTION.vgProbe({nr:'3'});A.AKTION.vgProbe({nr:'4'});
@@ -187,6 +187,65 @@ console.log('\n════ Ältere Daten: der Zusatz aus dem Wortlaut ═══
   ok(vg.db.vergleiche.length===1&&vg.db.vergleiche[0].zeilen.length===1&&vg.db.vergleiche[0].zeilen[0].nr===2,'Kaputte Vergleiche fallen weg, Nummern werden Zahlen');
   ok(A.leer().vergleiche.length===0&&A.leer().schema===12,'Neuer Bestand: leer, Schema bleibt 12');
   ok(A.heller('#336699',.5)==='#99b3cc'&&A.heller('nix',.5)==='nix','Hellere Farbe für das alte Blatt');
+}
+
+console.log('\n════ Aus der Prüfung ════');
+{
+  const V=A.VG_VORLAGE,nur=ids=>{const d=A.leer();d.analysen=JSON.parse(JSON.stringify(V.proben.filter(p=>ids.includes(p.laborId))));A.setDb(d)};
+  const tipps=h=>[...h.matchAll(/data-tipp="([^"]*)"/g)].map(m=>m[1]);
+  /* Platzhalter sagen nur, was die Daten hergeben */
+  nur(['202604171288','202604171289']);A.setVg({an:[1,2,3,4,5],stoffe:['K'],etage:'beide',skala:'wert'});
+  A.vVergleich();A.nachRenderRun();
+  let t=tipps($('cVgK').innerHTML).join(' ');
+  ok(/noch kein Bericht übernommen/.test(t)&&!/eingeschickt/.test(t),'Nur 09-844 übernommen: die anderen Proben «noch kein Bericht übernommen» – kein «nicht eingeschickt»');
+  ok(!/<circle cx="[\d.]+" cy="141"/.test($('cVgK').innerHTML.split('class="vgNrS" data-nr="2"')[0].split('data-nr="2"').slice(1).join('')),'… und ohne Blattzeichen, das ein junges Blatt behauptet');
+  /* Knopf: fehlt nur ein Blatt, bleibt «Fehlende Proben übernehmen» */
+  nur(V.proben.map(p=>p.laborId).filter(x=>x!=='202604171289'));
+  ok(/Fehlende Proben übernehmen \(1\)/.test(A.vgProbenHtml()),'Ein Blatt fehlt: «Fehlende Proben übernehmen (1)»');
+  /* Lage ohne Optimum: kein grünes Band */
+  nur(V.proben.map(p=>p.laborId));
+  A.setVg({stoffe:['K/Ca'],skala:'lage'});A.vgZeichnen();
+  ok(!/>Opt\.</.test($('cVgK').innerHTML)&&!/#E3F0E1/.test($('cVgK').innerHTML),'K/Ca in «Lage»: kein Optimum-Band, kein «Opt.»');
+  /* Nachweisgrenze in «Lage»: dort, wo lage() sie hinlegt */
+  const d=A.getDb(),mo=d.analysen.find(a=>a.laborId==='202604171290');mo.werte.Mo={wert:0.05,unter:true};
+  A.setVg({stoffe:['Mo'],skala:'lage',an:[2]});A.vgZeichnen();
+  const ring=$('cVgK').innerHTML.match(/<circle cx="[\d.]+" cy="([\d.]+)" r="4" fill="#fff"/);
+  ok(ring&&Math.abs(+ring[1]-(14+(1-1/3)*118))<0.6,'Molybdän <0,05 bei Optimum «< 0,05»: hohl auf Lage 1, wie im Verlauf (cy '+(ring&&ring[1])+')');
+  A.setVg({an:[1,2,3,4,5],skala:'wert',stoffe:['K']});
+  /* Beschriftungen: eng → erst beim Zeigen, jeder zweite Platz höher */
+  const sl=()=>V.zeilen.map(z=>({nr:z.nr,zeile:z,slots:A.vgProbenVon(z).map(a=>({a}))}));
+  const eng=A.vgKachel('K','#A0442C',sl(),280,'wert'),breit=A.vgKachel('K','#A0442C',sl(),420,'wert');
+  const ys=h=>[...h.matchAll(/class="vgWert( klein)?" data-nr="1" x="[\d.]+" y="([\d.]+)"/g)].map(m=>[!!m[1],+m[2]]);
+  ok(ys(breit).every(x=>!x[0])&&ys(eng).every(x=>x[0]),'Breit: Werte stehen; schmal (280 px): erst beim Zeigen');
+  ok(ys(eng).length===2&&Math.abs(ys(eng)[0][1]-ys(eng)[1][1])>=11,'Schmal: die zwei Werte einer Gruppe stehen 11 px auseinander – nichts überlappt ('+ys(eng).map(x=>x[1]).join(' / ')+')');
+  /* Tabelle für Bildschirmleser */
+  A.setVg({stoffe:['K']});A.vgZeichnen();
+  ok(/<span class="sr">Probe 4, 08-441 Nur Mangel, <\/span>/.test($('cVgK').innerHTML),'Tabelle: Spaltenkopf nennt Probe, Satz und Zusatz für Bildschirmleser');
+  ok(/<button type="button" class="chip stoff on" aria-pressed="true" data-tun="vgStoff" data-k="K"/.test($('cVgK').innerHTML),'Nährstoffe sind Knöpfe (Tastatur) mit aria-pressed');
+  /* Zusatz im Verlauf, in «Am selben Tag», nur bei Blattsaft */
+  A.AKTION.vgImVerlauf({},{target:{checked:true}});
+  A.setKombi({blatt:['K']});A.vKombi();A.nachRenderRun();
+  const tr=A.getZeit().ZEIT.treffer.flat().map(x=>x.tipp||x.html||'').join(' ');
+  ok(/08-441 · Nur Mangel/.test(tr)||/08-441 · Nur Mangel/.test($('cKb').innerHTML),'Im Verlauf nennt das Kästchen den Zusatz – die zwei alten Blätter von 08-441 sind zu unterscheiden');
+  A.AKTION.vgImVerlauf({},{target:{checked:false}});
+  const knoepfe=[...A.amTagZeile(A.berichtVon('lh26-202604171288')).matchAll(/data-tun="detail"[^>]*>([^<]*)</g)].map(m=>m[1]);
+  ok(new Set(knoepfe).size===knoepfe.length&&knoepfe.some(k=>/Nur Mangel/.test(k)),'«Am selben Tag»: jeder Knopf anders beschriftet ('+knoepfe.join(' | ')+')');
+  A.pruefdialog([{id:'w9',typ:'giesswasser',datum:'2026-04-09',stelle:'Reservoir vorne',zusatz:'Nur Mangel',werte:{gw_K:{wert:1}},optima:{}}],false);
+  A.AKTION.uebernehmen();
+  const w9=A.getDb().analysen.find(a=>a.id==='w9');
+  ok(w9&&!('zusatz' in w9)&&!/Nur Mangel/.test(A.berichtTitel(A.berichtVon('w9'))),'Auf Giesswasser umgestellt: der Zusatz fällt weg');
+  ok(/Sie gehört|gehört zu keiner|übernommen\./.test(letzterToast())&&!/1 Probe übernommen\. Sie gehören/.test(letzterToast()),'Meldung in der Einzahl: '+letzterToast());
+  A.pruefdialog([JSON.parse(JSON.stringify(V.proben[7]))].map(p=>Object.assign(p,{id:'x10'})),false);
+  A.getDb().analysen=A.getDb().analysen.filter(a=>a.laborId!=='202604171295');
+  A.AKTION.uebernehmen();
+  ok(/1 Probe übernommen\. Sie gehört zum Vergleich/.test(letzterToast()),'Eine Probe des Vergleichs: «Sie gehört zum Vergleich …»');
+  /* Verlauf: nur Vergleichsproben und Wasser → der Leertext sagt, wo sie stehen */
+  const d2=A.leer();d2.analysen=JSON.parse(JSON.stringify(V.proben)).concat([{id:'g1',typ:'giesswasser',labor:'NovaCropControl',datum:'2026-09-01',stelle:'Basilikum RV',werte:{gw_K:{wert:0.7}},optima:{}}]);
+  A.setDb(d2);A.setKombi({blatt:['K'],wasser:['gw_K']});A.vKombi();A.nachRenderRun();
+  ok(/8 Vergleichsproben – im eigenen Reiter/.test($('cKb').innerHTML)&&!/Noch keine Blattsaftanalyse/.test($('cKb').innerHTML),'Verlauf mit nur Vergleichsproben: kein «Noch keine Blattsaftanalyse»');
+  /* Zusatz: Wortlaut bleibt, nur ein allein stehendes Kulturbild fällt weg */
+  ok(A.zusatzAusText('Adresse: Eichhof Anbau: 08-441 Eichhof Nur gelbe Blätter','08-441')==='Nur gelbe Blätter','«Nur gelbe Blätter» bleibt so, wie es im Bericht steht');
+  ok(A.zusatzAusText('Adresse: Eichhof Anbau: 08-441 Eichhof grün','08-441')===null,'«Eichhof grün» → kein Zusatz (das ist das Kulturbild)');
 }
 
 console.log('\n════ Ergebnis ════');

@@ -132,6 +132,115 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     await ctx.close();
   }
 
+  console.log('\n── Aus der Prüfung ──');
+  const vorbereiten=async(h,stoffe)=>{
+    await h.goto('file://'+path);await h.waitForTimeout(900);
+    await h.evaluate(()=>{tab='vergleich';render()});await h.waitForTimeout(200);
+    await h.evaluate(()=>{AKTION.vgVorlage();AKTION.uebernehmen()});await h.waitForTimeout(300);
+    if(stoffe)await h.evaluate(s=>{vgStoffe=s;vgZeichnen()},stoffe);await h.waitForTimeout(150);
+  };
+  /* Überlappen sich sichtbare Wertbeschriftungen in einer Kachel? */
+  const ueberlappt=h=>h.$$eval('#cVgK .vgKachel',ks=>ks.some(k=>{
+    const r=[...k.querySelectorAll('text.vgWert')].filter(t=>getComputedStyle(t).display!=='none').map(t=>t.getBoundingClientRect());
+    return r.some((a,i)=>r.some((b,j)=>j>i&&a.left<b.right-0.5&&b.left<a.right-0.5&&a.top<b.bottom-0.5&&b.top<a.bottom-0.5))}));
+  {
+    await p.click('#nav button:text-is("Living Herbs vs Topfbasilikum")');await p.waitForTimeout(300);
+    /* Ausgeblendete Probe zeigen: die anderen Balken treten nicht zurück */
+    await p.click('#cVgP .vgZeile[data-nr="3"] .vgText');await p.waitForTimeout(250);
+    ok(await p.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null,'Maus auf einer ausgeblendeten Zeile: keine Balken zurückgenommen');
+    await p.click('#cVgP .vgZeile[data-nr="3"] .vgText');await p.waitForTimeout(250);
+    /* Tastatur: Nährstoffe, Blatt, keine/alle – der Fokus bleibt */
+    await p.focus('#cVgK button.chip[data-k="Ca"]');await p.keyboard.press('Enter');await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>vgStoffe.includes('Ca')&&document.activeElement.dataset.k==='Ca'),'Kalzium mit Enter dazu – der Fokus bleibt auf dem Knopf');
+    await p.focus('#cVgK .seg button[data-v="jung"]');await p.keyboard.press('Space');await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>vgEtage==='jung'&&document.activeElement.dataset.v==='jung'),'Blatt «jung» mit der Leertaste – Fokus bleibt');
+    await p.keyboard.press('Shift+Tab');await p.keyboard.press('Enter');await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>vgEtage==='beide'&&document.activeElement.dataset.v==='beide'),'Zurück auf «beide» – Fokus bleibt');
+    /* Mit Tab durch die Zeilen: zeigen, Esc, hinaus */
+    await p.focus('#cVgP button[data-tun="vgDatei"]');await p.keyboard.press('Tab');await p.waitForTimeout(150);
+    ok(await p.evaluate(()=>document.activeElement.dataset.nr)==='1'&&await p.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))==='1','Tab auf Zeile ①: ① ist hervorgehoben');
+    await p.keyboard.press('Escape');await p.waitForTimeout(100);
+    ok(await p.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null,'Esc hebt die Hervorhebung auf');
+    for(let i=0;i<30&&!(await p.evaluate(()=>document.activeElement.dataset.tun==='vgAlle'));i++)await p.keyboard.press('Tab');
+    ok(await p.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await p.$eval('#cVgP',e=>e.getAttribute('data-zeigt'))===null,'Mit Tab aus den Zeilen hinaus: nichts bleibt hervorgehoben');
+    await p.keyboard.press('Tab');await p.keyboard.press('Enter');await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>vgAn.size===0&&document.activeElement.dataset.v==='aus'),'«keine» mit Enter – Fokus bleibt');
+    await p.keyboard.press('Shift+Tab');await p.keyboard.press('Enter');await p.waitForTimeout(200);
+    ok(await p.evaluate(()=>vgAn.size===5),'«alle» mit Enter');
+    /* ✎ speichern: der Fokus kommt auf ✎ zurück */
+    await p.focus('#cVgP .vgZeile[data-nr="5"] .vgStift');await p.keyboard.press('Enter');await p.waitForTimeout(250);
+    await p.click('#dlgFoot button:text-is("Speichern")');await p.waitForTimeout(250);
+    ok(await p.evaluate(()=>document.activeElement.classList.contains('vgStift')&&document.activeElement.dataset.nr==='5'),'✎ → Speichern: der Fokus steht wieder auf ✎ der Zeile ⑤');
+    /* Die Tabelle bleibt offen */
+    await p.click('#cVgK details.vgTabelle summary');await p.waitForTimeout(100);
+    await p.click('#cVgK button.chip[data-k="Mg"]');await p.waitForTimeout(200);
+    ok(await p.$eval('#cVgK details.vgTabelle',d=>d.open),'«Werte als Tabelle» bleibt offen, wenn ein Nährstoff dazukommt');
+    ok(/Probe 4, 08-441 Nur Mangel/.test(await p.$eval('#cVgK details.vgTabelle thead',e=>e.textContent)),'Spaltenköpfe nennen Probe und Satz (für Bildschirmleser)');
+  }
+  for(const [w,nm] of [[1024,'1024'],[768,'768'],[360,'360'],[320,'320']]){
+    const ctx=await b.newContext({viewport:{width:w,height:900},hasTouch:w<500,isMobile:w<500});
+    const h=await ctx.newPage();wache(h);
+    await vorbereiten(h,['K','Ca','Mg','NO3','N_gesamt','N_aus_NO3']);
+    ok(!(await ueberlappt(h)),nm+' px: keine Wertbeschriftungen übereinander');
+    ok(await h.$$eval('#cVgK .vgOptText',es=>es.every(e=>e.scrollWidth<=e.clientWidth+1)),nm+' px: Optimum im Kopf jeder Kachel ganz zu lesen');
+    ok(await h.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),nm+' px: kein waagrechtes Scrollen');
+    ok(await h.$$eval('#cVgP .vgZeile',zs=>zs.every(z=>{const g=z.querySelector('.vgGruppe').getBoundingClientRect(),s=z.querySelector('.vgStift').getBoundingClientRect(),r=z.getBoundingClientRect();
+      return (g.right<=s.left+0.5||g.top>=s.bottom-0.5||g.bottom<=s.top+0.5)&&z.querySelector('.vgStand').getBoundingClientRect().right<=r.right+0.5})),nm+' px: Gruppe und ✎ überdecken sich nicht, «Bericht ›» bleibt in der Zeile');
+    ok(await h.$eval('#cVgP .vgZeile[data-nr="3"] .vgText',e=>e.getBoundingClientRect().width)>=Math.min(300,w-120),nm+' px: die Beschreibung hat Platz ('+Math.round(await h.$eval('#cVgP .vgZeile[data-nr="3"] .vgText',e=>e.getBoundingClientRect().width))+' px)');
+    ok(await h.$$eval('#cVgK .vgLegende .vgPaar',ps=>ps.every(x=>x.getBoundingClientRect().height<26)),nm+' px: Zeichen und Beschriftung der Legende bleiben zusammen');
+    /* Beim Zeigen: auch die eingeblendeten Werte stehen frei */
+    for(const nr of ['1','2','3']){
+      await h.evaluate(n=>vgZeigen(+n),nr);await h.waitForTimeout(60);
+      if(await ueberlappt(h)){ok(false,nm+' px: beim Zeigen von '+nr+' überlappen Werte');break}
+    }
+    await h.evaluate(()=>vgZeigen(null));
+    await h.screenshot({path:shots+'/vergleich-'+nm+'.png',fullPage:true});
+    await ctx.close();
+  }
+  {
+    /* Handy gedreht, während der Bericht offen war */
+    const ctx=await b.newContext({viewport:{width:1000,height:900}});const h=await ctx.newPage();wache(h);
+    await vorbereiten(h,['K','Ca']);
+    ok(/repeat\([23]/.test(await h.$eval('#cVgK .vgRaster',e=>e.style.gridTemplateColumns)),'1000 px: Kacheln nebeneinander');
+    await h.click('#cVgP .vgZeile[data-nr="1"] button[data-tun="detail"]');await h.waitForTimeout(250);
+    await h.setViewportSize({width:390,height:844});await h.waitForTimeout(400);
+    await h.evaluate(()=>el('dlg').close());await h.waitForTimeout(300);
+    ok(/repeat\(1/.test(await h.$eval('#cVgK .vgRaster',e=>e.style.gridTemplateColumns)),'Nach dem Schliessen: neu gezeichnet, eine Spalte');
+    await ctx.close();
+  }
+  {
+    /* Finger: je Balken und Kachel, Scrollen vergisst, Nummer zeigt */
+    const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});const h=await ctx.newPage();wache(h);
+    await vorbereiten(h,['K','Ca']);
+    const tippe=async sel=>{const e=await h.$(sel);await e.scrollIntoViewIfNeeded();await h.waitForTimeout(150);const bb=await e.boundingBox();await h.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height*0.6);await h.waitForTimeout(300)};
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
+    await tippe('#cVgK .vgKachel[data-k="Ca"] g.vgB[data-nr="2"]');
+    ok(!(await h.$eval('#dlg',d=>d.open))&&/Calcium|Kalzium/.test(await h.$eval('.tipp',e=>e.innerText)),'In der zweiten Kachel zeigt das erste Tippen wieder erst – es öffnet nichts');
+    await tippe('#cVgK .vgKachel[data-k="Ca"] g.vgB[data-nr="2"]');
+    ok(await h.$eval('#dlg',d=>d.open),'… das zweite öffnet den Bericht');
+    await h.evaluate(()=>el('dlg').close());await h.waitForTimeout(200);
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="5"]');
+    await h.evaluate(()=>window.scrollBy(0,40));await h.waitForTimeout(250);
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="5"]');
+    ok(!(await h.$eval('#dlg',d=>d.open))&&await h.$eval('.tipp',e=>e.classList.contains('an')),'Nach dem Scrollen ist das Kästchen weg – das nächste Tippen zeigt wieder, statt zu öffnen');
+    await tippe('#cVgK .vgKachel[data-k="K"] g.vgNrS[data-nr="3"]');
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))==='3','Tippen auf die Nummer ③ zeigt die Probe');
+    await tippe('#cVgP .vgZeile[data-nr="4"] .vgText');
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await h.evaluate(()=>!vgAn.has(4)),'Tippen auf eine Zeile blendet sie aus – nichts bleibt hervorgehoben');
+    await ctx.close();
+  }
+  {
+    /* Laptop mit Touchscreen: nach einem Fingertipp zeigt die Maus wieder */
+    const ctx=await b.newContext({viewport:{width:1280,height:900},hasTouch:true});const h=await ctx.newPage();wache(h);
+    await vorbereiten(h,['K']);
+    const bb=await (await h.$('#cVgK g.vgB[data-nr="2"]')).boundingBox();
+    await h.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height*0.6);await h.waitForTimeout(250);
+    const b5=await (await h.$('#cVgK g.vgB[data-nr="5"]')).boundingBox();
+    await h.mouse.move(b5.x+b5.width/2,b5.y+b5.height*0.6,{steps:4});await h.waitForTimeout(200);
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))==='5','Nach dem Tippen auf ②: die Maus über ⑤ zeigt ⑤');
+    await ctx.close();
+  }
+
   console.log('\n── Ergebnis ──');
   if(stoerung.length){fehler+=stoerung.length;stoerung.forEach(x=>console.log('  ✗',x))}
   console.log(fehler?`  ${fehler} FEHLER`:'  ✓ Der Vergleich tut, was er soll.');

@@ -8,7 +8,7 @@ function mkEl(id){
     appendChild(){},insertAdjacentHTML(){},remove(){},click(){},
     querySelector(){return null},querySelectorAll(){return []},
     closest(){return null},addEventListener(){},showModal(){e.open=true},close(){e.open=false},
-    setAttribute(){},getAttribute(){return null},focus(){}};
+    setAttribute(){},getAttribute(){return null},removeAttribute(){},focus(){}};
   return e;
 }
 const store=new Map();
