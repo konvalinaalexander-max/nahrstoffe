@@ -439,3 +439,34 @@ Was sich am 5. Oktober abends (§12) geändert hat, gilt weiter – mit diesen
     der anderen Grafik sieht.
 36. **Im Bericht** stehen die anderen Berichte desselben Tages und «Im Verlauf
     zeigen»; in den Listen trennt ein Strich die Tage.
+
+## 15 · Entschieden (19. Oktober): Living Herbs vs Topfbasilikum
+
+37. **Ein eigener Reiter für einen Vergleich an einem Tag**, gleich nach
+    Blattsaft & Giesswasser: fünf Einsendungen vom 09.04.2026 (acht
+    Laborproben). Oben fünf Zeilen mit den Beschreibungen aus dem Mail, so
+    wie sie dort stehen. Keine Zeitachse – alles ist vom selben Tag.
+38. **Balken statt Punkte, eine Kachel je Nährstoff.** Kalium liegt bei
+    Tausenden, Molybdän bei Zehntel-ppm: jede Kachel hat ihre eigene Achse
+    ab 0, jeder weitere Nährstoff kommt daneben. In der Kachel je Probe eine
+    Gruppe; **Farbe = Nährstoff** (wie überall), **junges Blatt voll, altes
+    hell**, das Optimum des Labors als Band dahinter. Erkennungsmerkmal der
+    Probe ist ihre **Nummer ①–⑤** – in der Zeile, unter der Gruppe, im
+    Kästchen und im Bericht dieselbe. Zeigt man auf eine Probe, ist sie in
+    allen Kacheln und in ihrer Zeile hinterlegt.
+39. **Die Gruppen laut Mail:** 09-844 (Elaine, im Verkauf) Topfbasilikum,
+    09-498 und 10-228 Living Herbs. Ob 08-441 Living Herbs oder
+    Topfbasilikum war, sagt das Mail nicht – das steht so da, nicht
+    geraten. Text und Gruppe lassen sich ändern; dann steht «(geändert)».
+40. **Die Mangelprobe bleibt eine eigene Probe.** Im Bericht steht «08-441
+    Eichhof Nur Mangel»; der Zusatz hinter der Satznummer wird jetzt
+    gelesen (bei älteren Berichten aus dem Wortlaut nachgetragen). Das
+    Labor nennt sie «Blatt (Alt)» – so steht es da, mit «laut Labor».
+41. **Nicht im Verlauf.** Vier Sätze am selben Tag würden im Verlauf
+    Blattsaft & Giesswasser übereinanderliegen; dort steht ein Hinweis mit
+    dem Weg in den Vergleich. «auch im Verlauf zeigen» schaltet sie für
+    alle dazu.
+42. **Übernommen wird über den Kontrolldialog.** Die fünf PDFs sind in der
+    App hinterlegt (gelesen wie beim Hochladen); «Die 5 Berichte
+    übernehmen» zeigt alle Werte zur Kontrolle. Selbst hochgeladene PDFs
+    landen über Satz, Tag und Zusatz in ihrer Zeile.

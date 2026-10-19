@@ -1,4 +1,4 @@
-/* Die schlanke App in Chromium: fünf Reiter leer und gefüllt, Bericht im
+/* Die schlanke App in Chromium: sechs Reiter leer und gefüllt, Bericht im
    Pop-up, Import über den Kontrolldialog, die Grafiken mit Auswahl, Zeiger
    und Klick (nächster Punkt), Zoomen (− und + oben rechts, Rollbalken,
    Strg + Rad, das Rad allein scrollt, Tastatur), «Punkte verbinden» je

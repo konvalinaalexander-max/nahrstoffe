@@ -5,8 +5,8 @@ bevor du `basilikum.html` öffnest, und ändere nichts, bevor du Abschnitt 8
 gelesen hast. Sie ersetzt kein Codelesen, aber sie erspart dir, die Absichten
 hinter dem Code zu erraten.
 
-Stand: 5. Oktober 2026 (abends) · Schema 12 · die **schlanke Fassung**: rund
-260 KB, 4000 Zeilen, fünf Reiter – plus `erfassen.html` (Eingabemaske fürs
+Stand: 19. Oktober 2026 · Schema 12 · die **schlanke Fassung**: rund
+390 KB, 5400 Zeilen, sechs Reiter – plus `erfassen.html` (Eingabemaske fürs
 Handy, online unter `/maske`) und `server.js` (online, ohne Passwort).
 Hosting: `ONLINE.md`, Konzept: `KONZEPT-ONLINE.md` (Entscheide 16 und 17).
 
@@ -40,11 +40,12 @@ zwei Reservoirs (vorne, hinten) in einem gemeinsamen Kreislauf. Im Büro der
 Agronom und sein Chef am PC; hinten am Tank die Mitarbeitenden mit dem Handy
 (`/maske`, per QR-Code). Sätze heissen z. B. `28-478` (Aussaat-KW, Charge).
 
-## 3 · Die fünf Reiter
+## 3 · Die sechs Reiter
 
 | Reiter | Was er zeigt |
 |---|---|
 | **Blattsaft & Giesswasser** (öffnet **immer** zuerst) | **Zwei Grafiken mit je eigener Datumsachse**, gemeinsam gezoomt: Blattsaft (Kopfzeile: Blatt beide/jung/alt, Anzeige Messwert / Lage im Optimum; darunter die Nährstoffe und «Punkte verbinden»), **dazwischen das Kulturmanagement**, dann Giesswasser (Kopfzeile: Zeichen der Stellen, «Stellen zuordnen · n offen»; darunter die Stoffe und «Punkte verbinden»). **Biovin steht hier nicht** (nur Darstellung; die Gaben bleiben, im Tank-Reiter stehen sie). Oben die **Zeitzeile** mit − / + rechts, unten der **Rollbalken**. Zeigen → Kästchen, Klick → Bericht. |
+| **Living Herbs vs Topfbasilikum** | Ein Vergleich **an einem Tag** (Abschnitt 8b): fünf Einsendungen vom 09.04.2026, acht Laborproben. Oben **fünf Zeilen** mit den Beschreibungen aus dem Mail des Betriebs, je mit Nummer ①–⑤ (das Kennzeichen der Probe überall), Gruppe (Living Herbs / Topfbasilikum / nicht angegeben), Blattzeichen ● ◆, «Bericht ›» und ✎ (Text und Gruppe ändern – gilt für alle, wird als «geändert» vermerkt). Antippen blendet eine Probe ein oder aus. Darunter **je gewähltem Nährstoff eine Kachel** mit eigener Achse ab 0 (die Auswahl wie im Blattsaft, höchstens 8): je Probe eine Gruppe Balken, junges Blatt voll, altes hell mit Rand, Farbe = Nährstoff wie überall, dahinter das Optimum des Labors als Band (Nitrat: liegt es weit über allen Werten, als Streifen oben «↑ oberhalb»), unter der Gruppe die Nummer. Blatt beide/jung/alt, Messwert / Lage im Optimum, «Werte als Tabelle». **Zeigen** auf einen Balken, eine Nummer oder eine Zeile hebt die Probe in allen Kacheln und ihre Zeile hervor (die anderen treten zurück); Klick → Bericht. Am Handy: erstes Tippen zeigt, zweites öffnet. Die Vergleichsproben stehen **nicht im Verlauf** Blattsaft & Giesswasser (dort ein Hinweis «8 Vergleichsproben vom 09.04.2026 ›»), ausser man schaltet «auch im Verlauf zeigen» ein. Ob 08-441 Living Herbs oder Topfbasilikum war, sagt das Mail nicht – das steht so da. |
 | **pH, EC & O₂** | Die Messungen am Tank (Excel, Handy, Datenpaket) – nicht die Laborwerte: pH, **gleich darunter das Kulturmanagement** (mit Biovin), dann EC (Ring: frisch angesetzt) und Sauerstoff, je mit eigener Datumsachse, gemeinsam gezoomt; die Stelle links in der Zeitzeile; liegen die Messungen zu eng, wird **verdichtet** (Mittel je halben oder ganzen Tag mit Strich, siehe unten); darunter die Liste aller Messungen, **eingeklappt**, mit «Excel oder CSV einlesen». |
 | **Einträge Mobile App** | Alles, was über die Handy-Seite (`/maske`) kam (Messungen und Beigaben), als Liste mit Name, Uhrzeit, Werten. Visualisierung folgt später. |
 | **Analysen** | Oben PDFs hochladen (Ablegen oder «Dateien wählen»), darunter alle Berichte, neueste zuerst, filterbar nach Art. Jung- und Altblatt eines Berichts sind **eine** Zeile. Klick → der Bericht im Pop-up: jeder Wert mit dem Optimum des Labors als Band, gruppiert wie das Laborblatt, Wasser mit Einheit des Labors und daneben mg/l, der Wortlaut des PDFs aufklappbar. «Werte bearbeiten», «Entfernen». **Keine Befunde, keine Bewertungsfarben.** |
@@ -155,6 +156,13 @@ Was im Parser teuer gelernt ist und bleiben muss:
   des Nutzers) als **hohle Marke bei 0** auf der x-Achse, damit «Punkte
   verbinden» einen Einbruch zeigt; gespeichert wird nie eine 0. **`<0,50 - <0,50`** ist eine Nachweisgrenze, keine
   Spanne.
+- **Zusatz hinter der Satznummer** (`zusatzAusText`, seit 19. Oktober):
+  steht im Feld «Anbau» nach der Satznummer mehr als die Adresse und das
+  Kulturbild («08-441 Eichhof Nur Mangel»), wird es als `zusatz` gelesen
+  («Nur Mangel»). Damit bleibt eine eigens bezeichnete Probe desselben
+  Satzes und Tages ein eigener Bericht. Was **vor** der Satznummer steht
+  («Basilikum 28-478»), ist kein Zusatz. Im Kontrolldialog als Feld «Zusatz
+  laut Bericht» änderbar; die Doppelprüfung berücksichtigt ihn.
 - **Spaltenmarker ¹ ²** stehen im NCC-PDF auf eigenen Zeilen; `putz()` leert
   nur Zeilen, die ausschliesslich aus einem Marker bestehen.
 - **Der Kontrolldialog** vor der Übernahme: nichts wandert ungeprüft in den
@@ -171,7 +179,7 @@ Was im Parser teuer gelernt ist und bleiben muss:
 
 ```js
 {schema:12, version, gespeichert,
- analysen:[],      // je Probe: typ, datum, satz, blattalter, zustand, stelle,
+ analysen:[],      // je Probe: typ, datum, satz, zusatz, blattalter, zustand, stelle,
                    // laborId, kultur, werte{k:{wert,unter}}, optima{k:[lo,hi]}, quelle{datei,text}
  ereignisse:[],    // Gaben und Ereignisse: typ, datum, zeit, mittel, menge, einheit,
                    // jeReservoir, stelle, felder{}, notiz, wer, quelle ('hand'|'excel'|'paket'|'erfassen')
@@ -180,11 +188,24 @@ Was im Parser teuer gelernt ist und bleiben muss:
  produkte:{},      // die Mittel: name, form, einheit (die Maske bietet sie an)
  stellen:{gruppen:[{id,name}], zu:{<Bezeichnung>:<id|null>}},
  pakete:{},        // welches Datenpaket aktiv/abgelehnt ist
+ vergleiche:[],    // freiwillig: {id, titel, datum, imVerlauf, zeilen:[{nr, satz, zusatz,
+                   // gruppe:'lh'|'topf'|null, text, beleg:'mail'|'geändert'}]} – erst ab der ersten Änderung
  einst:{}}         // frühere Einstellungen bleiben hier unangetastet
 ```
 
 - **Bericht** = die Proben eines Blattsaftberichts: `berichtSchluessel` =
-  Satz | Datum | Kulturbild. Wasser: jede Probe ihr eigener Bericht.
+  Satz | Datum | Kulturbild (| Zusatz, nur wenn einer da ist – bestehende
+  Schlüssel bleiben gleich). Wasser: jede Probe ihr eigener Bericht.
+- **Vergleich** (Abschnitt 8b): Die Vorlage `VG_VORLAGE` trägt die fünf
+  Zeilen aus dem Mail und die acht Proben, genau so, wie `parseNCC` die fünf
+  PDFs liest (mit Wortlaut; `vg1.js` belegt die Gleichheit). Übernommen wird
+  nur über den Kontrolldialog («Die 5 Berichte übernehmen»; was schon da
+  ist, wird nicht überschrieben). **Welche Probe zu welcher Zeile gehört,
+  wird nicht gespeichert, sondern abgeleitet** (`vgPasst`: Blattsaft, Satz,
+  Tag des Vergleichs, Zusatz) – so landet auch ein selbst hochgeladenes PDF
+  in seiner Zeile. `db.vergleiche` entsteht erst, wenn jemand eine Zeile
+  ändert oder «auch im Verlauf zeigen» umschaltet; bis dahin gilt die
+  Vorlage. `vereinigen` führt `vergleiche` wie die anderen Listen.
 - **Optimum** = `optimum(a,k)`, genau das des Labors. Eigene Optima früherer
   Fassungen wirken nicht mehr. `lage(v,o)` (0–3) nur für die Anzeige «Lage im
   Optimum», damit verschiedene Nährstoffe in ein Fenster passen.
@@ -211,7 +232,10 @@ Was im Parser teuer gelernt ist und bleiben muss:
   (`MITTEL_WEG`).
 - **Migration**: `migriere()` hebt alte Dateien, behält jedes unbekannte Feld
   und meldet nur, was Werte verändert (Nachweisgrenzen, Substratnamen,
-  Wassereinheiten, Mengen aus Freitext).
+  Wassereinheiten, Mengen aus Freitext). Still nachgetragen wird der
+  `zusatz` eines NovaCropControl-Blattsaftberichts aus dem mitgespeicherten
+  Wortlaut (nur wo das Feld fehlt; ohne Wortlaut bleibt alles, wie es ist);
+  `vergleiche` ohne Kennung oder Zeilen fallen weg.
 
 ## 6 · Kulturmanagement (Abschnitt 9)
 
@@ -286,6 +310,7 @@ Eine Datei: `<style>`, Gerüst, ein `<script>`, durchnummeriert:
 | 6 | Gerüst | Verdrahtung `data-tun`/`data-aend`, `TABS`, `render`, `diagFrisch`, `dialog`, `toast` |
 | 7 | Analysen | Liste, `berichte`, `detail`, `wertMitOptimum`, `einlesen`, `pruefdialog` |
 | 8 | Blattsaft & Giesswasser | `vKombi`, `farbenFuer`, `spurGruppen`, Entnahmestellen (`stelleVon`, `stellenDialog` …) |
+| 8b | Living Herbs vs Topfbasilikum | `VG_VORLAGE`, `vgVergleich`/`vgSchreiben`, `vgProbenVon`/`vgZeileVon`/`vgVerborgen`, `vVergleich`, `vgProbenHtml`, `vgZeichnen`, `vgKachel`, `vgZeigen` (Hervorheben über `data-zeigt` und CSS), Zeigen/Tippen als Beobachter am Dokument |
 | 9 | Kulturmanagement | Balken, Marken, Dialoge, «＋ Massnahme», Zeilen verwalten, Ziehen-und-Ablegen (`kmZug`, `kmVerschieben`), ausblenden, löschen |
 | 10 | pH, EC & O₂ | `vTank`, `messStelle`; 10b Tabellenimport |
 | 11 | Einträge Mobile App | `vMaske` |
@@ -361,13 +386,14 @@ h=io.open('basilikum.html',encoding='utf-8').read()
 io.open('pruefung/app.js','w',encoding='utf-8').write(re.findall(r'<script>(.*?)</script>',h,re.S)[-1])"
 node --check pruefung/app.js
 
-# ohne Browser (685 Einzelprüfungen; im Browser rund 360)
-for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1; do node pruefung/$t.js; done
+# ohne Browser (773 Einzelprüfungen; im Browser rund 420)
+for t in n1 g1 n4 x1 d1 st1 o1 z1 k1 server1 vg1; do node pruefung/$t.js; done
 
 # im Browser (Chromium + playwright; NODE_PATH mit pdfjs-dist@3.11.174, jsqr, pngjs)
 node pruefung/browser.js   node pruefung/upload.js   node pruefung/gwupload.js
 node pruefung/rundreise.js node pruefung/tank.js     node pruefung/online.js
 node pruefung/paket.js     node pruefung/pdfbau-pruefen.js
+node pruefung/vergleich.js
 ```
 
 `upload.js` und `gwupload.js` brauchen keine echten PDFs mehr: `pdfbau.js`
