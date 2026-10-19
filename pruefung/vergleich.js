@@ -91,6 +91,19 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   ok(/Kupfer/.test(await p.$eval('#cVgK .vgKachel:last-child',e=>e.innerText))&&/unter der Nachweisgrenze/.test(await p.$eval('#cVgK .vgLegende',e=>e.innerText)),'Kupfer dazu: eine weitere Kachel, die Mangelprobe hohl bei 0');
   const vorlieben=await p.evaluate(()=>JSON.parse(localStorage.getItem('basilikum.ansicht')).vgStoffe);
   ok(Array.isArray(vorlieben)&&vorlieben.includes('Cu'),'Die Auswahl merkt sich dieses Gerät');
+  await p.click('#cVgK button[data-tun="vgStoffAlle"][data-v="an"]');await p.waitForTimeout(300);
+  {
+    const n=await p.$$eval('#cVgK .vgKachel',es=>es.length),c=await p.$$eval('#cVgK button.chip',es=>es.length);
+    const reihen=await p.$$eval('#cVgK .vgKachel',es=>new Set(es.map(e=>Math.round(e.getBoundingClientRect().top))).size);
+    ok(n===c&&n>=22&&reihen>=6,'«alle»: '+n+' Kacheln, Zeile um Zeile ('+reihen+' Reihen)');
+    ok(await p.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)&&!kaputt(await p.$eval('#cVgK',e=>e.innerText)),'… ohne waagrechtes Scrollen, sauber');
+    await p.hover('#cVgK .vgKachel:last-child g.vgB[data-nr="3"]');await p.waitForTimeout(200);
+    ok(await p.$eval('#cVgK .vgKachel:first-child g.vgB[data-nr="1"]',e=>+getComputedStyle(e).opacity<1),'Zeigen in der letzten Kachel hebt die Probe auch in der ersten hervor');
+    await p.mouse.move(5,5);
+  }
+  await p.click('#cVgK button[data-tun="vgStoffAlle"][data-v="aus"]');await p.waitForTimeout(200);
+  ok(await p.$$eval('#cVgK .vgKachel',es=>es.length)===0,'«keine»: alle Kacheln weg');
+  for(const k of ['K','Cu'])await p.click(`#cVgK button.chip[data-k="${k}"]`);await p.waitForTimeout(200);
   await p.click('#cVgK .seg button:has-text("Lage im Optimum")');await p.waitForTimeout(200);
   ok(/Opt\./.test(await p.$eval('#cVgK .vgKachel',e=>e.innerHTML))&&!kaputt(await p.$eval('#cVgK',e=>e.innerText)),'Lage im Optimum: Zonen statt Messwert');
   await p.click('#cVgK .seg button:has-text("Messwert")');await p.waitForTimeout(150);

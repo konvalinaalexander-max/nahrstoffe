@@ -470,3 +470,7 @@ Was sich am 5. Oktober abends (§12) geändert hat, gilt weiter – mit diesen
     App hinterlegt (gelesen wie beim Hochladen); «Die 5 Berichte
     übernehmen» zeigt alle Werte zur Kontrolle. Selbst hochgeladene PDFs
     landen über Satz, Tag und Zusatz in ihrer Zeile.
+43. **Alle Nährstoffe auf einmal** (Nachtrag 19. Oktober): keine Grenze bei
+    der Auswahl, daneben «alle · keine». Jede weitere Kachel reiht sich im
+    Raster an, Zeile um Zeile. Zwischen den Proben einer Kachel trennt eine
+    dünne gestrichelte Linie; die Nummern ①–⑤ bleiben.

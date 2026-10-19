@@ -3028,7 +3028,6 @@ function vgVerborgen(){
 }
 const heller=(hex,f)=>{const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
   const n=parseInt(m[1],16),k=c=>Math.round(c+(255-c)*f).toString(16).padStart(2,'0');return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255)};
-const VG_MAX=8;
 let vgAn=new Set([1,2,3,4,5]),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgTabOffen=false;
 const vgNr=(nr,hohl)=>`<span class="vgNr${hohl?' hohl':''}" aria-hidden="true">${nr}</span>`;
 function vgProbenHtml(){
@@ -3059,6 +3058,9 @@ function vgProbenHtml(){
       <span>Ob 08-441 Living Herbs oder Topfbasilikum war, sagt das Mail nicht.</span>
       <label class="vgVerlauf"><input type="checkbox" data-aend="vgImVerlauf"${v.imVerlauf?' checked':''}> auch im Verlauf (Blattsaft &amp; Giesswasser) zeigen</label></div>`;
 }
+/* Alle Nährstoffe der Vergleichsproben, in der Reihenfolge der Farbvergabe */
+const vgParams=alle=>STOFFREIHE.filter(k=>alle.some(a=>a.werte&&a.werte[k]))
+  .concat([...new Set(alle.flatMap(a=>Object.keys(a.werte||{})))].filter(k=>!STOFFREIHE.includes(k)));
 /* Breite einer Wertbeschriftung in 9,5 px – Ziffern breiter als Trennzeichen */
 const vgTextBreite=t=>[...String(t)].reduce((n,ch)=>n+(/[0-9<]/.test(ch)?5.7:/[’'.,]/.test(ch)?2.6:5.2),0);
 /* Eine Kachel je Nährstoff */
@@ -3110,6 +3112,8 @@ function vgKachel(k,farbe,cl,W,skala){
   let x=ml;const marken=[];
   for(const c of cl){
     const cw=c.slots.length*sw,cx=x+cw/2;
+    /* Zwischen zwei Proben eine feine gestrichelte Linie, bis unter die Nummer */
+    if(c!==cl[0])s+=`<line class="vgTrenner" x1="${x-gap/2}" x2="${x-gap/2}" y1="${mt-6}" y2="${H-3}" stroke="#B9C4B4" stroke-width="1" stroke-dasharray="3 3" pointer-events="none"/>`;
     s+=`<rect class="vgStreifen" data-nr="${c.nr}" x="${x-gap/2+1}" y="${mt-12}" width="${cw+gap-2}" height="${H-mt+10}" rx="6" fill="#141D17" opacity="0" pointer-events="none"/>`;
     /* Stehen die Werte erst beim Zeigen und eng, hält jede Beschriftung der
        Gruppe 11 px Abstand zur vorigen – auch wenn die Balken gleich hoch sind. */
@@ -3172,8 +3176,8 @@ function vgZeichnen(){
   if(!alle.length){box.innerHTML=`<div class="tafel"><div class="tafelKopf"><h3>Je Nährstoff</h3></div>
     <p class="muted small" style="margin:0 0 10px">Noch keine Berichte zu diesen Proben. Die fünf PDFs aus dem Mail sind in der App hinterlegt; vor dem Übernehmen stehen alle Werte zur Kontrolle da.</p>
     <button class="primary" data-tun="vgVorlage">Die ${zeilen.length} Berichte übernehmen</button> <button data-tun="vgDatei">Eigene PDFs hinzufügen</button></div>`;return}
-  const params=STOFFREIHE.filter(k=>alle.some(a=>a.werte&&a.werte[k])).concat([...new Set(alle.flatMap(a=>Object.keys(a.werte||{})))].filter(k=>!STOFFREIHE.includes(k)));
-  if(!vgStoffe)vgStoffe=(kbBlatt&&kbBlatt.filter(k=>params.includes(k)).length?kbBlatt.filter(k=>params.includes(k)):['K','Ca','Mg'].filter(k=>params.includes(k))).slice(0,VG_MAX);
+  const params=vgParams(alle);
+  if(!vgStoffe)vgStoffe=kbBlatt&&kbBlatt.filter(k=>params.includes(k)).length?kbBlatt.filter(k=>params.includes(k)):['K','Ca','Mg'].filter(k=>params.includes(k));
   vgStoffe=vgStoffe.filter(k=>params.includes(k));
   const F=farbenFuer(vgStoffe);
   const etagen=BLATT_REIHE.filter(al=>alle.some(a=>(a.blattalter||'misch')===al));
@@ -3195,7 +3199,7 @@ function vgZeichnen(){
       <span class="vgPaar"><span class="lab2">Blatt</span><span class="seg">${[['beide','beide']].concat(etagen.map(al=>[al,BLATTNAME[al]])).map(([w,l])=>`<button class="${vgEtage===w?'on':''}" data-tun="vgEtage" data-v="${w}">${
         w==='beide'?etagen.map(al=>zeichen(BLATTFORM[al],NEUTRAL)).join(''):zeichen(BLATTFORM[w],NEUTRAL)}${esc(l)}</button>`).join('')}</span></span>
       <span class="vgPaar"><span class="lab2">Anzeige</span><span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([w,l])=>`<button class="${vgSkala===w?'on':''}" data-tun="vgSkala" data-v="${w}">${l}</button>`).join('')}</span></span></div></div>
-    <div class="wahl">${params.map(chip).join('')}</div>`;
+    <div class="wahl">${params.map(chip).join('')}<span class="trenner"></span><span class="tiny muted">Nährstoffe:</span><button class="ghost klein" data-tun="vgStoffAlle" data-v="an" title="Alle Nährstoffe als Kacheln – sie reihen sich untereinander">alle</button><button class="ghost klein" data-tun="vgStoffAlle" data-v="aus">keine</button></div>`;
   const ng=vgStoffe.some(k=>alle.some(a=>a.werte&&a.werte[k]&&a.werte[k].unter));
   const legende=`<div class="vgLegende tiny muted"><span class="vgPaar">${zeichen('kreis',NEUTRAL)} junges Blatt (voll)</span><span class="vgPaar">${zeichen('raute',NEUTRAL)} altes Blatt (hell)</span><span class="vgPaar">${vgNr('1–5')} Probe wie oben</span><span class="vgPaar">Band: Optimum laut Labor</span>${ng?`<span class="vgPaar">${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0</span>`:''}</div>`;
   const kacheln=vgStoffe.length&&cl.length?vgStoffe.map(k=>vgKachel(k,F[k],cl.map(c=>({nr:c.nr,zeile:c.zeile,slots:c.slots.map(s=>Object.assign({},s))})),W,vgSkala)).join('')
@@ -3242,7 +3246,12 @@ AKTION.vgAlle=d=>{const v=vgVergleich();vgAn=d.v==='an'?new Set((v.zeilen||[]).m
 AKTION.vgStoff=d=>{
   const k=d.k,l=vgStoffe||[];
   if(l.includes(k))vgStoffe=l.filter(x=>x!==k);
-  else{if(l.length>=VG_MAX)return toast(`Höchstens ${VG_MAX} Nährstoffe auf einmal – erst einen abwählen.`);vgStoffe=l.concat([k])}
+  else vgStoffe=l.concat([k]);   /* ohne Grenze – jede weitere Kachel kommt dazu, Zeile um Zeile */
+  ansichtMerken();vgFokus(vgZeichnen);
+};
+AKTION.vgStoffAlle=d=>{
+  const v=vgVergleich();
+  vgStoffe=d.v==='an'?vgParams((v.zeilen||[]).flatMap(z=>vgProbenVon(z,v))):[];
   ansichtMerken();vgFokus(vgZeichnen);
 };
 AKTION.vgEtage=d=>{vgEtage=d.v;ansichtMerken();vgFokus(vgZeichnen)};

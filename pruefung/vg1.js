@@ -97,6 +97,7 @@ console.log('\n════ Der Reiter ════');
   ok((k.match(/class="vgKachel"/g)||[]).length===3,'Ohne eigene Wahl: Kalium, Kalzium, Magnesium – drei Kacheln');
   ok((k.match(/<g class="vgB"/g)||[]).length===24,'Je Kachel acht Balken (2+2+2+1+1)');
   ok((k.match(/class="vgNrS"/g)||[]).length===15,'Je Kachel fünf Nummern unter den Gruppen');
+  ok((k.match(/class="vgTrenner"[^>]*stroke-dasharray="3 3"/g)||[]).length===12,'Zwischen den fünf Proben je Kachel vier dünne gestrichelte Linien');
   ok(k.includes('Optimum '+A.esc(A.optText([3975,4800]))),'Kopf der Kachel: Optimum laut Labor ('+A.optText([3975,4800])+')');
   ok(/class="vgOpt"/.test(k),'Das Optimum als Band');
   const kal=k.split('class="vgKachel"')[1];
@@ -131,10 +132,15 @@ console.log('\n════ Der Reiter ════');
   ok(/Keine Probe eingeschaltet/.test($('cVgK').innerHTML),'Keine: die Grafik sagt, was zu tun ist');
   A.AKTION.vgAlle({v:'an'});
   ok(A.getVg().an.length===5,'Alle: wieder fünf');
-  let viele=0;A.setVg({stoffe:[]});
-  for(const s of ['K','Ca','Mg','Na','NH4','NO3','S','P','Fe'])A.AKTION.vgStoff({k:s});
-  viele=A.getVg().stoffe.length;
-  ok(viele===8&&/Höchstens 8/.test(letzterToast()),'Höchstens acht Nährstoffe auf einmal');
+  A.setVg({stoffe:[]});
+  for(const s of ['K','Ca','Mg','Na','NH4','NO3','S','P','Fe','Mn','Zn'])A.AKTION.vgStoff({k:s});
+  ok(A.getVg().stoffe.length===11&&(($('cVgK').innerHTML).match(/class="vgKachel"/g)||[]).length===11,'Keine Grenze: elf Nährstoffe angeklickt, elf Kacheln');
+  A.AKTION.vgStoffAlle({v:'an'});
+  const alleK=(($('cVgK').innerHTML).match(/class="vgKachel"/g)||[]).length,chips=(($('cVgK').innerHTML).match(/data-tun="vgStoff" /g)||[]).length;
+  ok(alleK===chips&&alleK>=22&&A.getVg().stoffe[0]==='NO3','«alle»: jede Kachel – '+alleK+' Nährstoffe, in der gewohnten Reihenfolge');
+  ok(!/undefined|NaN/.test($('cVgK').innerHTML),'… sauber gezeichnet');
+  A.AKTION.vgStoffAlle({v:'aus'});
+  ok(A.getVg().stoffe.length===0&&/Oben einen Nährstoff anklicken/.test($('cVgK').innerHTML),'«keine»: leer, mit Hinweis');
 }
 
 console.log('\n════ Beschreibung ändern ════');
