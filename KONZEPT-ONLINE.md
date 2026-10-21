@@ -474,3 +474,11 @@ Was sich am 5. Oktober abends (§12) geändert hat, gilt weiter – mit diesen
     der Auswahl, daneben «alle · keine». Jede weitere Kachel reiht sich im
     Raster an, Zeile um Zeile. Zwischen den Proben einer Kachel trennt eine
     dünne gestrichelte Linie; die Nummern ①–⑤ bleiben.
+44. **Weitere Analysen dazunehmen** (21. Oktober): «＋ Analyse aus dem
+    Bestand hinzufügen» unter den Zeilen listet alle übrigen
+    Blattsaftberichte zum Ankreuzen. Jeder wird eine eigene Zeile mit der
+    nächsten Nummer, seinem Datum und Kulturbild; Beschreibung und Gruppe
+    mit ✎. Diese Zeilen bleiben im Verlauf (nur die Proben aus dem Mail sind
+    dort ausgeblendet) und lassen sich wieder herausnehmen – die Analyse
+    bleibt im Bestand. Ob eine Zeile ein- oder ausgeblendet ist, merkt sich
+    das Gerät; neue Zeilen sind eingeschaltet.

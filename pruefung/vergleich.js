@@ -120,6 +120,21 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
   ok(!(await p.$('#cKb button.vgHin'))&&await p.evaluate(()=>ZEIT.treffer.flat().some(t=>Math.abs(t.t-+new Date('2026-04-09'))<864e5)),'«auch im Verlauf zeigen»: die Proben stehen auch dort');
   ok(await p.evaluate(()=>db.vergleiche.length===1&&db.vergleiche[0].imVerlauf===true),'… und das gilt für alle (im Bestand)');
 
+  console.log('\n── Analysen aus dem Bestand dazunehmen ──');
+  await p.click('#nav button:text-is("Living Herbs vs Topfbasilikum")');await p.waitForTimeout(300);
+  await p.click('#cVgP button.vgPlus');await p.waitForTimeout(300);
+  const wahl=await p.$$('#dlgBody input[data-vgdazu]');
+  ok(wahl.length>=1,'＋ öffnet die Liste der übrigen Blattsaftberichte ('+wahl.length+')');
+  await wahl[0].check();await p.click('#dlgFoot button:text-is("Hinzufügen")');await p.waitForTimeout(400);
+  ok((await p.$$('#cVgP .vgZeile')).length===6&&!!(await p.$('#cVgK g.vgNrS[data-nr="6"]')),'Zeile 6 dazu, in den Kacheln eine sechste Gruppe');
+  await p.hover('#cVgP .vgZeile[data-nr="6"] .vgText');await p.waitForTimeout(200);
+  const o6=await p.$$eval('#cVgK .vgKachel:first-child g.vgB',es=>es.map(e=>e.dataset.nr+':'+getComputedStyle(e).opacity));
+  ok(o6.some(x=>x.startsWith('6:'))&&o6.filter(x=>x.startsWith('6:')).every(x=>x==='6:1')&&o6.filter(x=>!x.startsWith('6:')).every(x=>+x.split(':')[1]<1),'Zeigen auf Zeile 6 hebt ihre Balken hervor');
+  await p.mouse.move(5,5);
+  await p.click('#cVgP .vgZeile[data-nr="6"] .vgStift');await p.waitForTimeout(250);
+  await p.click('#dlgFoot button:text-is("Aus dem Vergleich nehmen")');await p.waitForTimeout(300);
+  ok((await p.$$('#cVgP .vgZeile')).length===5&&await p.evaluate(()=>db.analysen.length)===vorher+8,'Wieder herausgenommen – die Analyse bleibt im Bestand');
+
   console.log('\n── Handy ──');
   {
     const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,deviceScaleFactor:2});
@@ -177,9 +192,9 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     for(let i=0;i<30&&!(await p.evaluate(()=>document.activeElement.dataset.tun==='vgAlle'));i++)await p.keyboard.press('Tab');
     ok(await p.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await p.$eval('#cVgP',e=>e.getAttribute('data-zeigt'))===null,'Mit Tab aus den Zeilen hinaus: nichts bleibt hervorgehoben');
     await p.keyboard.press('Tab');await p.keyboard.press('Enter');await p.waitForTimeout(200);
-    ok(await p.evaluate(()=>vgAn.size===0&&document.activeElement.dataset.v==='aus'),'«keine» mit Enter – Fokus bleibt');
+    ok(await p.evaluate(()=>vgAus.size===5&&document.activeElement.dataset.v==='aus'),'«keine» mit Enter – Fokus bleibt');
     await p.keyboard.press('Shift+Tab');await p.keyboard.press('Enter');await p.waitForTimeout(200);
-    ok(await p.evaluate(()=>vgAn.size===5),'«alle» mit Enter');
+    ok(await p.evaluate(()=>vgAus.size===0),'«alle» mit Enter');
     /* ✎ speichern: der Fokus kommt auf ✎ zurück */
     await p.focus('#cVgP .vgZeile[data-nr="5"] .vgStift');await p.keyboard.press('Enter');await p.waitForTimeout(250);
     await p.click('#dlgFoot button:text-is("Speichern")');await p.waitForTimeout(250);
@@ -251,7 +266,7 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null,'Bericht geöffnet und geschlossen: Tippen daneben hebt auf');
     await tippe('#cVgK .vgKachel[data-k="K"] g.vgB[data-nr="2"]');
     await tippe('#cVgP .vgZeile[data-nr="4"] .vgText');
-    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await h.evaluate(()=>!vgAn.has(4)),'Tippen auf eine Zeile blendet sie aus – nichts bleibt hervorgehoben');
+    ok(await h.$eval('#cVgK',e=>e.getAttribute('data-zeigt'))===null&&await h.evaluate(()=>vgAus.has(4)),'Tippen auf eine Zeile blendet sie aus – nichts bleibt hervorgehoben');
     await ctx.close();
   }
   {
@@ -259,6 +274,7 @@ const kaputt=t=>/undefined|NaN|\[object Object\]|liess sich nicht aufbauen/.test
     const ctx=await b.newContext({viewport:{width:1024,height:900}});const h=await ctx.newPage();wache(h);
     await vorbereiten(h,['K']);
     const cdp=await ctx.newCDPSession(h);
+    await (await h.$('#cVgK g.vgB[data-nr="2"]')).scrollIntoViewIfNeeded();await h.waitForTimeout(150);
     const bb=await (await h.$('#cVgK g.vgB[data-nr="2"]')).boundingBox(),x=bb.x+bb.width/2,y=bb.y+bb.height*0.6;
     const stift=async()=>{for(const type of ['mousePressed','mouseReleased'])await cdp.send('Input.dispatchMouseEvent',{type,x,y,button:'left',clickCount:1,pointerType:'pen'});await h.waitForTimeout(250)};
     await stift();

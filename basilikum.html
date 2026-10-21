@@ -284,18 +284,15 @@ button.klein.offen{color:var(--ink)}
 .vgTabelle{margin-top:10px}
 .vgTag{gap:4px;padding-left:3px}.vgTag .vgNr{min-width:16px;height:16px;font-size:10px}
 .vgHin{margin-left:4px}
+.vgPlus{display:block;width:100%;margin-top:6px;border:1px dashed var(--line);background:none;color:var(--muted);text-align:left;padding:8px 12px;border-radius:10px;font-size:13px}
+.vgPlus:hover{color:var(--ink);border-color:var(--ink);background:var(--card2)}
+.vgWahlListe{display:flex;flex-direction:column;gap:2px;max-height:55vh;overflow:auto}
+.vgWahl{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.vgWahl:hover{background:var(--card2);border-color:var(--line2)}.vgWahl:has(input:checked){background:#EEF3EA}
 .vgPaar{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px}.vgLegende .vgPaar{flex-wrap:nowrap;white-space:nowrap;gap:4px}
 button.chip{font:inherit;font-size:12px;color:var(--ink);transition:none}button.chip.on{color:#fff}
 button.chip:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-#cVgP[data-zeigt="1"] .vgZeile[data-nr="1"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="1"] .vgStreifen[data-nr="1"]{opacity:.055}#cVgK[data-zeigt="1"] .vgWert.klein[data-nr="1"]{display:inline}#cVgK[data-zeigt="1"] .vgB:not([data-nr="1"]){opacity:.42}
-#cVgP[data-zeigt="2"] .vgZeile[data-nr="2"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="2"] .vgStreifen[data-nr="2"]{opacity:.055}#cVgK[data-zeigt="2"] .vgWert.klein[data-nr="2"]{display:inline}#cVgK[data-zeigt="2"] .vgB:not([data-nr="2"]){opacity:.42}
-#cVgP[data-zeigt="3"] .vgZeile[data-nr="3"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="3"] .vgStreifen[data-nr="3"]{opacity:.055}#cVgK[data-zeigt="3"] .vgWert.klein[data-nr="3"]{display:inline}#cVgK[data-zeigt="3"] .vgB:not([data-nr="3"]){opacity:.42}
-#cVgP[data-zeigt="4"] .vgZeile[data-nr="4"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="4"] .vgStreifen[data-nr="4"]{opacity:.055}#cVgK[data-zeigt="4"] .vgWert.klein[data-nr="4"]{display:inline}#cVgK[data-zeigt="4"] .vgB:not([data-nr="4"]){opacity:.42}
-#cVgP[data-zeigt="5"] .vgZeile[data-nr="5"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="5"] .vgStreifen[data-nr="5"]{opacity:.055}#cVgK[data-zeigt="5"] .vgWert.klein[data-nr="5"]{display:inline}#cVgK[data-zeigt="5"] .vgB:not([data-nr="5"]){opacity:.42}
-#cVgP[data-zeigt="6"] .vgZeile[data-nr="6"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="6"] .vgStreifen[data-nr="6"]{opacity:.055}#cVgK[data-zeigt="6"] .vgWert.klein[data-nr="6"]{display:inline}#cVgK[data-zeigt="6"] .vgB:not([data-nr="6"]){opacity:.42}
-#cVgP[data-zeigt="7"] .vgZeile[data-nr="7"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="7"] .vgStreifen[data-nr="7"]{opacity:.055}#cVgK[data-zeigt="7"] .vgWert.klein[data-nr="7"]{display:inline}#cVgK[data-zeigt="7"] .vgB:not([data-nr="7"]){opacity:.42}
-#cVgP[data-zeigt="8"] .vgZeile[data-nr="8"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="8"] .vgStreifen[data-nr="8"]{opacity:.055}#cVgK[data-zeigt="8"] .vgWert.klein[data-nr="8"]{display:inline}#cVgK[data-zeigt="8"] .vgB:not([data-nr="8"]){opacity:.42}
-#cVgP[data-zeigt="9"] .vgZeile[data-nr="9"]{background:#EEF3EA;border-color:var(--line)}#cVgK[data-zeigt="9"] .vgStreifen[data-nr="9"]{opacity:.055}#cVgK[data-zeigt="9"] .vgWert.klein[data-nr="9"]{display:inline}#cVgK[data-zeigt="9"] .vgB:not([data-nr="9"]){opacity:.42}
+#cVgP .vgZeile.vgDa{background:#EEF3EA;border-color:var(--line)}#cVgK .vgStreifen.vgDa{opacity:.055}#cVgK .vgWert.klein.vgDa{display:inline}#cVgK[data-zeigt] .vgB:not(.vgDa){opacity:.42}
 /* Schmaler als 900 px: Beschreibung unter Satz und Gruppe, über die volle Breite */
 @media (max-width:900px){
   .vgZeile{grid-template-columns:24px auto minmax(0,1fr) 30px;grid-template-areas:"nr satz gruppe stift" ". text text text" ". blatt stand stand";padding:9px 6px}
@@ -2572,7 +2569,7 @@ AKTION.uebernehmen=()=>{
   const imVg=neu.filter(a=>a.typ==='blattsaft'&&vgZeileVon(a));
   if(PRUEF_ZIEL==='vergleich'){
     tab='vergleich';
-    for(const a of imVg)vgAn.add(vgZeileVon(a).nr);
+    for(const a of imVg)vgAus.delete(vgZeileVon(a).nr);
     render();
     const ohne=n-imVg.length;
     return toast(n?`${n} Probe${n>1?'n':''} übernommen${ohne?` – ${ohne} davon gehör${ohne>1?'en':'t'} zu keiner Zeile des Vergleichs und steh${ohne>1?'en':'t'} unter Analysen`:''}.${sichern}`:'Nichts übernommen.');
@@ -3012,7 +3009,12 @@ function vgSchreiben(){
   if(!db.vergleiche.length){const v=JSON.parse(JSON.stringify(VG_VORLAGE));delete v.proben;db.vergleiche.push(v)}
   return db.vergleiche[0];
 }
-const vgPasst=(a,z,v)=>a&&a.typ==='blattsaft'&&a.satz===z.satz&&a.datum===v.datum&&(a.zusatz||'')===(z.zusatz||'');
+/* Eine Zeile aus dem Bestand (z.dazu) trägt ihr eigenes Datum und Kulturbild;
+   die Zeilen aus dem Mail gelten für den Tag des Vergleichs. */
+const vgPasst=(a,z,v)=>a&&a.typ==='blattsaft'&&a.satz===z.satz&&a.datum===(z.datum||v.datum)&&(a.zusatz||'')===(z.zusatz||'')
+  &&(z.zustand===undefined||(a.zustand||'')===(z.zustand||''));
+/* Wie eine Zeile heisst: Satz, Zusatz, bei Zeilen aus dem Bestand das Datum */
+const vgName=(z,v)=>z.satz+(z.zusatz?' · '+z.zusatz:'')+(z.datum&&z.datum!==(v||vgVergleich()).datum?' · '+fmt(z.datum):'');
 const vgProbenVon=(z,v)=>db.analysen.filter(a=>vgPasst(a,z,v||vgVergleich()))
   .sort((x,y)=>BLATT_REIHE.indexOf(x.blattalter||'misch')-BLATT_REIHE.indexOf(y.blattalter||'misch'));
 /* Zu welcher Zeile eine Analyse gehört (oder null) */
@@ -3023,36 +3025,39 @@ function vgZeileVon(a){const v=vgVergleich();return (v.zeilen||[]).find(z=>vgPas
 function vgVerborgen(){
   const v=vgVergleich(),s=new Set();
   if(v.imVerlauf)return s;
-  for(const a of db.analysen)if(a.typ==='blattsaft'&&(v.zeilen||[]).some(z=>vgPasst(a,z,v)))s.add(a.id);
+  /* Was aus dem Bestand dazugenommen wurde, bleibt im Verlauf */
+  for(const a of db.analysen)if(a.typ==='blattsaft'&&(v.zeilen||[]).some(z=>!z.dazu&&vgPasst(a,z,v)))s.add(a.id);
   return s;
 }
 const heller=(hex,f)=>{const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));if(!m)return hex;
   const n=parseInt(m[1],16),k=c=>Math.round(c+(255-c)*f).toString(16).padStart(2,'0');return '#'+k(n>>16&255)+k(n>>8&255)+k(n&255)};
-let vgAn=new Set([1,2,3,4,5]),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgTabOffen=false;
+let vgAus=new Set(),vgStoffe=null,vgEtage='beide',vgSkala='wert',vgGezeigt=null,vgTabOffen=false;
 const vgNr=(nr,hohl)=>`<span class="vgNr${hohl?' hohl':''}" aria-hidden="true">${nr}</span>`;
 function vgProbenHtml(){
   const v=vgVergleich(),zeilen=v.zeilen||[];
   const da=zeilen.map(z=>vgProbenVon(z,v));
-  const fehlt=da.filter(l=>!l.length).length;
+  const mail=zeilen.filter(z=>!z.dazu),dazu=zeilen.length-mail.length;
+  const fehlt=zeilen.filter((z,i)=>!z.dazu&&!da[i].length).length;
   /* Wie in vgVorlage: was aus den hinterlegten PDFs noch nicht im Bestand ist */
   const offen=VG_VORLAGE.proben.filter(p=>!db.analysen.some(a=>a.laborId&&a.laborId===p.laborId)).length;
   const zeile=(z,i)=>{
-    const l=da[i],an=vgAn.has(z.nr);
+    const l=da[i],an=!vgAus.has(z.nr);
     const blatt=l.map(a=>zeichen(BLATTFORM[a.blattalter]||'quadrat',NEUTRAL)).join('');
     return `<div class="vgZeile${an?'':' aus'}${l.length?'':' fehlt'}" data-nr="${z.nr}" data-tun="vgProbe" role="button" tabindex="0" aria-pressed="${an}" title="${an?'Ausblenden':'Einblenden'}">
       ${vgNr(z.nr,!an)}
-      <span class="vgSatz"><span class="mono">${esc(z.satz)}</span>${z.zusatz?`<span class="vgZusatz">${esc(z.zusatz)}</span>`:''}</span>
+      <span class="vgSatz"><span class="mono">${esc(z.satz)}</span>${z.zusatz?`<span class="vgZusatz">${esc(z.zusatz)}</span>`:''}${z.datum&&z.datum!==v.datum?`<span class="vgZusatz">${fmt(z.datum)}</span>`:''}</span>
       <span class="tag vgGruppe${z.gruppe?'':' offen'}">${esc(VG_GRUPPE[z.gruppe]||'nicht angegeben')}</span>
-      <span class="vgText">${esc(z.text||'')}${z.beleg==='geändert'?' <span class="tiny muted">(geändert)</span>':''}</span>
+      <span class="vgText">${z.text?esc(z.text):'<span class="muted">ohne Beschreibung – ✎</span>'}${z.beleg==='geändert'?' <span class="tiny muted">(geändert)</span>':''}${z.dazu?' <span class="tiny muted">(aus dem Bestand)</span>':''}</span>
       <span class="vgBlatt" title="${esc(l.map(a=>BLATTSPALTE[a.blattalter]||'Blatt').join(', '))}">${blatt}</span>
       <span class="vgStand">${l.length?`<button class="ghost klein" data-tun="detail" data-id="${esc(l[0].id)}" title="Bericht öffnen">${l.length} Probe${l.length>1?'n':''} · Bericht ›</button>`:'<span class="tiny muted">Bericht fehlt</span>'}</span>
       <button class="ghost klein vgStift" data-tun="vgBearb" data-nr="${z.nr}" title="Beschreibung und Gruppe ändern" aria-label="Zeile ${z.nr} ändern">✎</button></div>`;
   };
   return `<div class="hd"><div><h2>${esc(v.titel||'Living Herbs vs Topfbasilikum')}</h2>
-      <p class="sub">${zeilen.length} Einsendungen vom ${fmt(v.datum)} · Beschreibungen aus dem Mail · Optimum laut Labor</p></div>
-    <div class="row" style="gap:8px;align-items:center">${offen?`<button class="primary" data-tun="vgVorlage" title="Die Berichte aus dem Mail – zuerst im Kontrolldialog prüfen">${fehlt===zeilen.length?`Die ${zeilen.length} Berichte übernehmen`:`Fehlende Proben übernehmen (${offen})`}</button>`:''}
+      <p class="sub">${mail.length} Einsendungen vom ${fmt(v.datum)}${dazu?` · ${dazu} weitere Analyse${dazu>1?'n':''} aus dem Bestand`:''} · Beschreibungen aus dem Mail · Optimum laut Labor</p></div>
+    <div class="row" style="gap:8px;align-items:center">${offen?`<button class="primary" data-tun="vgVorlage" title="Die Berichte aus dem Mail – zuerst im Kontrolldialog prüfen">${fehlt===mail.length?`Die ${mail.length} Berichte übernehmen`:`Fehlende Proben übernehmen (${offen})`}</button>`:''}
       <button class="klein" data-tun="vgDatei">PDFs hinzufügen</button></div></div>
     <div class="vgZeilen">${zeilen.map(zeile).join('')}</div>
+    <button class="vgPlus" data-tun="vgDazu" title="Weitere Blattsaftberichte aus dem Bestand als eigene Zeilen in den Vergleich nehmen">＋ Analyse aus dem Bestand hinzufügen</button>
     <div class="vgFuss tiny muted">
       <span>Antippen blendet eine Probe ein oder aus · <button class="ghost klein" data-tun="vgAlle" data-v="an">alle</button> <button class="ghost klein" data-tun="vgAlle" data-v="aus">keine</button></span>
       <span>Ob 08-441 Living Herbs oder Topfbasilikum war, sagt das Mail nicht.</span>
@@ -3137,7 +3142,7 @@ function vgKachel(k,farbe,cl,W,skala){
       const jung=al!=='alt',fill=jung?farbe:heller(farbe,.55);
       const z=c.zeile,e2=e?' '+e:'';
       const tipp=tippBau(NAME[k]||k,farbe,[
-        ['Probe',`${c.nr} · ${z.satz}${z.zusatz?' · '+z.zusatz:''}`],['Gruppe',VG_GRUPPE[z.gruppe]||'nicht angegeben'],
+        ['Probe',`${c.nr} · ${vgName(z)}`],['Gruppe',VG_GRUPPE[z.gruppe]||'nicht angegeben'],
         ['Blatt',(BLATTSPALTE[al]||'Blatt')+(z.zusatz&&al==='alt'?' (laut Labor)':'')],
         ['Messwert',ng?ngText(sl.w,e):nz(sl.w.wert)+e2],
         sl.o?['Optimum (Labor)',optText(sl.o)+e2]:null,
@@ -3159,7 +3164,7 @@ function vgKachel(k,farbe,cl,W,skala){
       s+=`</g>`;
     });
     /* Die Nummer unter der Gruppe – dieselbe wie oben in der Zeile */
-    s+=`<g class="vgNrS" data-nr="${c.nr}" style="cursor:default"><title>${esc(c.zeile.satz+(c.zeile.zusatz?' · '+c.zeile.zusatz:''))}</title><circle cx="${cx}" cy="${unten+24}" r="8.5" fill="#141D17"/><text x="${cx}" y="${unten+27.5}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${c.nr}</text></g>`;
+    s+=`<g class="vgNrS" data-nr="${c.nr}" style="cursor:default"><title>${esc(vgName(c.zeile))}</title><circle cx="${cx}" cy="${unten+24}" r="8.5" fill="#141D17"/><text x="${cx}" y="${unten+27.5}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">${c.nr}</text></g>`;
     x+=cw+gap;
   }
   /* Achse und Blattzeichen lassen Zeiger und Finger zum Balken durch */
@@ -3174,7 +3179,7 @@ function vgZeichnen(){
   const alle=zeilen.flatMap(z=>vgProbenVon(z,v));
   if(!alle.length){box.innerHTML=`<div class="tafel"><div class="tafelKopf"><h3>Je Nährstoff</h3></div>
     <p class="muted small" style="margin:0 0 10px">Noch keine Berichte zu diesen Proben. Die fünf PDFs aus dem Mail sind in der App hinterlegt; vor dem Übernehmen stehen alle Werte zur Kontrolle da.</p>
-    <button class="primary" data-tun="vgVorlage">Die ${zeilen.length} Berichte übernehmen</button> <button data-tun="vgDatei">Eigene PDFs hinzufügen</button></div>`;return}
+    <button class="primary" data-tun="vgVorlage">Die ${zeilen.filter(z=>!z.dazu).length} Berichte übernehmen</button> <button data-tun="vgDatei">Eigene PDFs hinzufügen</button></div>`;return}
   const params=vgParams(alle);
   if(!vgStoffe)vgStoffe=kbBlatt&&kbBlatt.filter(k=>params.includes(k)).length?kbBlatt.filter(k=>params.includes(k)):['K','Ca','Mg'].filter(k=>params.includes(k));
   vgStoffe=vgStoffe.filter(k=>params.includes(k));
@@ -3187,7 +3192,7 @@ function vgZeichnen(){
   /* Gruppen: je eingeschaltete Zeile die Proben nach Blatt; fehlt das
      gewählte Blatt, bleibt ein schmaler Platz – die Nummern stehen in allen
      Kacheln gleich. */
-  const cl=zeilen.filter(z=>vgAn.has(z.nr)).map(z=>{
+  const cl=zeilen.filter(z=>!vgAus.has(z.nr)).map(z=>{
     const alleZ=vgProbenVon(z,v),l=alleZ.filter(a=>vgEtage==='beide'||(a.blattalter||'misch')===vgEtage);
     return {nr:z.nr,zeile:z,slots:l.length?l.map(a=>({a})):[{a:null,al:vgEtage==='beide'?null:vgEtage,ohneBericht:!alleZ.length}]};
   });
@@ -3200,13 +3205,13 @@ function vgZeichnen(){
       <span class="vgPaar"><span class="lab2">Anzeige</span><span class="seg">${[['wert','Messwert'],['lage','Lage im Optimum']].map(([w,l])=>`<button class="${vgSkala===w?'on':''}" data-tun="vgSkala" data-v="${w}">${l}</button>`).join('')}</span></span></div></div>
     <div class="wahl">${params.map(chip).join('')}<span class="trenner"></span><span class="tiny muted">Nährstoffe:</span><button class="ghost klein" data-tun="vgStoffAlle" data-v="an" title="Alle Nährstoffe als Kacheln – sie reihen sich untereinander">alle</button><button class="ghost klein" data-tun="vgStoffAlle" data-v="aus">keine</button></div>`;
   const ng=vgStoffe.some(k=>alle.some(a=>a.werte&&a.werte[k]&&a.werte[k].unter));
-  const legende=`<div class="vgLegende tiny muted"><span class="vgPaar">${zeichen('kreis',NEUTRAL)} junges Blatt (voll)</span><span class="vgPaar">${zeichen('raute',NEUTRAL)} altes Blatt (hell)</span><span class="vgPaar">${vgNr('1–5')} Probe wie oben</span><span class="vgPaar">Band: Optimum laut Labor</span>${ng?`<span class="vgPaar">${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0</span>`:''}</div>`;
+  const legende=`<div class="vgLegende tiny muted"><span class="vgPaar">${zeichen('kreis',NEUTRAL)} junges Blatt (voll)</span><span class="vgPaar">${zeichen('raute',NEUTRAL)} altes Blatt (hell)</span><span class="vgPaar">${vgNr(zeilen.length>1?Math.min(...zeilen.map(z=>z.nr))+'–'+Math.max(...zeilen.map(z=>z.nr)):'1')} Probe wie oben</span><span class="vgPaar">Band: Optimum laut Labor</span>${ng?`<span class="vgPaar">${zeichen('kreis',NEUTRAL,true)} unter der Nachweisgrenze, bei 0</span>`:''}</div>`;
   const kacheln=vgStoffe.length&&cl.length?vgStoffe.map(k=>vgKachel(k,F[k],cl.map(c=>({nr:c.nr,zeile:c.zeile,slots:c.slots.map(s=>Object.assign({},s))})),W,vgSkala)).join('')
     :`<p class="muted small">${cl.length?'Oben einen Nährstoff anklicken.':'Keine Probe eingeschaltet – oben eine Zeile antippen.'}</p>`;
   /* Zum genauen Ablesen und für Bildschirmleser: alles als Tabelle */
   const spaltenT=cl.flatMap(c=>c.slots.filter(s=>s.a).map(s=>({c,a:s.a})));
   const tabelle=vgStoffe.length&&spaltenT.length?`<details class="aufklapp vgTabelle"${vgTabOffen?' open':''}><summary>Werte als Tabelle</summary><div class="scroll"><table><thead><tr><th scope="col">Nährstoff</th>${
-      spaltenT.map(({c,a})=>`<th scope="col">${vgNr(c.nr)}<span class="sr">Probe ${c.nr}, ${esc(c.zeile.satz)}${c.zeile.zusatz?' '+esc(c.zeile.zusatz):''}, </span> ${esc(BLATTNAME[a.blattalter]||'')}</th>`).join('')}</tr></thead><tbody>${
+      spaltenT.map(({c,a})=>`<th scope="col">${vgNr(c.nr)}<span class="sr">Probe ${c.nr}, ${esc(vgName(c.zeile).replace(/ · /g,' '))}, </span> ${esc(BLATTNAME[a.blattalter]||'')}</th>`).join('')}</tr></thead><tbody>${
       vgStoffe.map(k=>`<tr><td><strong>${esc(NAME[k]||k)}</strong> <span class="tiny muted">${esc(einheit(k))}</span></td>${
         spaltenT.map(({a})=>`<td class="mono">${zeigeWert(a.werte&&a.werte[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`:'';
   box.innerHTML=`<div class="tafel">${kopf}<div class="vgRaster" style="grid-template-columns:repeat(${spalten},minmax(0,1fr))">${kacheln}</div>${legende}${tabelle}</div>`;
@@ -3224,7 +3229,10 @@ function vgZeigen(nr){
   for(const id of ['cVgP','cVgK']){const b=el(id);if(!b||!b.setAttribute)continue;
     /* In der Grafik nur, wenn die Probe dort eine Gruppe hat – sonst träten alle Balken zurück */
     const da=nr!=null&&(id==='cVgP'||!!(b.querySelector&&b.querySelector(`[data-nr="${nr}"]`)));
-    if(da)b.setAttribute('data-zeigt',String(nr));else b.removeAttribute('data-zeigt')}
+    if(da)b.setAttribute('data-zeigt',String(nr));else b.removeAttribute('data-zeigt');
+    if(!b.querySelectorAll)continue;
+    for(const e of b.querySelectorAll('.vgDa'))e.classList.remove('vgDa');
+    if(da)for(const e of b.querySelectorAll(`[data-nr="${nr}"]`))e.classList.add('vgDa')}
 }
 /* Nach dem Neuzeichnen steht der Fokus wieder auf demselben Knopf – wer mit
    der Tastatur bedient, finge sonst oben auf der Seite an. */
@@ -3238,10 +3246,10 @@ function vgFokus(fn){
   if(n)n.focus({preventScroll:true});
 }
 AKTION.vgProbe=d=>{
-  const nr=+d.nr;if(vgAn.has(nr))vgAn.delete(nr);else vgAn.add(nr);ansichtMerken();
+  const nr=+d.nr;if(vgAus.has(nr))vgAus.delete(nr);else vgAus.add(nr);ansichtMerken();
   vgFokus(diagFrisch);   /* wer mit der Tastatur umschaltet, bleibt auf seiner Zeile */
 };
-AKTION.vgAlle=d=>{const v=vgVergleich();vgAn=d.v==='an'?new Set((v.zeilen||[]).map(z=>z.nr)):new Set();ansichtMerken();vgFokus(diagFrisch)};
+AKTION.vgAlle=d=>{const v=vgVergleich();vgAus=d.v==='an'?new Set():new Set((v.zeilen||[]).map(z=>z.nr));ansichtMerken();vgFokus(diagFrisch)};
 AKTION.vgStoff=d=>{
   const k=d.k,l=vgStoffe||[];
   if(l.includes(k))vgStoffe=l.filter(x=>x!==k);
@@ -3268,12 +3276,48 @@ AKTION.vgVorlage=()=>{
 AKTION.vgDatei=()=>{el('filePdf').click()};
 AKTION.vgBearb=d=>{
   const z=(vgVergleich().zeilen||[]).find(x=>x.nr===+d.nr);if(!z)return;
-  dialog(`Probe ${z.nr} · ${z.satz}${z.zusatz?' · '+z.zusatz:''}`,
+  dialog(`Probe ${z.nr} · ${vgName(z)}`,
     `<label class="lab">Beschreibung</label><textarea id="vgText" rows="3" style="width:100%">${esc(z.text||'')}</textarea>
      <label class="lab" style="margin-top:12px">Gruppe</label>
      <span class="seg" id="vgGruppe">${[['lh','Living Herbs'],['topf','Topfbasilikum'],['','nicht angegeben']].map(([w,l])=>`<button class="${(z.gruppe||'')===w?'on':''}" data-tun="vgGruppeWahl" data-v="${w}">${l}</button>`).join('')}</span>
      <p class="tiny muted" style="margin-top:12px">Gilt für alle, die das Dashboard öffnen.${z.beleg==='mail'?' Der Text steht so im Mail.':''}</p>`,
-    `<div style="flex:1"></div><button data-tun="dlgZu">Abbrechen</button><button class="primary" data-tun="vgSpeichern" data-nr="${z.nr}">Speichern</button>`);
+    `${z.dazu?`<button data-tun="vgWeg" data-nr="${z.nr}" title="Die Analyse bleibt im Bestand und im Verlauf">Aus dem Vergleich nehmen</button>`:''}<div style="flex:1"></div><button data-tun="dlgZu">Abbrechen</button><button class="primary" data-tun="vgSpeichern" data-nr="${z.nr}">Speichern</button>`);
+};
+/* Was sich dazunehmen lässt: jeder Blattsaftbericht, der noch keine Zeile hat */
+const vgKandidaten=()=>berichte().filter(b=>b.typ==='blattsaft'&&b.datum&&b.satz&&!vgZeileVon(b.proben[0]));
+AKTION.vgDazu=()=>{
+  const l=vgKandidaten();
+  dialog('Analyse zum Vergleich hinzufügen',l.length
+    ?`<p class="small muted" style="margin:0 0 10px">Blattsaftberichte aus dem Bestand, neueste zuerst. Jeder gewählte kommt als eigene Zeile dazu, mit der nächsten Nummer; im Verlauf bleibt er stehen.</p>
+      <div class="vgWahlListe">${l.map(b=>`<label class="vgWahl"><input type="checkbox" data-vgdazu="${esc(b.id)}">
+        <span class="mono">${fmt(b.datum)}</span><span>Satz <b class="mono">${esc(b.satz)}</b>${b.zusatz?' · '+esc(b.zusatz):''}</span>${zustandTag(b.zustand)}
+        <span>${b.proben.map(p=>`<span class="tag ${esc(p.blattalter||'misch')}">${esc(BLATTNAME[p.blattalter]||'Blatt?')}</span>`).join(' ')}</span></label>`).join('')}</div>`
+    :`<p>Alle Blattsaftberichte im Bestand stehen schon im Vergleich. Weitere kommen über «PDFs hinzufügen» oder den Reiter Analysen dazu.</p>`,
+    l.length?`<button class="primary" data-tun="vgDazuSpeichern">Hinzufügen</button><button data-tun="dlgZu">Abbrechen</button>`:`<button class="primary" data-tun="dlgZu">Schliessen</button>`);
+};
+AKTION.vgDazuSpeichern=()=>{
+  const ids=[...el('dlgBody').querySelectorAll('input[data-vgdazu]:checked')].map(e=>e.dataset.vgdazu);
+  if(!ids.length)return toast('Keine Analyse gewählt.');
+  el('dlg').close();vgDazu(ids);
+};
+/* Berichte (Kennung aus berichte()) als neue Zeilen; gilt für alle */
+function vgDazu(ids){
+  const neu=berichte().filter(b=>ids.includes(b.id)&&b.typ==='blattsaft');
+  const v=vgSchreiben();let nr=Math.max(0,...v.zeilen.map(z=>z.nr)),n=0;
+  for(const b of neu){
+    if(vgZeileVon(b.proben[0]))continue;
+    v.zeilen.push({nr:++nr,satz:b.satz,zusatz:b.zusatz||null,datum:b.datum,zustand:b.zustand||null,gruppe:null,text:'',beleg:'hinzugefügt',dazu:true});
+    vgAus.delete(nr);n++;
+  }
+  if(!n)return;
+  aend();if(tab==='vergleich')diagFrisch();
+  toast(`${n} Analyse${n>1?'n':''} hinzugefügt – Beschreibung und Gruppe mit ✎.`);
+}
+AKTION.vgWeg=d=>{
+  const v=vgSchreiben(),i=v.zeilen.findIndex(z=>z.nr===+d.nr&&z.dazu);if(i<0)return;
+  v.zeilen.splice(i,1);vgAus.delete(+d.nr);aend();
+  if(el('dlg').open)el('dlg').close();vgZeigen(null);diagFrisch();
+  toast('Aus dem Vergleich genommen – die Analyse bleibt im Bestand.');
 };
 AKTION.vgGruppeWahl=d=>{const s=el('vgGruppe');if(!s)return;for(const b of s.querySelectorAll('button'))b.classList.toggle('on',b.dataset.v===d.v)};
 AKTION.vgSpeichern=d=>{
@@ -3286,7 +3330,7 @@ AKTION.vgSpeichern=d=>{
 };
 AKTION.imVergleich=d=>{
   const nr=+d.nr;if(el('dlg').open)el('dlg').close();
-  vgAn.add(nr);tab='vergleich';render();vgZeigen(nr);
+  vgAus.delete(nr);tab='vergleich';render();vgZeigen(nr);
   const z=document.querySelector&&document.querySelector(`#cVgP .vgZeile[data-nr="${nr}"]`);
   if(z){z.classList.add('blink');if(z.scrollIntoView)z.scrollIntoView({block:'nearest'});if(z.focus)z.focus({preventScroll:true});setTimeout(()=>z.classList.remove('blink'),1400)}
 };
@@ -5161,7 +5205,7 @@ el('dlg').addEventListener('close',()=>{const d=el('dlg');if(d.dataset.gesehen){
 function ansichtMerken(){
   try{localStorage.setItem(ANSICHT_SCHLUESSEL,JSON.stringify({kbBlatt,kbWasser,kbEtage,kbSkala,linien:[...linienAn],
     tkStelle,anFilter,meFilter,kmAus:[...kmAus],kmReihe,kmEreignisseOffen,tkListeOffen,
-    vgAn:[...vgAn],vgStoffe,vgEtage,vgSkala}))}catch(e){}
+    vgAus:[...vgAus],vgStoffe,vgEtage,vgSkala}))}catch(e){}
 }
 function ansichtLaden(){
   let a=null;try{a=JSON.parse(localStorage.getItem(ANSICHT_SCHLUESSEL)||'null')}catch(e){a=null}
@@ -5182,7 +5226,8 @@ function ansichtLaden(){
   if(liste(a.kmReihe))kmReihe=liste(a.kmReihe);
   if(typeof a.kmEreignisseOffen==='boolean')kmEreignisseOffen=a.kmEreignisseOffen;
   if(typeof a.tkListeOffen==='boolean')tkListeOffen=a.tkListeOffen;
-  if(Array.isArray(a.vgAn))vgAn=new Set(a.vgAn.filter(n=>Number.isInteger(n)));
+  if(Array.isArray(a.vgAus))vgAus=new Set(a.vgAus.filter(n=>Number.isInteger(n)));
+  else if(Array.isArray(a.vgAn))vgAus=new Set([1,2,3,4,5].filter(n=>!a.vgAn.includes(n)));   /* früher: was AN war, nur ①–⑤ */
   if(liste(a.vgStoffe))vgStoffe=liste(a.vgStoffe);
   vgEtage=wort(a.vgEtage,['beide','jung','alt','misch'])||vgEtage;
   vgSkala=wort(a.vgSkala,['wert','lage'])||vgSkala;

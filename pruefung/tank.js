@@ -162,7 +162,10 @@ const bestand=async()=>(await (await fetch(B+'/api/bestand',{headers:auth('admin
 
   console.log('\n════ Die Stunde ist um ════');
   await p.evaluate(()=>{const w=JSON.parse(localStorage.getItem('tank.wer'));w.bis=Date.now()-1000;localStorage.setItem('tank.wer',JSON.stringify(w))});
-  await p.fill('#mPh','6,5');   /* nah am letzten Wert (nach Uhrzeit: 6,3) – sonst fragt die Seite zu Recht nach */
+  /* Nah am letzten Wert, sonst fragt die Seite zu Recht nach. Welcher der
+     letzte ist, hängt von der Uhrzeit des Prüflaufs ab (6,3 «jetzt» oder 8,4
+     um 07:30) – 7,3 liegt bei beiden unter dem Sprung von 1,5. */
+  await p.fill('#mPh','7,3');
   await p.click('button:text-is("Messung eintragen")');await p.waitForTimeout(400);
   ok(!(await p.$eval('#schranke',e=>e.hidden)),'Nach Ablauf der Stunde: erst wieder das Kürzel, dann der Eintrag');
   ok(/Stunde ist um/.test(await p.$eval('#schrankeMeld',e=>e.textContent)),'Mit dem Grund');

@@ -195,6 +195,47 @@ console.log('\n════ Ältere Daten: der Zusatz aus dem Wortlaut ═══
   ok(A.heller('#336699',.5)==='#99b3cc'&&A.heller('nix',.5)==='nix','Hellere Farbe für das alte Blatt');
 }
 
+console.log('\n════ Analysen aus dem Bestand dazunehmen ════');
+{
+  const V=A.VG_VORLAGE,d=A.leer();
+  d.analysen=JSON.parse(JSON.stringify(V.proben)).concat([
+    {id:'b1',typ:'blattsaft',datum:'2026-08-18',satz:'28-478',blattalter:'jung',zustand:'grün',werte:{K:{wert:1040},Ca:{wert:700}},optima:{K:[3975,4800]}},
+    {id:'b2',typ:'blattsaft',datum:'2026-08-18',satz:'28-478',blattalter:'alt',zustand:'grün',werte:{K:{wert:1418}},optima:{K:[3975,4800]}},
+    {id:'b3',typ:'blattsaft',datum:'2026-08-18',satz:'28-478',blattalter:'jung',zustand:'gelb',werte:{K:{wert:900}},optima:{K:[3975,4800]}},
+    {id:'w1',typ:'giesswasser',datum:'2026-08-18',stelle:'RV',werte:{gw_K:{wert:1}},optima:{}}]);
+  A.setDb(d);A.setVg({an:[1,2,3,4,5],stoffe:['K'],etage:'beide',skala:'wert'});
+  const k=A.vgKandidaten();
+  ok(k.length===2&&k.every(b=>b.satz==='28-478'),'Zur Wahl: die zwei übrigen Blattsaftberichte (grün und gelb) – kein Wasser, nichts aus dem Mail');
+  ok(/＋ Analyse aus dem Bestand hinzufügen/.test(A.vVergleich()),'Der Plus-Knopf steht unter den Zeilen');
+  A.AKTION.vgDazu();
+  ok((($('dlgBody').innerHTML).match(/data-vgdazu=/g)||[]).length===2&&/18\.08\.2026/.test($('dlgBody').innerHTML),'Der Dialog listet sie mit Datum zum Ankreuzen');
+  const gruen=k.find(b=>b.zustand==='grün');
+  A.vgDazu([gruen.id]);
+  const z6=A.getDb().vergleiche[0].zeilen.find(z=>z.nr===6);
+  ok(z6&&z6.dazu&&z6.datum==='2026-08-18'&&z6.zustand==='grün'&&z6.text==='','Hinzugefügt als Zeile 6, mit Datum und Kulturbild, ohne Beschreibung');
+  ok(A.vgProbenVon(z6).map(a=>a.id).join()==='b1,b2','Zeile 6 findet genau den grünen Bericht (jung und alt), nicht den gelben');
+  ok(A.getVg().an.includes(6),'Die neue Zeile ist gleich eingeschaltet');
+  ok(A.vgVerborgen().size===8&&!A.vgVerborgen().has('b1'),'Im Verlauf bleibt sie stehen – ausgeblendet sind nur die acht aus dem Mail');
+  let h=A.vVergleich();A.nachRenderRun();
+  ok(/1 weitere Analyse aus dem Bestand/.test(h)&&/ohne Beschreibung/.test(h)&&/18\.08\.2026/.test(h),'Die Zeile zeigt ihr Datum, «ohne Beschreibung», der Kopf zählt sie');
+  ok(/class="vgNrS" data-nr="6"/.test($('cVgK').innerHTML)&&/28-478 · 18\.08\.2026/.test($('cVgK').innerHTML),'In der Kachel eine sechste Gruppe; das Kästchen nennt Satz und Datum');
+  ok((($('cVgK').innerHTML).match(/class="vgTrenner"/g)||[]).length===5,'… mit gestrichelter Linie davor');
+  ok(/>1–6<\/span> Probe wie oben/.test($('cVgK').innerHTML),'Die Legende zählt mit: «1–6 Probe wie oben»');
+  ok(A.vgKandidaten().length===1,'Danach steht nur noch der gelbe Bericht zur Wahl');
+  A.vgDazu(A.vgKandidaten().map(b=>b.id));
+  ok(A.getDb().vergleiche[0].zeilen.map(z=>z.nr).join()==='1,2,3,4,5,6,7','Der gelbe als Zeile 7');
+  const m=A.migriere(JSON.parse(JSON.stringify(A.getDb())));
+  ok(m.db.vergleiche[0].zeilen[6].dazu===true&&m.db.vergleiche[0].zeilen[6].zustand==='gelb','Gesichert und geladen: die Zeilen aus dem Bestand bleiben');
+  A.AKTION.vgBearb({nr:'7'});
+  ok(/data-tun="vgWeg"/.test($('dlgFoot').innerHTML),'✎ einer Zeile aus dem Bestand: «Aus dem Vergleich nehmen»');
+  A.AKTION.vgBearb({nr:'1'});
+  ok(!/data-tun="vgWeg"/.test($('dlgFoot').innerHTML),'… bei einer Zeile aus dem Mail nicht');
+  A.AKTION.vgWeg({nr:'7'});
+  ok(A.getDb().vergleiche[0].zeilen.length===6&&A.getDb().analysen.some(a=>a.id==='b3'),'Herausgenommen: die Zeile ist weg, die Analyse bleibt im Bestand');
+  A.AKTION.vgWeg({nr:'3'});
+  ok(A.getDb().vergleiche[0].zeilen.length===6,'Zeilen aus dem Mail lassen sich so nicht entfernen');
+}
+
 console.log('\n════ Aus der Prüfung ════');
 {
   const V=A.VG_VORLAGE,nur=ids=>{const d=A.leer();d.analysen=JSON.parse(JSON.stringify(V.proben.filter(p=>ids.includes(p.laborId))));A.setDb(d)};
